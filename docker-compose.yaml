@@ -1,0 +1,13 @@
+version: "3.6"
+services:
+  js:
+    image: node:latest
+    volumes:
+      - ./js:/usr/app
+    working_dir: /usr/app
+    ports:
+      - 8080:8080
+    environment:
+      - API_HOST_PORT
+      - APP_PORT
+    entrypoint: "yarn start"
