@@ -7,6 +7,8 @@ $control-width: 150px;
 
 body {
     font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    color: $grey;
     .container {
         display: flex;
         .viz-container {
@@ -14,7 +16,7 @@ body {
             width: 50%;
         }
         .controls-container {
-            width: 50%;
+            width: 40%;
             display: flex;
             align-items: flex-start;
             flex-direction: row;
@@ -28,16 +30,31 @@ body {
             }
             .prune-controls {
                 .prune-container {
+                    width: 250px;
+                    font-size: 16px;
+                    + .prune-container {
+                        margin-top: 15px;
+                    }
                     .header {
                         display: flex;
                         flex-direction: row;
                         justify-content: space-between;
                         cursor: pointer;
+                        font-weight: bold;
                     }
-                }
-                .prune-details {
-                    display: flex;
-                    flex-direction: column;
+                    .prune-details {
+                        display: flex;
+                        flex-direction: column;
+                        margin-left: 10px;
+                        margin-top: 10px;
+                        label {
+                            display: flex;
+                            justify-content: space-between;
+                            + label {
+                                margin-bottom: 10px;
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -4,10 +4,11 @@ import {
     HierarchyNode,
     HierarchyPointLink,
     HierarchyPointNode,
+    stratify,
     tree,
 } from 'd3-hierarchy';
 import { arc, pie, pointRadial } from 'd3-shape';
-import { scaleLinear, scaleOrdinal } from 'd3-scale';
+import { scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
 import data, { labelMap, TMCNodeBase } from './prepareData';
 import { extent, quantile, sum } from 'd3-array';
 import { zoom } from 'd3-zoom';
@@ -15,7 +16,14 @@ import { schemeAccent } from 'd3-scale-chromatic';
 import { rgb } from 'd3-color';
 import { format } from 'd3-format';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
-import { carToRadius, carToTheta, getMAD, hierarchize, squared } from './Util';
+import {
+    carToRadius,
+    carToTheta,
+    getMAD,
+    hierarchize,
+    sortChildren,
+    squared,
+} from './Util';
 import { dispatch } from 'd3-dispatch';
 
 // for debugging
@@ -30,25 +38,29 @@ export interface TMCNode extends TMCNodeBase {
 
 const initialData = hierarchize(data) as HierarchyNode<TMCNode>;
 
-/* aggregate tissue label counts */
-const nodes: HierarchyNode<TMCNode> = initialData
-    .copy()
-    .eachAfter(n => {
-        n.data.labelCount = n
-            .descendants()
-            .reduce<Record<string, number>>((acc, curr) => {
-                if (curr.data.items) {
-                    curr.data.items.forEach(item => {
-                        acc[labelMap[item._barcode.unCell]] =
-                            (acc[labelMap[item._barcode.unCell]] || 0) + 1;
-                    });
-                }
-                return acc;
-            }, {});
-    })
-    .eachBefore((n, i) => {
-        n.data.nodeId = i;
-    });
+const addLabelsAndIds = (node: HierarchyNode<TMCNode>) => {
+    /* aggregate tissue label counts */
+    return node
+        .copy()
+        .eachAfter(n => {
+            n.data.labelCount = n
+                .descendants()
+                .reduce<Record<string, number>>((acc, curr) => {
+                    if (curr.data.items) {
+                        curr.data.items.forEach(item => {
+                            acc[labelMap[item._barcode.unCell]] =
+                                (acc[labelMap[item._barcode.unCell]] || 0) + 1;
+                        });
+                    }
+                    return acc;
+                }, {});
+        })
+        .eachBefore((n, i) => {
+            n.data.nodeId = i;
+        });
+};
+
+const nodes = addLabelsAndIds(initialData);
 
 /**
  *
@@ -194,9 +206,10 @@ const labels = Array.from(new Set(Object.values(labelMap))).filter(Boolean);
 
 const labelScaleD3 = scaleOrdinal(schemeAccent).domain(labels);
 
-const labelScale = scaleOrdinal(['#66C2A5', '#EF966E']).domain(labels);
-
-const getBlendArgs = (labelCounts: Record<string, number>) => {
+const getBlendArgs = (
+    labelCounts: Record<string, number>,
+    labelScale: ScaleOrdinal<string, string>
+) => {
     const ret: { color: string; weight: number }[] = [];
     for (let label in labelCounts) {
         let colorsWithWeights = {} as {
@@ -210,30 +223,13 @@ const getBlendArgs = (labelCounts: Record<string, number>) => {
     return ret;
 };
 
-const getBlendedColor = (labelCounts: Record<string, number>) => {
-    const weightedColors = getBlendArgs(labelCounts);
+const getBlendedColor = (
+    labelCounts: Record<string, number>,
+    labelScale: ScaleOrdinal<string, string>
+) => {
+    const weightedColors = getBlendArgs(labelCounts, labelScale);
     return blendWeighted(weightedColors).toString();
 };
-
-export const drawLegend = (
-    selection: Selection<HTMLDivElement, unknown, HTMLElement, any>
-) =>
-    selection
-        .append('ul')
-        .style('list-style-type', 'none')
-        .style('padding', '0px')
-        .selectAll('li')
-        .data(labelScale.domain())
-        .join('li')
-        .append('span')
-        .style('height', '15px')
-        .style('width', '15px')
-        .style('border-radius', '50%')
-        .style('display', 'inline-block')
-        .style('background-color', d => labelScale(d))
-        .append('span')
-        .style('margin-left', '20px')
-        .text(d => d);
 
 const showToolTip = (data: TMCNode, e: MouseEvent) => {
     selectAll('.tooltip')
@@ -267,6 +263,8 @@ class RadialTree {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
     distanceVisible = false;
+    labelScale = scaleOrdinal(['#66C2A5', '#EF966E']).domain(labels);
+    legendSelector: string;
     linkContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
     nodeDragBehavior: DragBehavior<
         SVGGElement,
@@ -283,9 +281,12 @@ class RadialTree {
     selector: string;
     strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
+    transitionTime = 250;
+    valueMap: Record<string, number>;
 
-    constructor(selector: string) {
+    constructor(selector: string, legendSelector: string) {
         this.selector = selector;
+        this.legendSelector = legendSelector;
 
         this.svg = select(this.selector)
             .append('svg')
@@ -312,6 +313,14 @@ class RadialTree {
         const zoomBehavior = zoom<SVGSVGElement, unknown>().on('zoom', e =>
             this.container.attr('transform', e.transform.toString())
         );
+
+        this.valueMap = {};
+
+        const descendants = this.rootPositionedTree.descendants();
+
+        for (let i = 0; i < this.rootPositionedTree.descendants().length; i++) {
+            this.valueMap[descendants[i].data.id] = descendants[i].value!;
+        }
 
         zoomBehavior(this.svg);
 
@@ -486,17 +495,60 @@ class RadialTree {
             .on('end', () => deltaBehavior.on('nodeDelta', null));
     }
 
+    drawLegend = () => {
+        const container = select(this.legendSelector)
+            .selectAll('ul')
+            .data([1])
+            .join('ul')
+            .style('list-style-type', 'none')
+            .style('padding', '0px')
+            .selectAll<HTMLLIElement, string>('li')
+            .data(this.labelScale.domain())
+            .join('li')
+            .selectAll('span')
+            .data(d => [d])
+            .join('span')
+            .style('height', '15px')
+            .style('width', '15px')
+            .style('border-radius', '50%')
+            .style('display', 'inline-block')
+            .style('background-color', d => this.labelScale(d))
+            .on('click', (_, name) =>
+                document.getElementById(`picker-${name}`)?.click()
+            )
+            .append('span')
+            .style('margin-left', '20px')
+            .text(d => d)
+            .append('input')
+            .attr('id', 'picker')
+            .attr('type', 'color')
+            .style('position', 'absolute')
+            .attr('id', name => `picker-${name}`)
+            .style('height', 0)
+            .style('opacity', '0')
+            .style('width', 0)
+            .on('input', (a, b) => {
+                const idx = this.labelScale.domain().findIndex(i => i === b);
+                this.labelScale.range(
+                    this.labelScale
+                        .range()
+                        .map((o, i) => (i === idx ? a.target.value : o))
+                );
+                this.render();
+            });
+    };
+
     toggleStroke = () => {
         this.svg
             .selectAll('polygon')
             .attr('stroke', () => (!!this.strokeVisible ? 'none' : 'black'));
 
         this.svg
-            .selectAll('circle')
+            .selectAll('circle.node')
             .attr('stroke', () => (!!this.strokeVisible ? 'none' : 'black'));
 
         this.svg
-            .selectAll('path')
+            .selectAll('path.pie')
             .attr('stroke', () => (!!this.strokeVisible ? 'none' : 'black'));
 
         this.strokeVisible = !this.strokeVisible;
@@ -531,14 +583,18 @@ class RadialTree {
     };
 
     /**
-     * setMinSize Prune the tree by setting a minimum value for each node and rerender the tree
+     * setMinCount Prune the tree by setting a minimum value for each node and rerender the tree
+     * Visits nodes in pre-order traversal, meaning that we start with the root and if a node has a child that is less
+     * that the target value, ALL children get snipped, so each node's value is the value of its least child
      * @param minSize Minimum value for node (and therefore all children) in order to remain in the graphic
      */
-    setMinSize = (minSize: number) => {
+    setMinCount = (minSize: number) => {
         const newTree = this.rootPositionedTree.copy().eachBefore(d => {
             if (d.value! < minSize) {
-                d.data.parent!.children = null;
-                d.parent!.children = undefined;
+                if (d.data.parent && d.parent) {
+                    d.data.parent.children = null;
+                    d.parent.children = undefined;
+                }
             }
         });
         this.positionedTree = buildTree(newTree);
@@ -546,24 +602,39 @@ class RadialTree {
     };
 
     /**
-     * setMaxMAD Prune the tree by setting a certain median absolute deviations (MADs) away from the median as a cutoff
-     * @param madCount number of MADs from the median
-     * smart cutoff --> median of anything -->
      * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L260
+     * @returns 1 MAD for the count of items per node in the tree
      */
-    setMaxMAD = (madCount: number) => {
-        const values = this.rootPositionedTree.descendants().map(v => v.value!);
+    getCountMad = () =>
+        getMAD(this.rootPositionedTree.descendants().map(v => v.value!));
 
-        const mad = getMAD(values);
+    /**
+     * @returns median value of items in tree
+     */
+    getCountMedian = () =>
+        quantile(
+            this.rootPositionedTree.descendants().map(v => v.value!),
+            0.5
+        );
 
-        this.setMinSize(quantile(values, 0.5)! + mad! * madCount);
-    };
+    /**
+     * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L260
+     * @returns 1 MAD for the count of items per node in the tree
+     */
+    getDistanceMad = () =>
+        getMAD(
+            this.rootPositionedTree
+                .descendants()
+                .map(v => v.data.distance!)
+                .filter(Boolean)
+        );
 
     /**
      * Cut a dendrogram based off of the distance, keeping up to and including the
      * children of the stopping vertex. Stop is distance is less than the input
      * distance. -- don't keep the grandchildren. -- it shows the distance between the children,
-     * but we don't need
+     * problem here is that we're not stopping once we get up the tree
+     * we need to start with each child, then go up and stop
      * @param distance minimum distance
      * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L137
      */
@@ -579,6 +650,62 @@ class RadialTree {
         this.render();
     };
 
+    /* 
+        this is kind of clever and maybe good for using later, but there's an obvious problem: 
+            it you trim at the first one that doesn't match, you'll immediate stop on large numbers
+                b/c every leaf will get cut right awa (if it's like 1.5 or something)
+            whereas if we just filter out all the nodes that have less than that distance, we can easily reach the
+                the root if there is a path wherein the distance is above until the very end
+            try running his version and see.        
+    
+    */
+    setMinDistance2 = (distance: number) => {
+        const recurse = (node: HierarchyPointNode<TMCNode>) => {
+            if (
+                node.parent &&
+                (!node.parent?.data.distance ||
+                    node.parent.data.distance < distance)
+            ) {
+                node.parent.children = undefined;
+                return node.parent;
+            } else if (node.parent) {
+                recurse(node.parent!);
+            } else if (!node.parent) {
+                return node;
+            }
+        };
+
+        const newNodes = this.rootPositionedTree
+            .copy()
+            .leaves()
+            .filter(Boolean)
+            .map(recurse)
+            .flatMap(l => l?.ancestors())
+            .filter(
+                (v, i, arr) =>
+                    arr.findIndex(inn => inn?.data.id === v?.data.id) === i
+            )
+            .filter(Boolean)
+            .map(d => d!.data);
+
+        if (newNodes.length) {
+            const newTree = stratify<TMCNode>().parentId(d => d.parent?.id)(
+                newNodes
+            );
+
+            const sorted = sortChildren(newTree);
+
+            this.positionedTree = buildTree(sorted).each(
+                //it's read only but we're going to set it anyway!
+                //@ts-ignore
+                n => (n.value = this.valueMap[n.id])
+            );
+
+            this.render();
+        }
+    };
+
+    /* todo: why is add label scale not triggering rerender? why do nodes rerender every time? */
     renderLinks = (
         selection: Selection<SVGGElement, unknown, any, unknown>
     ) => {
@@ -586,7 +713,9 @@ class RadialTree {
             .selectAll<BaseType, HierarchyPointLink<TMCNode>>('linearGradient')
             .data(
                 this.positionedTree.links(),
-                (d: HierarchyPointLink<TMCNode>) => makeLinkId(d)
+                // (d: HierarchyPointLink<TMCNode>) =>
+                //     `${makeLinkId(d)}-${this.labelScale.range().join(' ')}`
+                (d: HierarchyPointLink<TMCNode>) => Math.random()
             )
             .join('linearGradient')
             .attr('gradientUnits', 'userSpaceOnUse')
@@ -599,12 +728,16 @@ class RadialTree {
         gradients
             .append('stop')
             .attr('offset', '40%')
-            .attr('stop-color', d => getBlendedColor(d.source.data.labelCount));
+            .attr('stop-color', d =>
+                getBlendedColor(d.source.data.labelCount, this.labelScale)
+            );
 
         gradients
             .append('stop')
             .attr('offset', '85%')
-            .attr('stop-color', d => getBlendedColor(d.target.data.labelCount));
+            .attr('stop-color', d =>
+                getBlendedColor(d.target.data.labelCount, this.labelScale)
+            );
 
         return selection
             .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
@@ -630,8 +763,8 @@ class RadialTree {
                         )
                         .call(this.branchDragBehavior)
                         .transition()
-                        .delay(500)
-                        .duration(250)
+                        .delay(this.transitionTime * 2)
+                        .duration(this.transitionTime)
                         .attr('points', d => {
                             return drawScaledTrapezoid(
                                 pointRadial(d.source.x, d.source.y),
@@ -645,8 +778,8 @@ class RadialTree {
                 update =>
                     update
                         .transition()
-                        .delay(250)
-                        .duration(250)
+                        .delay(this.transitionTime)
+                        .duration(this.transitionTime)
                         .attr('points', d =>
                             drawScaledTrapezoid(
                                 pointRadial(d.source.x, d.source.y),
@@ -658,7 +791,7 @@ class RadialTree {
                 exit =>
                     exit
                         .transition()
-                        .duration(250)
+                        .duration(this.transitionTime)
                         .attr('points', d =>
                             drawScaledTrapezoid(
                                 pointRadial(d.source.x, d.source.y),
@@ -719,8 +852,8 @@ class RadialTree {
                             selectAll('.tooltip').style('visibility', 'hidden')
                         )
                         .transition()
-                        .delay(500)
-                        .duration(250)
+                        .delay(this.transitionTime * 2)
+                        .duration(this.transitionTime)
                         .attr('opacity', 1)
                         .each(function (d) {
                             if (!d.children) {
@@ -737,8 +870,8 @@ class RadialTree {
                     const that = this;
                     return update
                         .transition()
-                        .delay(250)
-                        .duration(250)
+                        .delay(this.transitionTime)
+                        .duration(this.transitionTime)
                         .attr(
                             'transform',
                             d => `translate(${pointRadial(d.x, d.y)})`
@@ -768,7 +901,9 @@ class RadialTree {
             .attr('class', 'node')
             .attr('stroke', 'none')
             .attr('fill', d =>
-                d.children ? getBlendedColor(d.data.labelCount) : null
+                d.children
+                    ? getBlendedColor(d.data.labelCount, this.labelScale)
+                    : null
             )
             .attr('r', d => (d.children ? branchSizeScale(d.value || 0) : 0));
 
@@ -796,8 +931,8 @@ class RadialTree {
             .attr('class', 'distance')
             .attr('d', d => (d.children ? arcPath : null))
             .transition()
-            .delay(250)
-            .duration(250)
+            .delay(this.transitionTime)
+            .duration(this.transitionTime)
             .style('visibility', this.distanceVisible ? 'visible' : 'hidden')
             .attr('stroke', 'black')
             .attr('opacity', d => distanceScale(d.data.distance || 0));
@@ -830,6 +965,8 @@ class RadialTree {
             .style('visibility', this.nodeCountsVisible ? 'visible' : 'hidden');
 
         /* pies */
+
+        const that = this;
         this.nodes
             .selectAll('g.pie')
             .data(d => [d])
@@ -839,6 +976,7 @@ class RadialTree {
             .each(function (outer) {
                 select(this)
                     .selectAll('path')
+                    .attr('class', 'pie')
                     .data(
                         getPie(Object.entries(outer.data.labelCount)),
                         () => `${outer.data.nodeId}-${outer.data.children}`
@@ -846,7 +984,7 @@ class RadialTree {
                     .join('path')
                     .attr('stroke', 'none')
                     .transition()
-                    .duration(250)
+                    .duration(that.transitionTime)
                     .attr('d', d =>
                         !outer.children
                             ? arc()({
@@ -857,9 +995,11 @@ class RadialTree {
                             : null
                     )
 
-                    .attr('fill', d => labelScale(d.data[0]));
+                    .attr('fill', d => that.labelScale(d.data[0]));
             })
             .style('visibility', this.piesVisible ? 'visible' : 'hidden');
+
+        this.drawLegend();
     };
 }
 

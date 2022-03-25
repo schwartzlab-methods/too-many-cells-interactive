@@ -3,19 +3,24 @@ import { hierarchy, HierarchyNode } from 'd3-hierarchy';
 import { TMCNodeBase } from './prepareData';
 import { TMCNode } from './Tree';
 
+export const sortChildren = <T extends TMCNodeBase>(node: HierarchyNode<T>) =>
+    node.sort((a, b) => {
+        const aval = a.data.items ? a.data.items.length : 0;
+        const bval = b.data.items ? b.data.items.length : 0;
+        return aval > bval ? -1 : 1;
+    });
+
 /**
  * Prepare data for use by d3's hierarchical layouts
  * @param data a TooManyCells node, converted from nested-list form
  * @returns HiearchyNode w/ data prop containing node properties
  */
 export const hierarchize = (data: TMCNodeBase) =>
-    hierarchy(data)
-        .sort((a, b) => {
-            const aval = a.data.items ? a.data.items.length : 0;
-            const bval = b.data.items ? b.data.items.length : 0;
-            return aval > bval ? -1 : 1;
-        })
-        /* this sets `value` for each node as sum of items in descendants */
+    sortChildren
+        .call(
+            null,
+            hierarchy(data)
+        ) /* this sets `value` for each node as sum of items in descendants */
         .sum(d => (d.items ? d.items.length : 0));
 
 export const carToRadius = (x: number, y: number) => Math.hypot(x, y);
