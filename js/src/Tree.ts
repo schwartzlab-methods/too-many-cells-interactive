@@ -495,8 +495,8 @@ class RadialTree {
             .on('end', () => deltaBehavior.on('nodeDelta', null));
     }
 
-    drawLegend = () => {
-        const container = select(this.legendSelector)
+    drawLegend = () =>
+        select(this.legendSelector)
             .selectAll('ul')
             .data([1])
             .join('ul')
@@ -510,6 +510,8 @@ class RadialTree {
             .join('span')
             .style('height', '15px')
             .style('width', '15px')
+            .style('margin-bottom', '5px')
+            .style('cursor', 'pointer')
             .style('border-radius', '50%')
             .style('display', 'inline-block')
             .style('background-color', d => this.labelScale(d))
@@ -536,7 +538,6 @@ class RadialTree {
                 );
                 this.render();
             });
-    };
 
     toggleStroke = () => {
         this.svg
@@ -618,7 +619,6 @@ class RadialTree {
         );
 
     /**
-     * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L260
      * @returns 1 MAD for the count of items per node in the tree
      */
     getDistanceMad = () =>
@@ -630,16 +630,31 @@ class RadialTree {
         );
 
     /**
+     * @returns median value of distances in the tree
+     */
+    getDistanceMedian = () =>
+        quantile(
+            this.rootPositionedTree
+                .descendants()
+                .map(v => v.data.distance!)
+                .filter(Boolean),
+            0.5
+        );
+
+    /**
      * Cut a dendrogram based off of the distance, keeping up to and including the
      * children of the stopping vertex. Stop is distance is less than the input
-     * distance. -- don't keep the grandchildren. -- it shows the distance between the children,
+     * distance.
+     *
+     * Ought to proceed from the root: https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
+     *
      * problem here is that we're not stopping once we get up the tree
      * we need to start with each child, then go up and stop
      * @param distance minimum distance
      * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L137
      */
     setMinDistance = (distance: number) => {
-        const newTree = this.rootPositionedTree.copy().eachAfter(d => {
+        const newTree = this.rootPositionedTree.copy().eachBefore(d => {
             if (!d.data.distance || d.data.distance < distance) {
                 //keep the node, even though it's under the threshold, but eliminate the children
                 d.children = undefined;
@@ -651,9 +666,12 @@ class RadialTree {
     };
 
     /* 
+        Searches from the leaves (has a bug -- see hinge nodes)
+        Should correspond to https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L44
+
         this is kind of clever and maybe good for using later, but there's an obvious problem: 
             it you trim at the first one that doesn't match, you'll immediate stop on large numbers
-                b/c every leaf will get cut right awa (if it's like 1.5 or something)
+                b/c every leaf will get cut right away and you'll stop (if it's like 1.5 or something)
             whereas if we just filter out all the nodes that have less than that distance, we can easily reach the
                 the root if there is a path wherein the distance is above until the very end
             try running his version and see.        

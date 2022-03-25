@@ -1,4 +1,4 @@
-import { extent, max } from 'd3-array';
+import { max, min } from 'd3-array';
 import { scaleLinear, ScaleLinear } from 'd3-scale';
 import { select, Selection } from 'd3-selection';
 import { sliderBottom } from 'd3-simple-slider';
@@ -7,7 +7,6 @@ import TreeViz from './Tree';
 
 const styleControls = select('body .controls-container .style-controls');
 const pruneControls = select('body .controls-container .prune-controls');
-const colorControls = select('body .controls-container .color-controls');
 
 const legend = styleControls.append('div').attr('class', 'legend');
 
@@ -25,8 +24,10 @@ const makeSlider = (
         //@ts-ignore
         .default(0)
         .ticks(3)
-        .step(1)
-        .on('onchange', (val: number) => onChange(val));
+        .step(scale.domain()[1] > 1 ? 1 : 0.0002)
+        .on('onchange', (val: number) => {
+            onChange(val);
+        });
 
     selection.attr('class', name);
 
@@ -128,8 +129,8 @@ const makePruner = (
         .attr('type', 'radio')
         .attr('name', id)
         .on('click', () => {
-            select('svg.mad').style('display', 'flex');
-            select('svg.raw').style('display', 'none');
+            selection.select('svg.mad').style('display', 'flex');
+            selection.select('svg.raw').style('display', 'none');
         });
     details
         .append('label')
@@ -140,8 +141,8 @@ const makePruner = (
         .attr('checked', 'checked')
         .attr('name', id)
         .on('click', () => {
-            select('svg.raw').style('display', 'flex');
-            select('svg.mad').style('display', 'none');
+            selection.select('svg.raw').style('display', 'flex');
+            selection.select('svg.mad').style('display', 'none');
         });
 
     details
@@ -214,17 +215,22 @@ pruneControls.append('div').call(makePruner, 'Set Size', {
     prune: Tree.setMinCount,
     getDomain: () => [
         0,
-        max(Tree.rootPositionedTree.descendants().map(d => d.value!))! / 2,
+        max(Tree.rootPositionedTree.children!.map(d => d.value!)),
     ],
 });
 
 pruneControls.append('div').call(makePruner, 'Set Distance', {
     getMad: Tree.getDistanceMad,
-    prune: Tree.setMinDistance2,
-    getDomain: () =>
-        extent(
-            Tree.rootPositionedTree.descendants().map(d => d.data.distance!)
-        ),
+    getMedian: Tree.getDistanceMedian,
+    prune: Tree.setMinDistance,
+    getDomain: () => [
+        0,
+        min(
+            Tree.rootPositionedTree.children!.flatMap(d =>
+                d.children!.map(d => d.data.distance!)
+            )
+        )! + 0.05,
+    ],
 });
 
 pruneControls.append('hr');
