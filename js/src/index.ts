@@ -215,7 +215,7 @@ pruneControls.append('div').call(makePruner, 'Set Size', {
     prune: Tree.setMinCount,
     getDomain: () => [
         0,
-        max(Tree.rootPositionedTree.children!.map(d => d.value!)),
+        min(Tree.rootPositionedTree.children!.map(d => d.value!))! + 5,
     ],
 });
 
