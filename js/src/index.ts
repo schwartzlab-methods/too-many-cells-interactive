@@ -167,7 +167,7 @@ const makePruner = (
             'mad',
             scaleLinear([0, 165]).domain([0, 20]),
             (val: number) => {
-                Tree.transitionTime = 0;
+                Tree.transitionTime = 1;
                 fn.prune(fn.getMedian() + fn.getMad() * +val);
                 Tree.transitionTime = 250;
             }
@@ -185,7 +185,7 @@ const makePruner = (
             'raw',
             scaleLinear([0, 165]).domain(fn.getDomain()),
             (val: number) => {
-                Tree.transitionTime = 0;
+                Tree.transitionTime = 1;
                 fn.prune(val);
                 Tree.transitionTime = 250;
             }
@@ -245,8 +245,8 @@ const tour = () => {
 
     setInterval(() => {
         Tree.setMinCount(i);
-        i = i += 15;
-    }, 2000);
+        i = i += 25;
+    }, 1000);
 };
 
 const renderControls = () => {

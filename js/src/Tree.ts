@@ -237,11 +237,15 @@ const showToolTip = (data: TMCNode, e: MouseEvent) => {
             const total = sum(Object.values(data.labelCount));
             const f = format('.1%');
 
-            return `${Object.entries(data.labelCount).reduce(
-                (acc, [k, v]) =>
-                    `${acc}<strong>${k}</strong>: ${v} (${f(v / total)})<br/>`,
-                ''
-            )}<strong>Distance</strong>: ${data.distance}`;
+            return `${Object.entries(data.labelCount)
+                .sort(([_, v1], [__, v2]) => (v1 < v2 ? 1 : -1))
+                .reduce(
+                    (acc, [k, v]) =>
+                        `${acc}<strong>${k}</strong>: ${v} (${f(
+                            v / total
+                        )})<br/>`,
+                    ''
+                )}<hr/><strong>Distance</strong>: ${data.distance}`;
         })
         .style('visibility', 'visible')
         .style('left', `${e.pageX + 15}px`)
@@ -263,7 +267,8 @@ class RadialTree {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
     distanceVisible = false;
-    labelScale = scaleOrdinal(['#66C2A5', '#EF966E']).domain(labels);
+    //labelScale = scaleOrdinal(['#66C2A5', '#EF966E']).domain(labels);
+    labelScale = labelScaleD3;
     legendSelector: string;
     linkContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
     nodeDragBehavior: DragBehavior<
@@ -300,15 +305,15 @@ class RadialTree {
         this.rootPositionedTree = buildTree(nodes);
         this.positionedTree = buildTree(nodes);
 
-        this.linkContainer = this.container
-            .append('g')
-            .attr('class', 'link-container')
-            .attr('fill', 'none');
-
         this.nodeContainer = this.container
             .append('g')
             .attr('class', 'node-container')
             .attr('stroke-opacity', 0.8);
+
+        this.linkContainer = this.container
+            .append('g')
+            .attr('class', 'link-container')
+            .attr('fill', 'none');
 
         const zoomBehavior = zoom<SVGSVGElement, unknown>().on('zoom', e =>
             this.container.attr('transform', e.transform.toString())
