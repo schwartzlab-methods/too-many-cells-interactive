@@ -9,9 +9,11 @@
         "test": "jest"
     },
     "dependencies": {
+        "@types/d3-axis": "^3.0.1",
         "@types/d3-dispatch": "^3.0.1",
         "@types/node": "^17.0.21",
         "d3-array": "^3.1.1",
+        "d3-axis": "^3.0.0",
         "d3-color": "^3.0.1",
         "d3-drag": "^3.0.0",
         "d3-format": "^3.1.0",

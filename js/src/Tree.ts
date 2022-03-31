@@ -1,18 +1,18 @@
 import 'd3-transition'; // must be imported before selection
+import { dispatch } from 'd3-dispatch';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import {
     HierarchyNode,
     HierarchyPointLink,
     HierarchyPointNode,
-    stratify,
     tree,
 } from 'd3-hierarchy';
 import { arc, pie, pointRadial } from 'd3-shape';
-import { scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
-import data, { labelMap, TMCNodeBase } from './prepareData';
+import { ScaleLinear, scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
+import { labelMap } from './prepareData';
 import { extent, quantile, sum } from 'd3-array';
 import { zoom } from 'd3-zoom';
-import { schemeAccent } from 'd3-scale-chromatic';
+import { schemePaired } from 'd3-scale-chromatic';
 import { rgb } from 'd3-color';
 import { format } from 'd3-format';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
@@ -20,47 +20,15 @@ import {
     carToRadius,
     carToTheta,
     getMAD,
-    hierarchize,
-    sortChildren,
+    pruneTreeByMinValue,
     squared,
 } from './Util';
-import { dispatch } from 'd3-dispatch';
+import { TMCNode } from './index';
 
 // for debugging
 (window as any).select = select;
 
 type Point = [number, number];
-
-export interface TMCNode extends TMCNodeBase {
-    labelCount: Record<string, number>;
-    nodeId: number;
-}
-
-const initialData = hierarchize(data) as HierarchyNode<TMCNode>;
-
-const addLabelsAndIds = (node: HierarchyNode<TMCNode>) => {
-    /* aggregate tissue label counts */
-    return node
-        .copy()
-        .eachAfter(n => {
-            n.data.labelCount = n
-                .descendants()
-                .reduce<Record<string, number>>((acc, curr) => {
-                    if (curr.data.items) {
-                        curr.data.items.forEach(item => {
-                            acc[labelMap[item._barcode.unCell]] =
-                                (acc[labelMap[item._barcode.unCell]] || 0) + 1;
-                        });
-                    }
-                    return acc;
-                }, {});
-        })
-        .eachBefore((n, i) => {
-            n.data.nodeId = i;
-        });
-};
-
-const nodes = addLabelsAndIds(initialData);
 
 /**
  *
@@ -191,20 +159,9 @@ const arcPath = arc()({
 const getPie = (data: [string, number][]) =>
     pie<[string, number]>().value(d => d[1])(data);
 
-const branchSizeScale = scaleLinear([0.1, 22]).domain(
-    extent(nodes.descendants().map(d => d.value!)) as [number, number]
-);
-
-const distanceScale = scaleLinear([0, 1]).domain(
-    extent(nodes.descendants().map(d => +(d.data.distance || 0))) as [
-        number,
-        number
-    ]
-);
-
 const labels = Array.from(new Set(Object.values(labelMap))).filter(Boolean);
 
-const labelScaleD3 = scaleOrdinal(schemeAccent).domain(labels);
+const labelScaleD3 = scaleOrdinal(schemePaired).domain(labels);
 
 const getBlendArgs = (
     labelCounts: Record<string, number>,
@@ -265,12 +222,16 @@ const deltaBehavior = dispatch('nodeDelta', 'linkDelta');
 
 class RadialTree {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
+    branchSizeScale: ScaleLinear<number, number>;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
+    distanceScale: ScaleLinear<number, number>;
     distanceVisible = false;
+    h = 1000;
     //labelScale = scaleOrdinal(['#66C2A5', '#EF966E']).domain(labels);
     labelScale = labelScaleD3;
     legendSelector: string;
     linkContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
+    links?: Selection<SVGGElement, HierarchyPointLink<TMCNode>, any, any>;
     nodeDragBehavior: DragBehavior<
         SVGGElement,
         HierarchyPointNode<TMCNode>,
@@ -287,23 +248,37 @@ class RadialTree {
     strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
     transitionTime = 250;
-    valueMap: Record<string, number>;
-
-    constructor(selector: string, legendSelector: string) {
+    w = 1000;
+    constructor(
+        selector: string,
+        legendSelector: string,
+        tree: HierarchyNode<TMCNode>
+    ) {
         this.selector = selector;
         this.legendSelector = legendSelector;
 
         this.svg = select(this.selector)
             .append('svg')
-            .attr('viewBox', [-500, -500, 1000, 1000]);
+            .attr('viewBox', [-this.w / 2, -this.h / 2, this.w, this.h]);
 
         this.container = this.svg
             .append('g')
             .attr('class', 'container')
             .attr('stroke-width', '1px');
 
-        this.rootPositionedTree = buildTree(nodes);
-        this.positionedTree = buildTree(nodes);
+        this.rootPositionedTree = buildTree(tree);
+        this.positionedTree = buildTree(tree);
+
+        this.branchSizeScale = scaleLinear([0.1, 22]).domain(
+            extent(tree.descendants().map(d => d.value!)) as [number, number]
+        );
+
+        this.distanceScale = scaleLinear([0, 1]).domain(
+            extent(tree.descendants().map(d => +(d.data.distance || 0))) as [
+                number,
+                number
+            ]
+        );
 
         this.nodeContainer = this.container
             .append('g')
@@ -318,14 +293,6 @@ class RadialTree {
         const zoomBehavior = zoom<SVGSVGElement, unknown>().on('zoom', e =>
             this.container.attr('transform', e.transform.toString())
         );
-
-        this.valueMap = {};
-
-        const descendants = this.rootPositionedTree.descendants();
-
-        for (let i = 0; i < this.rootPositionedTree.descendants().length; i++) {
-            this.valueMap[descendants[i].data.id] = descendants[i].value!;
-        }
 
         zoomBehavior(this.svg);
 
@@ -410,8 +377,8 @@ class RadialTree {
                                     drawScaledTrapezoid(
                                         pointRadial(d.source.x, d.source.y),
                                         pointRadial(d.target.x, d.target.y),
-                                        branchSizeScale(d.source.value!),
-                                        branchSizeScale(d.target.value!)
+                                        that.branchSizeScale(d.source.value!),
+                                        that.branchSizeScale(d.target.value!)
                                     ).toString()
                             );
                         }
@@ -420,14 +387,13 @@ class RadialTree {
             )
             .on(
                 'drag',
-                function (
+                (
                     event: D3DragEvent<
                         SVGGElement,
                         HierarchyPointNode<TMCNode>,
                         any
-                    >,
-                    datum: HierarchyPointNode<TMCNode>
-                ) {
+                    >
+                ) => {
                     const { dx, dy } = event;
                     deltaBehavior.apply('linkDelta', undefined, [dx, dy]);
                 }
@@ -435,38 +401,24 @@ class RadialTree {
             .on('end', () => deltaBehavior.on('linkDelta', null));
 
         this.nodeDragBehavior = drag<SVGGElement, any>()
-            .on(
-                'start',
-                function (
-                    event: D3DragEvent<
-                        SVGGElement,
-                        HierarchyPointNode<TMCNode>,
-                        any
-                    >,
-                    datum: HierarchyPointNode<TMCNode>
-                ) {
-                    const parentLink = that.linkContainer
-                        .selectAll<
-                            SVGPolygonElement,
-                            HierarchyPointLink<TMCNode>
-                        >('polygon')
-                        .filter(g => g.target.data.id === datum.data.id);
+            .on('start', (_, datum: HierarchyPointNode<TMCNode>) => {
+                const parentLink = that.linkContainer
+                    .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
+                        'polygon'
+                    )
+                    .filter(g => g.target.data.id === datum.data.id);
 
-                    deltaBehavior.on(
-                        'nodeDelta',
-                        function (x: number, y: number) {
-                            parentLink.attr('points', d =>
-                                drawScaledTrapezoid(
-                                    pointRadial(d.source.x, d.source.y),
-                                    [x, y],
-                                    branchSizeScale(d.source.value!),
-                                    branchSizeScale(d.target.value!)
-                                ).toString()
-                            );
-                        }
-                    );
-                }
-            )
+                deltaBehavior.on('nodeDelta', (x: number, y: number) =>
+                    parentLink.attr('points', d =>
+                        drawScaledTrapezoid(
+                            pointRadial(d.source.x, d.source.y),
+                            [x, y],
+                            that.branchSizeScale(d.source.value!),
+                            that.branchSizeScale(d.target.value!)
+                        ).toString()
+                    )
+                );
+            })
             .on(
                 'drag',
                 function (
@@ -499,6 +451,33 @@ class RadialTree {
             )
             .on('end', () => deltaBehavior.on('nodeDelta', null));
     }
+
+    drawNodeCounter = () => {
+        this.svg
+            .selectAll<SVGGElement, Record<string, number>>('g.node-counter')
+            .data(
+                [
+                    {
+                        nodes: this.positionedTree.descendants().length,
+                        leaves: this.positionedTree.leaves().length,
+                    },
+                ],
+                Math.random
+            )
+            .join('g')
+            .attr('class', 'node-counter')
+            .attr(
+                'transform',
+                `translate(${this.w / 2 - 150},${-this.h / 2 + 10})`
+            )
+            .append('text')
+            .append('tspan')
+            .text(d => `Node count: ${d.nodes}`)
+            .append('tspan')
+            .attr('dy', 15)
+            .attr('x', 0)
+            .text(d => `Leaf count: ${d.leaves}`);
+    };
 
     drawLegend = () =>
         select(this.legendSelector)
@@ -595,14 +574,7 @@ class RadialTree {
      * @param minSize Minimum value for node (and therefore all children) in order to remain in the graphic
      */
     setMinCount = (minSize: number) => {
-        const newTree = this.rootPositionedTree.copy().eachBefore(d => {
-            if (d.value! < minSize) {
-                if (d.data.parent && d.parent) {
-                    d.data.parent.children = null;
-                    d.parent.children = undefined;
-                }
-            }
-        });
+        const newTree = pruneTreeByMinValue(this.rootPositionedTree, minSize);
         this.positionedTree = buildTree(newTree);
         this.render();
     };
@@ -649,12 +621,8 @@ class RadialTree {
     /**
      * Cut a dendrogram based off of the distance, keeping up to and including the
      * children of the stopping vertex. Stop is distance is less than the input
-     * distance.
+     * distance. Start from root: https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
      *
-     * Ought to proceed from the root: https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
-     *
-     * problem here is that we're not stopping once we get up the tree
-     * we need to start with each child, then go up and stop
      * @param distance minimum distance
      * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L137
      */
@@ -670,67 +638,14 @@ class RadialTree {
         this.render();
     };
 
-    /* 
-        Searches from the leaves (has a bug -- see hinge nodes)
-        Should correspond to https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L44
-
-        this is kind of clever and maybe good for using later, but there's an obvious problem: 
-            it you trim at the first one that doesn't match, you'll immediate stop on large numbers
-                b/c every leaf will get cut right away and you'll stop (if it's like 1.5 or something)
-            whereas if we just filter out all the nodes that have less than that distance, we can easily reach the
-                the root if there is a path wherein the distance is above until the very end
-            try running his version and see.        
-    
-    */
-    setMinDistance2 = (distance: number) => {
-        const recurse = (node: HierarchyPointNode<TMCNode>) => {
-            if (
-                node.parent &&
-                (!node.parent?.data.distance ||
-                    node.parent.data.distance < distance)
-            ) {
-                node.parent.children = undefined;
-                return node.parent;
-            } else if (node.parent) {
-                recurse(node.parent!);
-            } else if (!node.parent) {
-                return node;
-            }
-        };
-
-        const newNodes = this.rootPositionedTree
-            .copy()
-            .leaves()
-            .filter(Boolean)
-            .map(recurse)
-            .flatMap(l => l?.ancestors())
-            .filter(
-                (v, i, arr) =>
-                    arr.findIndex(inn => inn?.data.id === v?.data.id) === i
-            )
-            .filter(Boolean)
-            .map(d => d!.data);
-
-        if (newNodes.length) {
-            const newTree = stratify<TMCNode>().parentId(d => d.parent?.id)(
-                newNodes
-            );
-
-            const sorted = sortChildren(newTree);
-
-            this.positionedTree = buildTree(sorted).each(
-                //it's read only but we're going to set it anyway!
-                //@ts-ignore
-                n => (n.value = this.valueMap[n.id])
-            );
-
-            this.render();
-        }
-    };
-
     /* todo: why is add label scale not triggering rerender? why do nodes rerender every time? */
     renderLinks = (
-        selection: Selection<SVGGElement, unknown, any, unknown>
+        selection: Selection<
+            SVGGElement,
+            HierarchyPointLink<TMCNode>,
+            any,
+            unknown
+        >
     ) => {
         const gradients = this.container
             .selectAll<BaseType, HierarchyPointLink<TMCNode>>('linearGradient')
@@ -764,16 +679,17 @@ class RadialTree {
 
         return selection
             .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
-                'polygon'
+                'polygon.link'
             )
             .data(
-                this.positionedTree.links(),
-                (d: HierarchyPointLink<TMCNode>) => makeLinkId(d)
+                d => [d],
+                d => makeLinkId(d)
             )
             .join(
                 enter => {
                     return enter
                         .append('polygon')
+                        .attr('class', 'link')
                         .attr('points', d =>
                             drawScaledTrapezoid(
                                 pointRadial(d.source.x, d.source.y),
@@ -792,8 +708,8 @@ class RadialTree {
                             return drawScaledTrapezoid(
                                 pointRadial(d.source.x, d.source.y),
                                 pointRadial(d.target.x, d.target.y),
-                                branchSizeScale(d.source.value!),
-                                branchSizeScale(d.target.value!)
+                                this.branchSizeScale(d.source.value!),
+                                this.branchSizeScale(d.target.value!)
                             ).toString();
                         });
                 },
@@ -807,8 +723,8 @@ class RadialTree {
                             drawScaledTrapezoid(
                                 pointRadial(d.source.x, d.source.y),
                                 pointRadial(d.target.x, d.target.y),
-                                branchSizeScale(d.source.value!),
-                                branchSizeScale(d.target.value!)
+                                this.branchSizeScale(d.source.value!),
+                                this.branchSizeScale(d.target.value!)
                             ).toString()
                         ),
                 exit =>
@@ -851,10 +767,7 @@ class RadialTree {
 
         this.nodes = this.nodeContainer
             .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>('g.node')
-            .data(
-                this.positionedTree.descendants(),
-                (d: HierarchyPointNode<TMCNode>) => d.data.nodeId
-            )
+            .data(this.positionedTree.descendants(), d => d.data.nodeId)
             .join(
                 enter => {
                     const that = this;
@@ -913,6 +826,25 @@ class RadialTree {
                 exit => exit.remove()
             );
 
+        this.links = this.linkContainer
+            .selectAll<SVGGElement, HierarchyPointLink<TMCNode>>('g.link')
+            .data(this.positionedTree.links(), d => makeLinkId(d))
+            .join('g')
+            .attr('class', 'link');
+
+        this.links
+            .call(this.renderLinks)
+            .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
+                'polygon'
+            )
+            .on('mouseover', (e: MouseEvent, d: HierarchyPointLink<TMCNode>) =>
+                showToolTip(d.target.data, e)
+            )
+            .on('mouseout', () =>
+                selectAll('.tooltip').style('visibility', 'hidden')
+            )
+            .attr('stroke', 'none');
+
         /* append nodes */
         this.nodes
             .selectAll<SVGPathElement, HierarchyPointNode<TMCNode>>(
@@ -928,37 +860,9 @@ class RadialTree {
                     ? getBlendedColor(d.data.labelCount, this.labelScale)
                     : null
             )
-            .attr('r', d => (d.children ? branchSizeScale(d.value || 0) : 0));
-
-        this.linkContainer
-            .attr('class', 'links')
-            .call(this.renderLinks)
-            .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
-                'polygon'
-            )
-            .on('mouseover', (e: MouseEvent, d: HierarchyPointLink<TMCNode>) =>
-                showToolTip(d.target.data, e)
-            )
-            .on('mouseout', () =>
-                selectAll('.tooltip').style('visibility', 'hidden')
-            )
-            .attr('stroke', 'none');
-
-        /* Append distance arcs  */
-        this.nodes
-            .selectAll<SVGPathElement, HierarchyPointNode<TMCNode>>(
-                'path.distance'
-            )
-            .data(d => [d])
-            .join('path')
-            .attr('class', 'distance')
-            .attr('d', d => (d.children ? arcPath : null))
-            .transition()
-            .delay(this.transitionTime)
-            .duration(this.transitionTime)
-            .style('visibility', this.distanceVisible ? 'visible' : 'hidden')
-            .attr('stroke', 'black')
-            .attr('opacity', d => distanceScale(d.data.distance || 0));
+            .attr('r', d =>
+                d.children ? this.branchSizeScale(d.value || 0) : 0
+            );
 
         /* append node ids */
         this.nodes
@@ -1022,7 +926,34 @@ class RadialTree {
             })
             .style('visibility', this.piesVisible ? 'visible' : 'hidden');
 
+        /* Append distance arcs --> have to go on top of everything */
+        this.container
+            .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>(
+                'path.distance'
+            )
+            .data(this.positionedTree.descendants(), d => d.data.nodeId)
+            .join('path')
+            .on('mouseover', (e: MouseEvent, d: HierarchyNode<TMCNode>) =>
+                showToolTip(d.data, e)
+            )
+            .on('mouseout', () =>
+                selectAll('.tooltip').style('visibility', 'hidden')
+            )
+            .attr('class', 'distance')
+            .style('visibility', this.distanceVisible ? 'visible' : 'hidden')
+            .attr(
+                'transform',
+                d => `translate(${pointRadial(d.x, d.y).toString()})`
+            )
+            .attr('d', d => (d.children ? arcPath : null))
+            .transition()
+            .delay(this.transitionTime)
+            .duration(this.transitionTime)
+            .attr('stroke', 'black')
+            .attr('opacity', d => this.distanceScale(d.data.distance || 0));
+
         this.drawLegend();
+        this.drawNodeCounter();
     };
 }
 

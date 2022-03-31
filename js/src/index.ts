@@ -1,16 +1,170 @@
-import { max, min } from 'd3-array';
+import { cumsum, min, quantile, quantileSorted, range, ticks } from 'd3-array';
+import { HierarchyNode } from 'd3-hierarchy';
 import { scaleLinear, ScaleLinear } from 'd3-scale';
 import { select, Selection } from 'd3-selection';
 import { sliderBottom } from 'd3-simple-slider';
 import './style.scss';
+import data, { TMCNodeBase, labelMap } from './prepareData';
+import { getMAD, hierarchize } from './Util';
 import TreeViz from './Tree';
+import Histogram from './Histogram';
+
+export interface TMCNode extends TMCNodeBase {
+    labelCount: Record<string, number>;
+    nodeId: number;
+}
+
+const initialData = hierarchize(data) as HierarchyNode<TMCNode>;
+
+/**
+ * Find the minimum size-cutoff value needed to display at least one generation of the tree
+ * This ends up being the smallest child of the root
+ */
+const getMaxCutoffNodeSize = (tree: HierarchyNode<TMCNode>) => {
+    if (tree.children) {
+        return min(tree.children.map(d => d.value || 0));
+    } else return 0;
+};
+
+/**
+ * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
+ */
+const getSizeGroups = (tree: HierarchyNode<TMCNode>, binCount = 50) => {
+    const maxSize = getMaxCutoffNodeSize(tree)!;
+
+    // map and put in ascending order
+    const values = tree
+        .descendants()
+        .map(d => d.value!)
+        .sort((a, b) => (a < b ? -1 : 1));
+
+    // calculate bounds
+    const bounds = ticks(0, maxSize, binCount);
+
+    //initialize bin map
+    const levels: Record<number, number> = {};
+
+    let j = 1;
+    for (let i = 0; i < values.length; i++) {
+        while (values[i] >= bounds[j + 1]) {
+            j++;
+        }
+        levels[bounds[j]] = (levels[bounds[j]] || 0) + 1;
+    }
+
+    // cumsum in reverse so that smallest range has largest count, then reverse again and map back to levels,
+    // shift index to the right so that counts are associate with their upper bound
+    cumsum(Object.values(levels).reverse())
+        .reverse()
+        .forEach((v, i) => (levels[bounds[i + 1]] = v));
+
+    return levels;
+};
+
+/**
+ * @returns object keyed by integer `n` whose value is count of nodes with `value` >= median + (n * MAD) in tree
+ */
+const getMadGroups = (tree: HierarchyNode<TMCNode>) => {
+    const maxSize = getMaxCutoffNodeSize(tree)!;
+
+    const values = tree
+        .descendants()
+        .map(d => d.value!)
+        .sort((a, b) => (a < b ? -1 : 1));
+
+    const mad = getMAD(values)!;
+    const median = quantileSorted(values, 0.5)!;
+
+    const maxMads = maxSize - median / mad;
+
+    const bounds = range(0, maxMads).map(m => ({
+        size: median + m * mad,
+        mads: m,
+    }));
+
+    //initialize bin map
+    const levels: Record<number, number> = {};
+
+    let j = 0;
+    for (let i = 0; i < values.length; i++) {
+        //filter out values that are less that the median from the start
+        if (values[i] < bounds[j].size) continue;
+        while (values[i] >= bounds[j + 1].size) {
+            j++;
+        }
+        levels[bounds[j].mads] = (levels[bounds[j].mads] || 0) + 1;
+    }
+
+    // cumsum in reverse so that smallest range has largest count, then reverse again and map back to levels,
+    cumsum(Object.values(levels).reverse())
+        .reverse()
+        .forEach((v, i) => (levels[bounds[i].mads] = v));
+
+    return levels;
+};
+
+const madGroups = getMadGroups(initialData);
+
+const sizeGroups = getSizeGroups(initialData, 10);
+
+select('.color-controls')
+    .append('div')
+    .attr('class', 'raw-count')
+    .style('width', '500px')
+    .style('height', '250px');
+
+const CountHist = new Histogram(
+    sizeGroups,
+    '.raw-count',
+    'Node counts by bin upper threshold'
+);
+
+CountHist.render();
+
+select('.color-controls')
+    .append('div')
+    .attr('class', 'mad-count')
+    .style('width', '500px')
+    .style('height', '250px');
+
+const MadHist = new Histogram(
+    madGroups,
+    '.mad-count',
+    'Node counts by MAD distance'
+);
+
+MadHist.render();
+
+const addLabelsAndIds = (node: HierarchyNode<TMCNode>) => {
+    /* aggregate tissue label counts */
+    return node
+        .copy()
+        .eachAfter(n => {
+            n.data.labelCount = n
+                .descendants()
+                .reduce<Record<string, number>>((acc, curr) => {
+                    if (curr.data.items) {
+                        curr.data.items.forEach(item => {
+                            acc[labelMap[item._barcode.unCell]] =
+                                (acc[labelMap[item._barcode.unCell]] || 0) + 1;
+                        });
+                    }
+                    return acc;
+                }, {});
+        })
+        .eachBefore((n, i) => {
+            n.data.nodeId = i;
+        });
+};
+
+const tree = addLabelsAndIds(initialData);
 
 const styleControls = select('body .controls-container .style-controls');
 const pruneControls = select('body .controls-container .prune-controls');
 
 const legend = styleControls.append('div').attr('class', 'legend');
 
-const Tree = new TreeViz('.viz-container', '.legend');
+const Tree = new TreeViz('.viz-container', '.legend', tree);
 
 const makeSlider = (
     selection: Selection<SVGGElement, any, any, any>,
@@ -25,9 +179,7 @@ const makeSlider = (
         .default(0)
         .ticks(3)
         .step(scale.domain()[1] > 1 ? 1 : 0.0002)
-        .on('onchange', (val: number) => {
-            onChange(val);
-        });
+        .on('onchange', (val: number) => onChange(val));
 
     selection.attr('class', name);
 

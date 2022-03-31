@@ -1,7 +1,7 @@
 import { quantile } from 'd3-array';
 import { hierarchy, HierarchyNode } from 'd3-hierarchy';
 import { TMCNodeBase } from './prepareData';
-import { TMCNode } from './Tree';
+import { TMCNode } from './index';
 
 export const sortChildren = <T extends TMCNodeBase>(node: HierarchyNode<T>) =>
     node.sort((a, b) => {
@@ -20,7 +20,7 @@ export const hierarchize = (data: TMCNodeBase) =>
         .call(
             null,
             hierarchy(data)
-        ) /* this sets `value` for each node as sum of items in descendants */
+        ) /* set {@code value} for each node as sum of {@code item}s in descendants */
         .sum(d => (d.items ? d.items.length : 0));
 
 export const carToRadius = (x: number, y: number) => Math.hypot(x, y);
@@ -56,4 +56,34 @@ export const getMAD = (values: number[]) => {
     const distances = values.map(v => Math.abs(v - median));
 
     return quantile(distances, 0.5);
+};
+
+/**
+ * @param minSize Minimum value for node (and therefore all children) in order to remain in the graphic
+ */
+export const getSizePrunedRemainder = (
+    tree: HierarchyNode<TMCNode>,
+    minSize: number
+) => {
+    const pruned = pruneTreeByMinValue(tree, minSize);
+    return pruned.descendants().length;
+};
+
+/**
+ * @param minSize Minimum value for node (and therefore all children) in order to remain in the graphic
+ * @returns tree pruned of nodes (and siblings) that did not meet {@code minSize}
+ */
+export const pruneTreeByMinValue = (
+    tree: HierarchyNode<TMCNode>,
+    minSize: number
+) => {
+    const newTree = tree.copy().eachBefore(d => {
+        if (d.value! < minSize) {
+            if (d.data.parent && d.parent) {
+                d.data.parent.children = null;
+                d.parent.children = undefined;
+            }
+        }
+    });
+    return newTree;
 };
