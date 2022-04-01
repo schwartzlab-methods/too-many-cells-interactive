@@ -1,11 +1,11 @@
-import { cumsum, min, quantile, quantileSorted, range, ticks } from 'd3-array';
+import { median, min, range, ticks } from 'd3-array';
 import { HierarchyNode } from 'd3-hierarchy';
 import { scaleLinear, ScaleLinear } from 'd3-scale';
 import { select, Selection } from 'd3-selection';
 import { sliderBottom } from 'd3-simple-slider';
 import './style.scss';
 import data, { TMCNodeBase, labelMap } from './prepareData';
-import { getMAD, hierarchize } from './Util';
+import { getMAD, hierarchize, pruneTreeByMinValue } from './Util';
 import TreeViz from './Tree';
 import Histogram from './Histogram';
 
@@ -32,33 +32,15 @@ const getMaxCutoffNodeSize = (tree: HierarchyNode<TMCNode>) => {
 const getSizeGroups = (tree: HierarchyNode<TMCNode>, binCount = 50) => {
     const maxSize = getMaxCutoffNodeSize(tree)!;
 
-    // map and put in ascending order
-    const values = tree
-        .descendants()
-        .map(d => d.value!)
-        .sort((a, b) => (a < b ? -1 : 1));
-
-    // calculate bounds
     const bounds = ticks(0, maxSize, binCount);
 
-    //initialize bin map
-    const levels: Record<number, number> = {};
-
-    let j = 1;
-    for (let i = 0; i < values.length; i++) {
-        while (values[i] >= bounds[j + 1]) {
-            j++;
-        }
-        levels[bounds[j]] = (levels[bounds[j]] || 0) + 1;
-    }
-
-    // cumsum in reverse so that smallest range has largest count, then reverse again and map back to levels,
-    // shift index to the right so that counts are associate with their upper bound
-    cumsum(Object.values(levels).reverse())
-        .reverse()
-        .forEach((v, i) => (levels[bounds[i + 1]] = v));
-
-    return levels;
+    return bounds.reduce(
+        (acc, curr) => ({
+            ...acc,
+            [curr]: pruneTreeByMinValue(tree, curr).descendants().length,
+        }),
+        {}
+    );
 };
 
 /**
@@ -73,48 +55,39 @@ const getMadGroups = (tree: HierarchyNode<TMCNode>) => {
         .sort((a, b) => (a < b ? -1 : 1));
 
     const mad = getMAD(values)!;
-    const median = quantileSorted(values, 0.5)!;
+    const med = median(values)!;
 
-    const maxMads = maxSize - median / mad;
+    const maxMads = Math.ceil((maxSize - med) / mad);
 
     const bounds = range(0, maxMads).map(m => ({
-        size: median + m * mad,
+        size: med + m * mad,
         mads: m,
     }));
 
-    //initialize bin map
-    const levels: Record<number, number> = {};
-
-    let j = 0;
-    for (let i = 0; i < values.length; i++) {
-        //filter out values that are less that the median from the start
-        if (values[i] < bounds[j].size) continue;
-        while (values[i] >= bounds[j + 1].size) {
-            j++;
-        }
-        levels[bounds[j].mads] = (levels[bounds[j].mads] || 0) + 1;
-    }
-
-    // cumsum in reverse so that smallest range has largest count, then reverse again and map back to levels,
-    cumsum(Object.values(levels).reverse())
-        .reverse()
-        .forEach((v, i) => (levels[bounds[i].mads] = v));
-
-    return levels;
+    return bounds.reduce(
+        (acc, curr) => ({
+            ...acc,
+            [curr.mads]: pruneTreeByMinValue(tree, curr.size).descendants()
+                .length,
+        }),
+        {}
+    );
 };
 
 const madGroups = getMadGroups(initialData);
 
-const sizeGroups = getSizeGroups(initialData, 10);
+const sizeGroups = getSizeGroups(initialData, 12);
 
 select('.color-controls')
     .append('div')
     .attr('class', 'raw-count')
-    .style('width', '500px')
-    .style('height', '250px');
+    .style('width', '350px');
 
 const CountHist = new Histogram(
     sizeGroups,
+    val => {
+        requestAnimationFrame(Tree.setMinCount.bind(null, val));
+    },
     '.raw-count',
     'Node counts by bin upper threshold'
 );
@@ -124,11 +97,13 @@ CountHist.render();
 select('.color-controls')
     .append('div')
     .attr('class', 'mad-count')
-    .style('width', '500px')
-    .style('height', '250px');
+    .style('width', '350');
 
 const MadHist = new Histogram(
     madGroups,
+    val => {
+        requestAnimationFrame(Tree.setMinCount.bind(null, val * mad + med));
+    },
     '.mad-count',
     'Node counts by MAD distance'
 );
@@ -404,6 +379,9 @@ const tour = () => {
 const renderControls = () => {
     renderStyleControls();
 };
+
+const mad = Tree.getCountMad()!;
+const med = Tree.getCountMedian()!;
 
 Tree.render();
 

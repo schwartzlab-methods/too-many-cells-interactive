@@ -1,4 +1,4 @@
-import { quantile } from 'd3-array';
+import { median } from 'd3-array';
 import { hierarchy, HierarchyNode } from 'd3-hierarchy';
 import { TMCNodeBase } from './prepareData';
 import { TMCNode } from './index';
@@ -51,11 +51,11 @@ export const getMADNodes = (nodes: HierarchyNode<TMCNode>) => {
  * @returns float
  */
 export const getMAD = (values: number[]) => {
-    const median = quantile(values, 0.5)!;
+    const med = median(values)!;
 
-    const distances = values.map(v => Math.abs(v - median));
+    const distances = values.map(v => Math.abs(v - med));
 
-    return quantile(distances, 0.5);
+    return median(distances);
 };
 
 /**
