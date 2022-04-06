@@ -9,7 +9,6 @@ import {
 } from 'd3-hierarchy';
 import { arc, pie, pointRadial } from 'd3-shape';
 import { ScaleLinear, scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
-import { labelMap } from './prepareData';
 import { extent, max, min, quantile, sum } from 'd3-array';
 import { zoom } from 'd3-zoom';
 import { schemePaired } from 'd3-scale-chromatic';
@@ -17,13 +16,15 @@ import { rgb } from 'd3-color';
 import { format } from 'd3-format';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import {
+    buildTree,
     carToRadius,
     carToTheta,
     getMAD,
     pruneTreeByMinValue,
     squared,
-} from './Util';
-import { TMCNode } from './index';
+} from './../util';
+import { TMCNode } from './../types';
+import { BaseTreeContext } from '../Components/Dashboard/Dashboard';
 
 // for debugging
 (window as any).select = select;
@@ -159,10 +160,6 @@ const arcPath = arc()({
 const getPie = (data: [string, number][]) =>
     pie<[string, number]>().value(d => d[1])(data);
 
-const labels = Array.from(new Set(Object.values(labelMap))).filter(Boolean);
-
-const labelScaleD3 = scaleOrdinal(schemePaired).domain(labels);
-
 const getBlendArgs = (
     labelCounts: Record<string, number>,
     labelScale: ScaleOrdinal<string, string>
@@ -209,18 +206,13 @@ const showToolTip = (data: TMCNode, e: MouseEvent) => {
         .style('top', `${e.pageY - 15}px`);
 };
 
-const buildTree = (nodes: HierarchyNode<TMCNode>) =>
-    tree<TMCNode>()
-        .size([2 * Math.PI, 450])
-        .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
-
 const makeLinkId = (link: HierarchyPointLink<TMCNode>) =>
     `${link.source.data.nodeId}-${link.target.data.nodeId}-${!!link.source
         .children}`;
 
 const deltaBehavior = dispatch('nodeDelta', 'linkDelta');
 
-class RadialTree {
+class RadialTree implements BaseTreeContext {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
     branchSizeScale: ScaleLinear<number, number>;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
@@ -228,7 +220,7 @@ class RadialTree {
     distanceVisible = false;
     h = 1000;
     //labelScale = scaleOrdinal(['#66C2A5', '#EF966E']).domain(labels);
-    labelScale = labelScaleD3;
+    labelScale: ScaleOrdinal<string, string>;
     legendSelector: string;
     linkContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
     links?: Selection<SVGGElement, HierarchyPointLink<TMCNode>, any, any>;
@@ -243,7 +235,7 @@ class RadialTree {
     nodeContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
     piesVisible = true;
     rootPositionedTree: HierarchyPointNode<TMCNode>;
-    positionedTree: HierarchyPointNode<TMCNode>;
+    visibleNodes: HierarchyPointNode<TMCNode>;
     selector: string;
     strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
@@ -266,8 +258,8 @@ class RadialTree {
             .attr('class', 'container')
             .attr('stroke-width', '1px');
 
-        this.rootPositionedTree = buildTree(tree);
-        this.positionedTree = buildTree(tree);
+        this.rootPositionedTree = buildTree(tree, this.w);
+        this.visibleNodes = buildTree(tree, this.w);
 
         this.branchSizeScale = scaleLinear([0.1, 22]).domain(
             extent(tree.descendants().map(d => d.value!)) as [number, number]
@@ -450,6 +442,18 @@ class RadialTree {
                 }
             )
             .on('end', () => deltaBehavior.on('nodeDelta', null));
+
+        //need to grab all the labels off the nodes
+
+        const labels = Array.from(
+            new Set(
+                this.rootPositionedTree
+                    .descendants()
+                    .flatMap(d => d.data.items?.map(d => d._barcode?.unCell))
+            )
+        ).filter(Boolean) as string[];
+
+        this.labelScale = scaleOrdinal(schemePaired).domain(labels);
     }
 
     drawNodeCounter = () => {
@@ -458,13 +462,13 @@ class RadialTree {
             .data(
                 [
                     {
-                        nodes: this.positionedTree.descendants().length,
-                        leaves: this.positionedTree.leaves().length,
+                        nodes: this.visibleNodes.descendants().length,
+                        leaves: this.visibleNodes.leaves().length,
                         minVal: min(
-                            this.positionedTree.descendants().map(d => d.value!)
+                            this.visibleNodes.descendants().map(d => d.value!)
                         ),
                         maxVal: max(
-                            this.positionedTree.descendants().map(d => d.value!)
+                            this.visibleNodes.descendants().map(d => d.value!)
                         ),
                     },
                 ],
@@ -538,19 +542,8 @@ class RadialTree {
             });
 
     toggleStroke = () => {
-        this.svg
-            .selectAll('polygon')
-            .attr('stroke', () => (!!this.strokeVisible ? 'none' : 'black'));
-
-        this.svg
-            .selectAll('circle.node')
-            .attr('stroke', () => (!!this.strokeVisible ? 'none' : 'black'));
-
-        this.svg
-            .selectAll('path.pie')
-            .attr('stroke', () => (!!this.strokeVisible ? 'none' : 'black'));
-
-        this.strokeVisible = !this.strokeVisible;
+        Object.assign(this, { strokeVisible: !this.strokeVisible });
+        this.render();
     };
 
     toggleDistance = () => {
@@ -579,18 +572,6 @@ class RadialTree {
         this.svg
             .selectAll('.pie')
             .style('visibility', this.piesVisible ? 'visible' : 'hidden');
-    };
-
-    /**
-     * setMinCount Prune the tree by setting a minimum value for each node and rerender the tree
-     * Visits nodes in pre-order traversal, meaning that we start with the root and if a node has a child that is less
-     * that the target value, ALL children get snipped, so each node's value is the value of its least child
-     * @param minSize Minimum value for node (and therefore all children) in order to remain in the graphic
-     */
-    setMinCount = (minSize: number) => {
-        const newTree = pruneTreeByMinValue(this.rootPositionedTree, minSize);
-        this.positionedTree = buildTree(newTree);
-        this.render();
     };
 
     /**
@@ -648,7 +629,7 @@ class RadialTree {
             }
         });
 
-        this.positionedTree = buildTree(newTree);
+        this.visibleNodes = buildTree(newTree, this.w);
         this.render();
     };
 
@@ -668,7 +649,7 @@ class RadialTree {
             }
         });
 
-        this.positionedTree = buildTree(newTree);
+        this.visibleNodes = buildTree(newTree, this.w);
         this.render();
     };
 
@@ -684,7 +665,7 @@ class RadialTree {
         const gradients = this.container
             .selectAll<BaseType, HierarchyPointLink<TMCNode>>('linearGradient')
             .data(
-                this.positionedTree.links(),
+                this.visibleNodes.links(),
                 // (d: HierarchyPointLink<TMCNode>) =>
                 //     `${makeLinkId(d)}-${this.labelScale.range().join(' ')}`
                 (d: HierarchyPointLink<TMCNode>) => Math.random()
@@ -777,7 +758,7 @@ class RadialTree {
                         )
                         .remove()
             )
-            .attr('stroke', 'none')
+            .attr('stroke', this.strokeVisible ? 'black' : 'none')
             .attr(
                 'fill',
                 d => `url('#${d.source.data.id}-${d.target.data.id}')`
@@ -786,14 +767,14 @@ class RadialTree {
 
     render = () => {
         const pieScale = scaleLinear([5, 20]).domain(
-            extent(this.positionedTree.leaves().map(d => d.value!)) as [
+            extent(this.visibleNodes.leaves().map(d => d.value!)) as [
                 number,
                 number
             ]
         );
 
         const textSizeScale = scaleLinear([10, 40]).domain(
-            extent(this.positionedTree.leaves().map(d => d.value!)) as [
+            extent(this.visibleNodes.leaves().map(d => d.value!)) as [
                 number,
                 number
             ]
@@ -801,7 +782,7 @@ class RadialTree {
 
         this.nodes = this.nodeContainer
             .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>('g.node')
-            .data(this.positionedTree.descendants(), d => d.data.nodeId)
+            .data(this.visibleNodes.descendants(), d => d.data.nodeId)
             .join(
                 enter => {
                     const that = this;
@@ -867,7 +848,7 @@ class RadialTree {
 
         this.links = this.linkContainer
             .selectAll<SVGGElement, HierarchyPointLink<TMCNode>>('g.link')
-            .data(this.positionedTree.links(), d => makeLinkId(d))
+            .data(this.visibleNodes.links(), d => makeLinkId(d))
             .join('g')
             .attr('class', 'link');
 
@@ -882,7 +863,7 @@ class RadialTree {
             .on('mouseout', () =>
                 selectAll('.tooltip').style('visibility', 'hidden')
             )
-            .attr('stroke', 'none');
+            .attr('stroke', this.strokeVisible ? 'black' : 'none');
 
         /* append nodes */
         this.nodes
@@ -893,7 +874,7 @@ class RadialTree {
             .data((d: HierarchyPointNode<TMCNode>) => [d])
             .join('circle')
             .attr('class', 'node')
-            .attr('stroke', 'none')
+            .attr('stroke', this.strokeVisible ? 'black' : 'none')
             .attr('fill', d =>
                 d.children
                     ? getBlendedColor(d.data.labelCount, this.labelScale)
@@ -970,7 +951,7 @@ class RadialTree {
             .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>(
                 'path.distance'
             )
-            .data(this.positionedTree.descendants(), d => d.data.nodeId)
+            .data(this.visibleNodes.descendants(), d => d.data.nodeId)
             .join('path')
             .on('mouseover', (e: MouseEvent, d: HierarchyNode<TMCNode>) =>
                 showToolTip(d.data, e)

@@ -61,34 +61,6 @@ body {
     }
 }
 
-button {
-    background-color: $white;
-    border: 0.1em solid $primary;
-    border-radius: 0.12em;
-    box-sizing: border-box;
-    color: $grey;
-    display: inline-block;
-    font-weight: 300;
-    margin: $control-margin;
-    padding: 0.35em 1.2em;
-    text-align: center;
-    text-decoration: none;
-    transition: all 0.2s;
-    width: $control-width;
-    &:hover {
-        background-color: $light-grey;
-        cursor: pointer;
-        &:disabled {
-            cursor: auto;
-            background-color: inherit;
-        }
-    }
-    &:disabled {
-        color: $light-grey;
-        cursor: auto;
-    }
-}
-
 input {
     &:focus,
     &:focus-visible {

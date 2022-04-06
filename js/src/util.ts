@@ -1,7 +1,6 @@
 import { median } from 'd3-array';
-import { hierarchy, HierarchyNode } from 'd3-hierarchy';
-import { TMCNodeBase } from './prepareData';
-import { TMCNode } from './index';
+import { hierarchy, HierarchyNode, tree } from 'd3-hierarchy';
+import { TMCNodeBase, TMCNode } from './types';
 
 export const sortChildren = <T extends TMCNodeBase>(node: HierarchyNode<T>) =>
     node.sort((a, b) => {
@@ -87,3 +86,8 @@ export const pruneTreeByMinValue = (
     });
     return newTree;
 };
+
+export const buildTree = (nodes: HierarchyNode<TMCNode>, w: number) =>
+    tree<TMCNode>()
+        .size([2 * Math.PI, (w / 2) * 0.9])
+        .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
