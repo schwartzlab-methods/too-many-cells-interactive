@@ -10,7 +10,7 @@ import {
 import { arc, pie, pointRadial } from 'd3-shape';
 import { ScaleLinear, scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
 import { labelMap } from './prepareData';
-import { extent, quantile, sum } from 'd3-array';
+import { extent, max, min, quantile, sum } from 'd3-array';
 import { zoom } from 'd3-zoom';
 import { schemePaired } from 'd3-scale-chromatic';
 import { rgb } from 'd3-color';
@@ -280,15 +280,15 @@ class RadialTree {
             ]
         );
 
-        this.nodeContainer = this.container
-            .append('g')
-            .attr('class', 'node-container')
-            .attr('stroke-opacity', 0.8);
-
         this.linkContainer = this.container
             .append('g')
             .attr('class', 'link-container')
             .attr('fill', 'none');
+
+        this.nodeContainer = this.container
+            .append('g')
+            .attr('class', 'node-container')
+            .attr('stroke-opacity', 0.8);
 
         const zoomBehavior = zoom<SVGSVGElement, unknown>().on('zoom', e =>
             this.container.attr('transform', e.transform.toString())
@@ -460,6 +460,12 @@ class RadialTree {
                     {
                         nodes: this.positionedTree.descendants().length,
                         leaves: this.positionedTree.leaves().length,
+                        minVal: min(
+                            this.positionedTree.descendants().map(d => d.value!)
+                        ),
+                        maxVal: max(
+                            this.positionedTree.descendants().map(d => d.value!)
+                        ),
                     },
                 ],
                 Math.random
@@ -476,7 +482,15 @@ class RadialTree {
             .append('tspan')
             .attr('dy', 15)
             .attr('x', 0)
-            .text(d => `Leaf count: ${d.leaves}`);
+            .text(d => `Leaf count: ${d.leaves}`)
+            .append('tspan')
+            .attr('dy', 15)
+            .attr('x', 0)
+            .text(d => `Min val: ${d.minVal}`)
+            .append('tspan')
+            .attr('dy', 15)
+            .attr('x', 0)
+            .text(d => `Max val: ${d.maxVal}`);
     };
 
     drawLegend = () =>
@@ -638,6 +652,26 @@ class RadialTree {
         this.render();
     };
 
+    /**todo: fix this doc
+     * Cut a dendrogram based off of the distance, keeping up to and including the
+     * children of the stopping vertex. Stop is distance is less than the input
+     * distance. Start from root: https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
+     *
+     * @param distance minimum distance
+     * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L137
+     */
+    setMinDistanceSearch = (distance: number) => {
+        const newTree = this.rootPositionedTree.copy().eachAfter(d => {
+            if (!d.data.distance || d.data.distance < distance) {
+                //keep the node, even though it's under the threshold, but eliminate the children
+                d.children = undefined;
+            }
+        });
+
+        this.positionedTree = buildTree(newTree);
+        this.render();
+    };
+
     /* todo: why is add label scale not triggering rerender? why do nodes rerender every time? */
     renderLinks = (
         selection: Selection<
@@ -771,36 +805,41 @@ class RadialTree {
             .join(
                 enter => {
                     const that = this;
-                    return enter
-                        .append('g')
-                        .attr('class', 'node')
-                        .attr('opacity', 0)
-                        .attr(
-                            'transform',
-                            d => `translate(${pointRadial(d.x, d.y)})`
-                        )
-                        .on(
-                            'mouseover',
-                            (e: MouseEvent, d: HierarchyNode<TMCNode>) =>
-                                showToolTip(d.data, e)
-                        )
-                        .on('mouseout', () =>
-                            selectAll('.tooltip').style('visibility', 'hidden')
-                        )
-                        .transition()
-                        .delay(this.transitionTime * 2)
-                        .duration(this.transitionTime)
-                        .attr('opacity', 1)
-                        .each(function (d) {
-                            if (!d.children) {
-                                select<
-                                    SVGGElement,
-                                    HierarchyPointNode<TMCNode>
-                                >(this).call(that.nodeDragBehavior);
-                            } else {
-                                select(this).on('mousedown.drag', null);
-                            }
-                        });
+                    return (
+                        enter
+                            .append('g')
+                            .attr('class', 'node')
+                            .attr('opacity', 0)
+                            .attr(
+                                'transform',
+                                d => `translate(${pointRadial(d.x, d.y)})`
+                            )
+                            .on(
+                                'mouseover',
+                                (e: MouseEvent, d: HierarchyNode<TMCNode>) =>
+                                    showToolTip(d.data, e)
+                            )
+                            .on('mouseout', () =>
+                                selectAll('.tooltip').style(
+                                    'visibility',
+                                    'hidden'
+                                )
+                            )
+                            .transition()
+                            //.delay(this.transitionTime * 2)
+                            .duration(this.transitionTime)
+                            .attr('opacity', 1)
+                            .each(function (d) {
+                                if (!d.children) {
+                                    select<
+                                        SVGGElement,
+                                        HierarchyPointNode<TMCNode>
+                                    >(this).call(that.nodeDragBehavior);
+                                } else {
+                                    select(this).on('mousedown.drag', null);
+                                }
+                            })
+                    );
                 },
                 update => {
                     const that = this;

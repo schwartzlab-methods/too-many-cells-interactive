@@ -1,5 +1,5 @@
-//import data from "./data/workshop/cluster_tree.json";
-//import labels from "./data/workshop/labels.csv";
+//import data from './data/workshop/cluster_tree.json';
+//import labels from './data/workshop/labels.csv';
 import data from './data/tabula_muris_all_simple/cluster_tree.json';
 import labels from './data/tabula_muris_all_simple/labels.csv';
 

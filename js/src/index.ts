@@ -7,7 +7,7 @@ import './style.scss';
 import data, { TMCNodeBase, labelMap } from './prepareData';
 import { getMAD, hierarchize, pruneTreeByMinValue } from './Util';
 import TreeViz from './Tree';
-import Histogram from './Histogram';
+import AreaChart from './AreaChart';
 
 export interface TMCNode extends TMCNodeBase {
     labelCount: Record<string, number>;
@@ -83,7 +83,7 @@ select('.color-controls')
     .attr('class', 'raw-count')
     .style('width', '350px');
 
-const CountHist = new Histogram(
+const CountHist = new AreaChart(
     sizeGroups,
     val => {
         requestAnimationFrame(Tree.setMinCount.bind(null, val));
@@ -99,7 +99,7 @@ select('.color-controls')
     .attr('class', 'mad-count')
     .style('width', '350');
 
-const MadHist = new Histogram(
+const MadHist = new AreaChart(
     madGroups,
     val => {
         requestAnimationFrame(Tree.setMinCount.bind(null, val * mad + med));
@@ -293,11 +293,10 @@ const makePruner = (
             makeSlider,
             'mad',
             scaleLinear([0, 165]).domain([0, 20]),
-            (val: number) => {
-                Tree.transitionTime = 1;
-                fn.prune(fn.getMedian() + fn.getMad() * +val);
-                Tree.transitionTime = 250;
-            }
+            (val: number) =>
+                requestAnimationFrame(
+                    fn.prune.bind(null, fn.getMedian() + fn.getMad() * +val)
+                )
         );
 
     details
@@ -311,11 +310,7 @@ const makePruner = (
             makeSlider,
             'raw',
             scaleLinear([0, 165]).domain(fn.getDomain()),
-            (val: number) => {
-                Tree.transitionTime = 1;
-                fn.prune(val);
-                Tree.transitionTime = 250;
-            }
+            (val: number) => requestAnimationFrame(fn.prune.bind(null, val))
         );
 
     const button = details
@@ -350,6 +345,20 @@ pruneControls.append('div').call(makePruner, 'Set Distance', {
     getMad: Tree.getDistanceMad,
     getMedian: Tree.getDistanceMedian,
     prune: Tree.setMinDistance,
+    getDomain: () => [
+        0,
+        min(
+            Tree.rootPositionedTree.children!.flatMap(d =>
+                d.children!.map(d => d.data.distance!)
+            )
+        )! + 0.05,
+    ],
+});
+
+pruneControls.append('div').call(makePruner, 'Set Distance Search', {
+    getMad: Tree.getDistanceMad,
+    getMedian: Tree.getDistanceMedian,
+    prune: Tree.setMinDistanceSearch,
     getDomain: () => [
         0,
         min(
