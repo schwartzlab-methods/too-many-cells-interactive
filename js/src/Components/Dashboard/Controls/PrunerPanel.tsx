@@ -1,12 +1,6 @@
 import { median, min, quantile, range, ticks } from 'd3-array';
 import { HierarchyNode } from 'd3-hierarchy';
-import React, {
-    useCallback,
-    useContext,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { TMCNode } from '../../../types';
 import { buildTree, getMAD, pruneTreeByMinValue } from '../../../util';
@@ -14,8 +8,6 @@ import { TreeContext } from '../Dashboard';
 import Button from '../../Button';
 import AreaChartComponent from '../AreaChartComponent';
 import { max } from 'lodash';
-
-interface PrunerPanelProps {}
 
 type Pruner = 'depth' | 'distance' | 'distanceSearch' | 'size';
 
@@ -26,7 +18,7 @@ const initialPrunerVal: Record<Pruner, number> = {
     size: 0,
 };
 
-const PrunerPanel: React.FC<PrunerPanelProps> = ({}) => {
+const PrunerPanel: React.FC = () => {
     const [prunerVals, setPrunerVals] =
         useState<Record<Pruner, number>>(initialPrunerVal);
 

@@ -1,30 +1,34 @@
 import React, { useContext, useMemo } from 'react';
 import styled from 'styled-components';
 import Button from '../../Button';
+import Checkbox from '../../Checkbox';
 import { BaseTreeContext, TreeContext } from '../Dashboard';
 
 const DisplayButtons: React.FC = () => {
     return (
-        <ButtonList>
-            <ToggleButton label="Stroke" propName="strokeVisible" />
-            <ToggleButton label="Node IDs" propName="nodeIdsVisible" />
-            <ToggleButton label="Node Counts" propName="nodeCountsVisible" />
-            <ToggleButton label="Distance" propName="distanceVisible" />
-            <ToggleButton label="Pies" propName="piesVisible" />
-        </ButtonList>
+        <BoxList>
+            <ToggleCheckbox label="Show Stroke" propName="strokeVisible" />
+            <ToggleCheckbox label="Show Node IDs" propName="nodeIdsVisible" />
+            <ToggleCheckbox
+                label="Show Node Counts"
+                propName="nodeCountsVisible"
+            />
+            <ToggleCheckbox label="Show Distance" propName="distanceVisible" />
+            <ToggleCheckbox label="Show Pies" propName="piesVisible" />
+        </BoxList>
     );
 };
 
 export default DisplayButtons;
 
-interface ToggleButtonProps {
+interface ToggleCheckboxProps {
     propName: keyof BaseTreeContext;
     label: string;
 }
 
-const ToggleButton: React.FC<ToggleButtonProps> = ({ propName, label }) => {
+const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({ propName, label }) => {
     const treeContext = useContext(TreeContext);
-    const active = useMemo(() => !!treeContext[propName], [treeContext]);
+    const checked = useMemo(() => !!treeContext[propName], [treeContext]);
 
     const toggleTreeProp = (prop: keyof BaseTreeContext) =>
         treeContext.setTreeContext!({
@@ -33,13 +37,15 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({ propName, label }) => {
         });
 
     return (
-        <Button active={active} onClick={() => toggleTreeProp(propName)}>
-            {`${active ? 'Hide' : 'Show'} ${label}`}
-        </Button>
+        <Checkbox
+            checked={checked}
+            onClick={() => toggleTreeProp(propName)}
+            label={label}
+        />
     );
 };
 
-const ButtonList = styled.div`
+const BoxList = styled.div`
     display: flex;
     flex-direction: column;
     width: 200px;
