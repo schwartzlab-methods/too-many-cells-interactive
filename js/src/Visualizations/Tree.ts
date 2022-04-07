@@ -15,14 +15,7 @@ import { schemePaired } from 'd3-scale-chromatic';
 import { rgb } from 'd3-color';
 import { format } from 'd3-format';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
-import {
-    buildTree,
-    carToRadius,
-    carToTheta,
-    getMAD,
-    pruneTreeByMinValue,
-    squared,
-} from './../util';
+import { buildTree, carToRadius, carToTheta, getMAD, squared } from './../util';
 import { TMCNode } from './../types';
 import { BaseTreeContext } from '../Components/Dashboard/Dashboard';
 
@@ -478,7 +471,7 @@ class RadialTree implements BaseTreeContext {
             .attr('class', 'node-counter')
             .attr(
                 'transform',
-                `translate(${this.w / 2 - 150},${-this.h / 2 + 10})`
+                `translate(${this.w / 2 - 150},${-this.h / 2 + 15})`
             )
             .append('text')
             .append('tspan')
@@ -572,85 +565,6 @@ class RadialTree implements BaseTreeContext {
         this.svg
             .selectAll('.pie')
             .style('visibility', this.piesVisible ? 'visible' : 'hidden');
-    };
-
-    /**
-     * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L260
-     * @returns 1 MAD for the count of items per node in the tree
-     */
-    getCountMad = () =>
-        getMAD(this.rootPositionedTree.descendants().map(v => v.value!));
-
-    /**
-     * @returns median value of items in tree
-     */
-    getCountMedian = () =>
-        quantile(
-            this.rootPositionedTree.descendants().map(v => v.value!),
-            0.5
-        );
-
-    /**
-     * @returns 1 MAD for the count of items per node in the tree
-     */
-    getDistanceMad = () =>
-        getMAD(
-            this.rootPositionedTree
-                .descendants()
-                .map(v => v.data.distance!)
-                .filter(Boolean)
-        );
-
-    /**
-     * @returns median value of distances in the tree
-     */
-    getDistanceMedian = () =>
-        quantile(
-            this.rootPositionedTree
-                .descendants()
-                .map(v => v.data.distance!)
-                .filter(Boolean),
-            0.5
-        );
-
-    /**
-     * Cut a dendrogram based off of the distance, keeping up to and including the
-     * children of the stopping vertex. Stop is distance is less than the input
-     * distance. Start from root: https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
-     *
-     * @param distance minimum distance
-     * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L137
-     */
-    setMinDistance = (distance: number) => {
-        const newTree = this.rootPositionedTree.copy().eachBefore(d => {
-            if (!d.data.distance || d.data.distance < distance) {
-                //keep the node, even though it's under the threshold, but eliminate the children
-                d.children = undefined;
-            }
-        });
-
-        this.visibleNodes = buildTree(newTree, this.w);
-        this.render();
-    };
-
-    /**todo: fix this doc
-     * Cut a dendrogram based off of the distance, keeping up to and including the
-     * children of the stopping vertex. Stop is distance is less than the input
-     * distance. Start from root: https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
-     *
-     * @param distance minimum distance
-     * https://github.com/GregorySchwartz/birch-beer/blob/master/src/BirchBeer/Stopping.hs#L137
-     */
-    setMinDistanceSearch = (distance: number) => {
-        const newTree = this.rootPositionedTree.copy().eachAfter(d => {
-            if (!d.data.distance || d.data.distance < distance) {
-                //keep the node, even though it's under the threshold, but eliminate the children
-                d.children = undefined;
-            }
-        });
-
-        this.visibleNodes = buildTree(newTree, this.w);
-        this.render();
     };
 
     /* todo: why is add label scale not triggering rerender? why do nodes rerender every time? */

@@ -12,7 +12,7 @@ const ControlPanel: React.FC = () => {
     );
 };
 
-const Group = styled('div')`
+const Group = styled.div`
     display: flex;
     flex-direction: row;
     flex-wrap: no-wrap;

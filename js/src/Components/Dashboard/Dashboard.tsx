@@ -83,12 +83,12 @@ const Dashboard: React.FC = () => {
 
 export default Dashboard;
 
-const Container = styled('div')`
+const Container = styled.div`
     display: flex;
     flex-direction: row;
 `;
 
-const Group = styled('div')`
+const Group = styled.div`
     display: flex;
     flex-direction: row;
     flex-basis: 50%;

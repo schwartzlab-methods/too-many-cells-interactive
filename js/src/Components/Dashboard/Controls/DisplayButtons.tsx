@@ -39,7 +39,7 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({ propName, label }) => {
     );
 };
 
-const ButtonList = styled('div')`
+const ButtonList = styled.div`
     display: flex;
     flex-direction: column;
     width: 200px;

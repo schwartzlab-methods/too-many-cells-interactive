@@ -34,17 +34,6 @@ export const carToTheta = (x: number, y: number) =>
 export const squared = (base: number) => Math.pow(base, 2);
 
 /**
- * Get the Median Absolute Deviation for a node and all of its children's values
- * @param nodes
- * @returns float
- */
-export const getMADNodes = (nodes: HierarchyNode<TMCNode>) => {
-    const values = nodes.descendants().map(n => n.value || 0);
-
-    return getMAD(values);
-};
-
-/**
  * Calculate the median absolute distance for a node and its children
  * @param values array of numbers
  * @returns float

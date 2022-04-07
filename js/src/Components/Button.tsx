@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-export default styled('button')<{ active?: boolean }>`
+export default styled.button<{ active?: boolean }>`
     background-color: ${props =>
         props.active
             ? props.theme.palette.lightGrey

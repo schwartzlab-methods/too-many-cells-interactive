@@ -114,7 +114,7 @@ export default class Histogram {
     };
 
     render = () => {
-        const bins = Object.keys(this.counts);
+        const bins = Object.keys(this.counts); //todo: this should be a map, or else we should always sort in desc order?
 
         this.svg
             .append('g')
