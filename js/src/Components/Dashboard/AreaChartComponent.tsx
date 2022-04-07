@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AreaChart } from './../../Visualizations';
 
 interface AreaChartComponentProps {
-    counts: Record<number, number>;
+    counts: Map<number, number>;
     onBrush: (val: number) => void;
     title: string;
 }

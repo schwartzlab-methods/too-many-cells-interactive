@@ -38,13 +38,13 @@ const PrunerPanel: React.FC<PrunerPanelProps> = ({}) => {
     const sizeGroupsPlain = useMemo(() => {
         if (treeContext.rootPositionedTree) {
             return getSizeGroups(treeContext.rootPositionedTree!);
-        } else return {};
+        } else return new Map();
     }, [treeContext.rootPositionedTree]);
 
     const sizeGroupsMad = useMemo(() => {
         if (treeContext.rootPositionedTree) {
             return getSizeMadGroups(treeContext.rootPositionedTree!);
-        } else return {};
+        } else return new Map();
     }, [treeContext.rootPositionedTree]);
 
     const sizeMadValue = useMemo(() => {
@@ -77,7 +77,7 @@ const PrunerPanel: React.FC<PrunerPanelProps> = ({}) => {
                 treeContext.rootPositionedTree!,
                 pruneTreeByMinDistance
             );
-        } else return {};
+        } else return new Map();
     }, [treeContext.rootPositionedTree]);
 
     const distanceGroupsMad = useMemo(() => {
@@ -86,7 +86,7 @@ const PrunerPanel: React.FC<PrunerPanelProps> = ({}) => {
                 treeContext.rootPositionedTree!,
                 pruneTreeByMinDistance
             );
-        } else return {};
+        } else return new Map();
     }, [treeContext.rootPositionedTree]);
 
     const distanceSearchGroupsMad = useMemo(() => {
@@ -95,7 +95,7 @@ const PrunerPanel: React.FC<PrunerPanelProps> = ({}) => {
                 treeContext.rootPositionedTree!,
                 pruneTreeByMinDistanceSearch
             );
-        } else return {};
+        } else return new Map();
     }, [treeContext.rootPositionedTree]);
 
     const distanceSearchGroupsPlain = useMemo(() => {
@@ -104,7 +104,7 @@ const PrunerPanel: React.FC<PrunerPanelProps> = ({}) => {
                 treeContext.rootPositionedTree!,
                 pruneTreeByMinDistanceSearch
             );
-        } else return {};
+        } else return new Map();
     }, [treeContext.rootPositionedTree]);
 
     const distanceMadValue = useMemo(() => {
@@ -135,7 +135,7 @@ const PrunerPanel: React.FC<PrunerPanelProps> = ({}) => {
     const depthSearchGroupsPlain = useMemo(() => {
         if (treeContext.rootPositionedTree) {
             return getDepthGroups(treeContext.rootPositionedTree!);
-        } else return {};
+        } else return new Map();
     }, [treeContext.rootPositionedTree]);
 
     //just need the steps
@@ -268,7 +268,7 @@ interface PrunerProps {
     onExpand: () => void;
     onChange: (val: number) => void;
     onSubmit: (size: number) => void;
-    plainValues: Record<number, number>;
+    plainValues: Map<number, number>;
     value: number;
 }
 
@@ -309,10 +309,10 @@ interface SmartPrunerProps {
     id: Pruner;
     label: string;
     madSize: number;
-    madValues: Record<number, number>;
+    madValues: Map<number, number>;
     median: number;
     onExpand: () => void;
-    plainValues: Record<number, number>;
+    plainValues: Map<number, number>;
     onChange: (val: number) => void;
     onSubmit: (size: number) => void;
     value: number;
@@ -436,11 +436,9 @@ const getSizeGroups = (tree: HierarchyNode<TMCNode>, binCount = 50) => {
     const bounds = ticks(0, maxSize, binCount);
 
     return bounds.reduce(
-        (acc, curr) => ({
-            ...acc,
-            [curr]: pruneTreeByMinValue(tree, curr).descendants().length,
-        }),
-        {}
+        (acc, curr) =>
+            acc.set(curr, pruneTreeByMinValue(tree, curr).descendants().length),
+        new Map<number, number>()
     );
 };
 
@@ -466,12 +464,12 @@ const getSizeMadGroups = (tree: HierarchyNode<TMCNode>) => {
     }));
 
     return bounds.reduce(
-        (acc, curr) => ({
-            ...acc,
-            [curr.mads]: pruneTreeByMinValue(tree, curr.size).descendants()
-                .length,
-        }),
-        {}
+        (acc, curr) =>
+            acc.set(
+                curr.mads,
+                pruneTreeByMinValue(tree, curr.size).descendants().length
+            ),
+        new Map<number, number>()
     );
 };
 
@@ -541,11 +539,8 @@ const getDistanceGroups = (
     const bounds = ticks(0, maxSize, binCount);
 
     return bounds.reduce(
-        (acc, curr) => ({
-            ...acc,
-            [curr]: pruneFn(tree, curr).descendants().length,
-        }),
-        {}
+        (acc, curr) => acc.set(curr, pruneFn(tree, curr).descendants().length),
+        new Map<number, number>()
     );
 };
 
@@ -554,7 +549,7 @@ const getDistanceGroups = (
  */
 const getDistanceMadGroups = (
     tree: HierarchyNode<TMCNode>,
-    prunFn: (
+    pruneFn: (
         tree: HierarchyNode<TMCNode>,
         size: number
     ) => HierarchyNode<TMCNode>
@@ -577,11 +572,9 @@ const getDistanceMadGroups = (
     }));
 
     return bounds.reduce(
-        (acc, curr) => ({
-            ...acc,
-            [curr.mads]: prunFn(tree, curr.size).descendants().length,
-        }),
-        {}
+        (acc, curr) =>
+            acc.set(curr.mads, pruneFn(tree, curr.size).descendants().length),
+        new Map<number, number>()
     );
 };
 
@@ -591,16 +584,14 @@ const getDistanceMadGroups = (
 const getDepthGroups = (tree: HierarchyNode<TMCNode>) => {
     const maxSize = max(tree.descendants().map(n => n.depth))!;
 
-    return (
-        range(0, maxSize)
-            //.reverse()
-            .reduce(
-                (acc, curr) => ({
-                    ...acc,
-                    [curr]: tree.descendants().filter(d => d.depth <= curr)
-                        .length,
-                }),
-                {}
-            )
-    );
+    return range(0, maxSize + 1)
+        .reverse()
+        .reduce(
+            (acc, curr) =>
+                acc.set(
+                    curr,
+                    tree.descendants().filter(d => d.depth <= curr).length
+                ),
+            new Map<number, number>()
+        );
 };

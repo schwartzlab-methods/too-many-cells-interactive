@@ -14,7 +14,7 @@ const bisectDownSorted = (arr: number[], target: number) => {
     return i;
 };
 export default class Histogram {
-    counts: Record<number, number>;
+    counts: Map<number, number>;
     selector: string;
     svg: Selection<SVGGElement, unknown, any, any>;
     w = 400;
@@ -25,7 +25,7 @@ export default class Histogram {
     yScale: ScaleLinear<number, number>;
     xScale: ScaleLinear<number, number>;
     constructor(
-        counts: Record<number, number>,
+        counts: Map<number, number>,
         onBrush: (val: number) => void,
         selector: string,
         title: string
@@ -43,13 +43,18 @@ export default class Histogram {
             0 + this.margin,
             this.w - this.margin,
         ]).domain(
-            extent(Object.keys(this.counts).map(d => +d)) as [number, number]
+            extent(Array.from(this.counts.keys()).map(d => +d)) as [
+                number,
+                number
+            ]
         );
 
         this.title = title;
 
         this.yScale = scaleLinear([this.h - this.margin, this.margin])
-            .domain(extent(Object.values(this.counts)) as [number, number])
+            .domain(
+                extent(Array.from(this.counts.values())) as [number, number]
+            )
             .nice();
     }
 
@@ -58,10 +63,16 @@ export default class Histogram {
         let startX = 0;
         let selectedIdx: number;
 
-        const counts = Object.keys(this.counts).map(Number);
+        console.log(this.counts);
+
+        const counts = Array.from(this.counts.keys()).map(Number);
+
+        console.log(counts);
 
         /* store starting location of each bin*/
-        const ticks = counts.map(c => this.xScale(c));
+        const ticks = counts
+            .sort((a, b) => (a < b ? -1 : 1))
+            .map(c => this.xScale(c));
 
         const brushed = function (this: SVGGElement, event: D3BrushEvent<any>) {
             if (!event.sourceEvent || !event.selection) return;
@@ -114,7 +125,7 @@ export default class Histogram {
     };
 
     render = () => {
-        const bins = Object.keys(this.counts); //todo: this should be a map, or else we should always sort in desc order?
+        const bins = Array.from(this.counts.keys());
 
         this.svg
             .append('g')
@@ -131,7 +142,7 @@ export default class Histogram {
 
         this.svg
             .selectAll('path.area')
-            .data([Object.entries(this.counts)])
+            .data([Array.from(this.counts.entries())])
             .join('path')
             .attr('class', 'area')
             // note that this is and other number casting is just to keep typescript happy, the key is already a number
