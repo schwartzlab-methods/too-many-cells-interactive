@@ -138,8 +138,6 @@ const PrunerPanel: React.FC<PrunerPanelProps> = ({}) => {
         } else return new Map();
     }, [treeContext.rootPositionedTree]);
 
-    //just need the steps
-
     const onExpand = (id: Pruner) => () => {
         updatePrunerVal(id)(0);
         setExpanded(id);
@@ -289,7 +287,10 @@ const Pruner: React.FC<PrunerProps> = ({
             {expanded && (
                 <>
                     <AreaChartComponent
-                        onBrush={onSubmit}
+                        onBrush={v => {
+                            onChange(v);
+                            onSubmit(v);
+                        }}
                         counts={plainValues}
                         title="Drag to Prune"
                     />
@@ -365,7 +366,10 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                     </RadioGroup>
                     {type === 'raw' && (
                         <AreaChartComponent
-                            onBrush={onSubmit}
+                            onBrush={val => {
+                                onChange(val);
+                                onSubmit(val);
+                            }}
                             counts={plainValues}
                             title="Drag to Prune"
                         />
@@ -373,6 +377,7 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                     {type === 'smart' && (
                         <AreaChartComponent
                             onBrush={val => {
+                                onChange(val);
                                 onSubmit(median + val * median);
                             }}
                             counts={madValues}
