@@ -22,6 +22,7 @@ export interface BaseTreeContext {
     labelScale?: ScaleOrdinal<string, string>;
     nodeIdsVisible?: boolean;
     nodeCountsVisible?: boolean;
+    pieScale?: ScaleLinear<number, number>;
     piesVisible?: boolean;
     rootPositionedTree?: HierarchyNode<TMCNode>;
     strokeVisible?: boolean;
@@ -30,7 +31,7 @@ export interface BaseTreeContext {
 }
 
 interface TreeContext extends BaseTreeContext {
-    setTreeContext?: (newContext: Partial<BaseTreeContext>) => void;
+    setTreeContext?: (newContext: BaseTreeContext) => void;
 }
 
 export const TreeContext = createContext<TreeContext>({});
@@ -62,6 +63,7 @@ const Dashboard: React.FC = () => {
                                             nodeCountsVisible:
                                                 tree.nodeCountsVisible,
                                             piesVisible: tree.piesVisible,
+                                            pieScale: tree.pieScale,
                                             rootPositionedTree:
                                                 tree.rootPositionedTree,
                                             strokeVisible: tree.strokeVisible,

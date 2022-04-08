@@ -13,6 +13,7 @@ import {
 } from './../../../Components';
 //https://github.com/styled-components/styled-components/issues/1449
 import Button from '../../Button';
+import Input from '../../Input';
 import { Label } from '../../Typography';
 import { format } from 'd3-format';
 
@@ -310,31 +311,33 @@ const Pruner: React.FC<PrunerProps> = ({
     xLabel,
 }) => {
     return (
-        <PrunerContainer>
+        <PrunerContainer expanded={expanded}>
             <PrunerLabel expanded={expanded} onClick={onExpand}>
                 {label}
             </PrunerLabel>
-            {expanded && (
-                <>
-                    <AreaChartComponent
-                        onBrush={v => {
-                            onChange(+format('.3f')(v));
-                            onSubmit(v);
-                        }}
-                        counts={plainValues}
-                        xLabel={xLabel}
-                    />
-                    <TextInputGroup>
-                        <Input
-                            onChange={v => onChange(+v.currentTarget.value)}
-                            value={value}
+            <ChartContainer expanded={expanded}>
+                {expanded && (
+                    <>
+                        <AreaChartComponent
+                            onBrush={v => {
+                                onChange(+format('.3f')(v));
+                                onSubmit(v);
+                            }}
+                            counts={plainValues}
+                            xLabel={xLabel}
                         />
-                        <SubmitButton onClick={() => onSubmit(value)}>
-                            Update
-                        </SubmitButton>
-                    </TextInputGroup>
-                </>
-            )}
+                        <TextInputGroup>
+                            <Input
+                                onChange={v => onChange(+v.currentTarget.value)}
+                                value={value}
+                            />
+                            <SubmitButton onClick={() => onSubmit(value)}>
+                                Update
+                            </SubmitButton>
+                        </TextInputGroup>
+                    </>
+                )}
+            </ChartContainer>
         </PrunerContainer>
     );
 };
@@ -376,74 +379,85 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
     };
 
     return (
-        <PrunerContainer>
+        <PrunerContainer expanded={expanded}>
             <PrunerLabel expanded={expanded} onClick={onExpand}>
                 {label}
             </PrunerLabel>
-            {expanded && (
-                <span>
-                    <RadioGroup>
-                        <RadioButton
-                            checked={type === 'raw'}
-                            id={`${id}raw`}
-                            name={`${id}types`}
-                            onChange={() => handleChange('raw')}
-                            type="radio"
-                        />
-                        <RadioLabel htmlFor={`${id}raw`}>Plain</RadioLabel>
-                        <RadioButton
-                            checked={type === 'smart'}
-                            id={`${id}smart`}
-                            name={`${id}types`}
-                            onChange={() => handleChange('smart')}
-                            type="radio"
-                        />
-                        <RadioLabel htmlFor={`${id}smart`}>Smart</RadioLabel>
-                    </RadioGroup>
-                    {type === 'raw' && (
-                        <AreaChartComponent
-                            onBrush={val => {
-                                onChange(+format('.3f')(val));
-                                onSubmit(val);
-                            }}
-                            counts={plainValues}
-                            xLabel={xLabel}
-                        />
-                    )}
-                    {type === 'smart' && (
-                        <AreaChartComponent
-                            onBrush={val => {
-                                onChange(+format('.3f')(val));
-                                onSubmit(median + val * median);
-                            }}
-                            counts={madValues}
-                            xLabel={`${xLabel} in MADs from median`}
-                        />
-                    )}
-                    <TextInputGroup>
-                        <Input
-                            onChange={v => onChange(+v.currentTarget.value)}
-                            value={value}
-                        />
-                        <SubmitButton onClick={() => onSubmit(value)}>
-                            Update
-                        </SubmitButton>
-                    </TextInputGroup>
-                </span>
-            )}
+            <ChartContainer expanded={expanded}>
+                {expanded && (
+                    <>
+                        <RadioGroup>
+                            <RadioButton
+                                checked={type === 'raw'}
+                                id={`${id}raw`}
+                                name={`${id}types`}
+                                onChange={() => handleChange('raw')}
+                                type="radio"
+                            />
+                            <RadioLabel htmlFor={`${id}raw`}>Plain</RadioLabel>
+                            <RadioButton
+                                checked={type === 'smart'}
+                                id={`${id}smart`}
+                                name={`${id}types`}
+                                onChange={() => handleChange('smart')}
+                                type="radio"
+                            />
+                            <RadioLabel htmlFor={`${id}smart`}>
+                                Smart
+                            </RadioLabel>
+                        </RadioGroup>
+                        {type === 'raw' && (
+                            <AreaChartComponent
+                                onBrush={val => {
+                                    onChange(+format('.3f')(val));
+                                    onSubmit(val);
+                                }}
+                                counts={plainValues}
+                                xLabel={xLabel}
+                            />
+                        )}
+                        {type === 'smart' && (
+                            <AreaChartComponent
+                                onBrush={val => {
+                                    onChange(+format('.3f')(val));
+                                    onSubmit(median + val * median);
+                                }}
+                                counts={madValues}
+                                xLabel={`${xLabel} in MADs from median`}
+                            />
+                        )}
+                        <TextInputGroup>
+                            <Input
+                                onChange={v => onChange(+v.currentTarget.value)}
+                                value={value}
+                            />
+                            <SubmitButton onClick={() => onSubmit(value)}>
+                                Update
+                            </SubmitButton>
+                        </TextInputGroup>
+                    </>
+                )}
+            </ChartContainer>
         </PrunerContainer>
     );
 };
 
-const PrunerContainer = styled.div`
+const ChartContainer = styled.div<{ expanded: boolean }>`
+    opacity: ${props => (props.expanded ? 1 : 0)};
+    transition: 0.5s opacity cubic-bezier(0.73, 0.32, 0.34, 1.5);
+`;
+
+const PrunerContainer = styled.div<{ expanded: boolean }>`
     cursor: pointer;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
     max-width: 300px;
+    height: ${props => (props.expanded ? '220px' : '25px')};
     + {PrunerContainer} {
         margin-bottom: 10px;
     }
+    transition: 0.25s height cubic-bezier(.73,.32,.34,1.5)
 `;
 
 const PrunerLabel: React.FC<{ expanded: boolean; onClick: () => void }> = ({
@@ -461,20 +475,6 @@ const PrunerLabelContainer = styled.div`
     display: flex;
     flex-direction: columns;
     justify-content: space-between;
-`;
-
-const Input = styled.input`
-    &:focus,
-    &:focus-visible {
-        border-color: ${props => props.theme.palette.grey};
-        outline: none;
-    }
-    background-color: ${props => props.theme.palette.white};
-    border: 0.1em solid ${props => props.theme.palette.gray};
-    color: ${props => props.theme.palette.grey};
-    margin: 2;
-    padding: 0.25em 0.5em;
-    width: 100px;
 `;
 
 const RadioButton = styled.input.attrs({ type: 'radio' })`

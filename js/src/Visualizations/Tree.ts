@@ -9,13 +9,13 @@ import {
 } from 'd3-hierarchy';
 import { arc, pie, pointRadial } from 'd3-shape';
 import { ScaleLinear, scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
-import { extent, max, min, quantile, sum } from 'd3-array';
+import { extent, max, min, sum } from 'd3-array';
 import { zoom } from 'd3-zoom';
 import { schemePaired } from 'd3-scale-chromatic';
 import { rgb } from 'd3-color';
 import { format } from 'd3-format';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
-import { buildTree, carToRadius, carToTheta, getMAD, squared } from './../util';
+import { buildTree, carToRadius, carToTheta, squared } from './../util';
 import { TMCNode } from './../types';
 import { BaseTreeContext } from '../Components/Dashboard/Dashboard';
 
@@ -226,13 +226,14 @@ class RadialTree implements BaseTreeContext {
     nodeIdsVisible = false;
     nodeCountsVisible = false;
     nodeContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
+    pieScale: ScaleLinear<number, number>;
     piesVisible = true;
     rootPositionedTree: HierarchyPointNode<TMCNode>;
-    visibleNodes: HierarchyPointNode<TMCNode>;
     selector: string;
     strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
     transitionTime = 250;
+    visibleNodes: HierarchyPointNode<TMCNode>;
     w = 1000;
     constructor(
         selector: string,
@@ -436,17 +437,24 @@ class RadialTree implements BaseTreeContext {
             )
             .on('end', () => deltaBehavior.on('nodeDelta', null));
 
-        //need to grab all the labels off the nodes
-
         const labels = Array.from(
             new Set(
                 this.rootPositionedTree
                     .descendants()
-                    .flatMap(d => d.data.items?.map(d => d._barcode?.unCell))
+                    .flatMap(d => Object.keys(d.data.labelCount))
             )
         ).filter(Boolean) as string[];
 
         this.labelScale = scaleOrdinal(schemePaired).domain(labels);
+
+        this.pieScale = scaleLinear([5, 20])
+            .domain(
+                extent(this.visibleNodes.leaves().map(d => d.value!)) as [
+                    number,
+                    number
+                ]
+            )
+            .clamp(true);
     }
 
     drawNodeCounter = () => {
@@ -489,50 +497,6 @@ class RadialTree implements BaseTreeContext {
             .attr('x', 0)
             .text(d => `Max val: ${d.maxVal}`);
     };
-
-    drawLegend = () =>
-        select(this.legendSelector)
-            .selectAll('ul')
-            .data([1])
-            .join('ul')
-            .style('list-style-type', 'none')
-            .style('padding', '0px')
-            .selectAll<HTMLLIElement, string>('li')
-            .data(this.labelScale.domain())
-            .join('li')
-            .selectAll('span')
-            .data(d => [d])
-            .join('span')
-            .style('height', '15px')
-            .style('width', '15px')
-            .style('margin-bottom', '5px')
-            .style('cursor', 'pointer')
-            .style('border-radius', '50%')
-            .style('display', 'inline-block')
-            .style('background-color', d => this.labelScale(d))
-            .on('click', (_, name) =>
-                document.getElementById(`picker-${name}`)?.click()
-            )
-            .append('span')
-            .style('margin-left', '20px')
-            .text(d => d)
-            .append('input')
-            .attr('id', 'picker')
-            .attr('type', 'color')
-            .style('position', 'absolute')
-            .attr('id', name => `picker-${name}`)
-            .style('height', 0)
-            .style('opacity', '0')
-            .style('width', 0)
-            .on('input', (a, b) => {
-                const idx = this.labelScale.domain().findIndex(i => i === b);
-                this.labelScale.range(
-                    this.labelScale
-                        .range()
-                        .map((o, i) => (i === idx ? a.target.value : o))
-                );
-                this.render();
-            });
 
     toggleStroke = () => {
         Object.assign(this, { strokeVisible: !this.strokeVisible });
@@ -680,13 +644,6 @@ class RadialTree implements BaseTreeContext {
     };
 
     render = () => {
-        const pieScale = scaleLinear([5, 20]).domain(
-            extent(this.visibleNodes.leaves().map(d => d.value!)) as [
-                number,
-                number
-            ]
-        );
-
         const textSizeScale = scaleLinear([10, 40]).domain(
             extent(this.visibleNodes.leaves().map(d => d.value!)) as [
                 number,
@@ -850,7 +807,7 @@ class RadialTree implements BaseTreeContext {
                         !outer.children
                             ? arc()({
                                   innerRadius: 0,
-                                  outerRadius: pieScale(outer.value!),
+                                  outerRadius: that.pieScale(outer.value!),
                                   ...d,
                               })
                             : null
@@ -886,7 +843,6 @@ class RadialTree implements BaseTreeContext {
             .attr('stroke', 'black')
             .attr('opacity', d => this.distanceScale(d.data.distance || 0));
 
-        this.drawLegend();
         this.drawNodeCounter();
     };
 }
