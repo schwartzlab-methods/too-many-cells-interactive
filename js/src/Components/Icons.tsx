@@ -9,7 +9,7 @@ interface IconProps {
 }
 
 const Icon = styled.svg<IconProps>`
-    fill: ${props => props.fill ?? 'none'};
+    fill: ${props => props.fill ?? props.theme.palette.grey};
     stroke: ${props => props.color ?? props.theme.palette.grey};
     stroke-width: ${props => props.strokeWidth ?? '3px'};
     width: ${props => props.size ?? '20px'};

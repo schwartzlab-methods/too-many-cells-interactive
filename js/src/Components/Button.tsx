@@ -5,13 +5,12 @@ export default styled.button<{ active?: boolean }>`
         props.active
             ? props.theme.palette.lightGrey
             : props.theme.palette.white};
-    border: 0.1em solid ${props => props.theme.palette.primary};
+    border: 0.1em solid ${props => props.theme.palette.grey};
     border-radius: 0.12em;
     box-sizing: border-box;
     color: ${props => props.theme.palette.grey};
     display: inline-block;
     font-weight: 300;
-    margin: 3px;
     padding: 0.35em 1.2em;
     text-align: center;
     text-decoration: none;

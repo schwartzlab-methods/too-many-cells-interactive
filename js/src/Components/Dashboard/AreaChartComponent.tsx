@@ -4,13 +4,15 @@ import { AreaChart } from './../../Visualizations';
 interface AreaChartComponentProps {
     counts: Map<number, number>;
     onBrush: (val: number) => void;
-    title: string;
+    title?: string;
+    xLabel: string;
 }
 
 const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
     counts,
     onBrush,
     title,
+    xLabel,
 }) => {
     const [chart, setChart] = useState<AreaChart>();
     const selector = useRef<string>(`a${Math.random().toString(36).slice(3)}`);
@@ -30,6 +32,7 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
             counts,
             onBrush,
             `.${selector.current}`,
+            xLabel,
             title
         );
         setChart(chart);

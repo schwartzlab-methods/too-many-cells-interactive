@@ -19,16 +19,18 @@ export default class Histogram {
     svg: Selection<SVGGElement, unknown, any, any>;
     w = 400;
     h = 200;
-    margin = 35;
+    margin = 40;
     onBrush: (val: number) => void;
-    title: string;
-    yScale: ScaleLinear<number, number>;
+    title?: string;
     xScale: ScaleLinear<number, number>;
+    xLabel: string;
+    yScale: ScaleLinear<number, number>;
     constructor(
         counts: Map<number, number>,
         onBrush: (val: number) => void,
         selector: string,
-        title: string
+        xLabel: string,
+        title?: string
     ) {
         this.counts = counts;
         this.onBrush = onBrush;
@@ -40,7 +42,7 @@ export default class Histogram {
             .attr('class', 'container');
 
         this.xScale = scaleLinear([
-            0 + this.margin,
+            0 + this.margin + 12,
             this.w - this.margin,
         ]).domain(
             extent(Array.from(this.counts.keys()).map(d => +d)) as [
@@ -51,7 +53,12 @@ export default class Histogram {
 
         this.title = title;
 
-        this.yScale = scaleLinear([this.h - this.margin, this.margin])
+        this.xLabel = xLabel;
+
+        this.yScale = scaleLinear([
+            this.h - this.margin,
+            this.title ? this.margin : this.margin / 2,
+        ])
             .domain(
                 extent(Array.from(this.counts.values())) as [number, number]
             )
@@ -63,11 +70,7 @@ export default class Histogram {
         let startX = 0;
         let selectedIdx: number;
 
-        console.log(this.counts);
-
         const counts = Array.from(this.counts.keys()).map(Number);
-
-        console.log(counts);
 
         /* store starting location of each bin*/
         const ticks = counts
@@ -103,7 +106,7 @@ export default class Histogram {
 
         const brush = brushX()
             .extent([
-                [this.margin, this.margin],
+                [this.margin, this.title ? this.margin : this.margin / 2],
                 [this.w - this.margin, this.h - this.margin],
             ])
             .on('brush', brushed)
@@ -127,12 +130,17 @@ export default class Histogram {
     render = () => {
         const bins = Array.from(this.counts.keys());
 
-        this.svg
-            .append('g')
-            .attr('class', 'title')
-            .attr('transform', `translate(${this.margin}, ${this.margin / 2})`)
-            .append('text')
-            .text(this.title);
+        if (this.title) {
+            this.svg
+                .append('g')
+                .attr('class', 'title')
+                .attr(
+                    'transform',
+                    `translate(${this.margin}, ${this.margin / 2})`
+                )
+                .append('text')
+                .text(this.title);
+        }
 
         const areaG = area()
             .x(([k]) => this.xScale(k)!)
@@ -146,7 +154,8 @@ export default class Histogram {
             .join('path')
             .attr('class', 'area')
             // note that this is and other number casting is just to keep typescript happy, the key is already a number
-            .attr('d', d => areaG(d.map(([d, e]) => [+d, e])));
+            .attr('d', d => areaG(d.map(([d, e]) => [+d, e])))
+            .attr('fill', '#3a83c5');
 
         const maxTicks = 15;
 
@@ -163,9 +172,26 @@ export default class Histogram {
                 axisBottom(this.xScale)
                     .tickSizeOuter(0)
                     .tickValues(ticks.map(t => +t))
-            );
+            )
+            .style('font-size', 8)
+            .append('g')
+            .append('text')
+            .attr('transform', `translate(${this.w / 2}, 30)`)
+            .attr('fill', 'black')
+            .attr('text-anchor', 'middle')
+            .text(this.xLabel)
+            .style('font-size', 12);
 
-        this.svg.append('g').call(axisRight(this.yScale));
+        this.svg
+            .append('g')
+            .call(axisRight(this.yScale))
+            .attr('transform', 'translate(12,0)')
+            .append('g')
+            .append('text')
+            .attr('transform', `translate(-12, ${this.h / 2}), rotate(90)`)
+            .attr('fill', 'black')
+            .attr('text-anchor', 'end')
+            .text('Count');
 
         this.setBrush();
     };

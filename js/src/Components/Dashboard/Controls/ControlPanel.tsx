@@ -16,6 +16,9 @@ const Group = styled.div`
     display: flex;
     flex-direction: row;
     flex-wrap: no-wrap;
+    flex-grow: 1;
+    margin: 5px;
+    padding: 10px;
 `;
 
 export default ControlPanel;

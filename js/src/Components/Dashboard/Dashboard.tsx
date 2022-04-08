@@ -10,7 +10,7 @@ import TreeComponent from './TreeComponent';
 const theme = {
     palette: {
         white: '#ffffff',
-        primary: '#bce7fd',
+        primary: '#3a83c5',
         grey: '#5e6365',
         lightGrey: '#d1d9dd',
     },
@@ -93,4 +93,5 @@ const Group = styled.div`
     display: flex;
     flex-direction: row;
     flex-basis: 50%;
+    flex-grow: 1;
 `;

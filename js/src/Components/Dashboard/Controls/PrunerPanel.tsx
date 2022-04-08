@@ -1,13 +1,20 @@
 import { median, min, quantile, range, ticks } from 'd3-array';
-import { HierarchyNode } from 'd3-hierarchy';
+import { HierarchyNode, tree } from 'd3-hierarchy';
 import React, { useCallback, useContext, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { TMCNode } from '../../../types';
+import { max } from 'lodash';
 import { buildTree, getMAD, pruneTreeByMinValue } from '../../../util';
 import { TreeContext } from '../Dashboard';
+import {
+    AreaChartComponent,
+    CaretDownIcon,
+    CaretUpIcon,
+} from './../../../Components';
+//https://github.com/styled-components/styled-components/issues/1449
 import Button from '../../Button';
-import AreaChartComponent from '../AreaChartComponent';
-import { max } from 'lodash';
+import { Label } from '../../Typography';
+import { format } from 'd3-format';
 
 type Pruner = 'depth' | 'distance' | 'distanceSearch' | 'size';
 
@@ -132,7 +139,7 @@ const PrunerPanel: React.FC = () => {
 
     const onExpand = (id: Pruner) => () => {
         updatePrunerVal(id)(0);
-        setExpanded(id);
+        setExpanded(expanded === id ? undefined : id);
     };
 
     /* todo: the following three could be collapsed by just passing in callback */
@@ -197,7 +204,7 @@ const PrunerPanel: React.FC = () => {
         setPrunerVals({ ...initialPrunerVal, [pruner]: val });
 
     return (
-        <div>
+        <PrunerPanelContainer>
             <SmartPruner
                 expanded={expanded === 'size'}
                 id="size"
@@ -210,6 +217,7 @@ const PrunerPanel: React.FC = () => {
                 onSubmit={updateMinNodeSize}
                 plainValues={sizeGroupsPlain}
                 value={prunerVals.size}
+                xLabel="Size"
             />
             <SmartPruner
                 expanded={expanded === 'distance'}
@@ -223,6 +231,7 @@ const PrunerPanel: React.FC = () => {
                 onSubmit={updateMinDistance()}
                 plainValues={distanceGroupsPlain}
                 value={prunerVals.distance}
+                xLabel="Distance"
             />
             <SmartPruner
                 expanded={expanded === 'distanceSearch'}
@@ -236,21 +245,48 @@ const PrunerPanel: React.FC = () => {
                 onSubmit={updateMinDistance(true)}
                 plainValues={distanceSearchGroupsPlain}
                 value={prunerVals.distanceSearch}
+                xLabel="Distance (Search)"
             />
             <Pruner
                 expanded={expanded === 'depth'}
-                label="Depth"
+                label="Prune by depth"
                 onExpand={onExpand('depth')}
                 onChange={updatePrunerVal('depth')}
                 onSubmit={updateDepth}
                 plainValues={depthSearchGroupsPlain}
+                xLabel="Depth"
                 value={prunerVals.depth}
             />
-        </div>
+            <SubmitButton
+                onClick={() => {
+                    setPrunerVals(initialPrunerVal);
+                    setExpanded(undefined);
+                    treeContext.setTreeContext!({
+                        ...treeContext,
+                        visibleNodes: treeContext.rootPositionedTree,
+                    });
+                }}
+            >
+                Reset
+            </SubmitButton>
+        </PrunerPanelContainer>
     );
 };
 
+const PrunerPanelContainer = styled.div`
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    justify-content: flex-start;
+`;
+
 export default PrunerPanel;
+
+const SubmitButton = styled(Button)`
+    align-self: flex-start;
+    margin-left: 5px;
+`;
 
 interface PrunerProps {
     expanded: boolean;
@@ -259,6 +295,7 @@ interface PrunerProps {
     onChange: (val: number) => void;
     onSubmit: (size: number) => void;
     plainValues: Map<number, number>;
+    xLabel: string;
     value: number;
 }
 
@@ -270,30 +307,35 @@ const Pruner: React.FC<PrunerProps> = ({
     onChange,
     onSubmit,
     value,
+    xLabel,
 }) => {
     return (
-        <div>
-            <span onClick={onExpand}>
-                <Label>{label}</Label>
-            </span>
+        <PrunerContainer>
+            <PrunerLabel expanded={expanded} onClick={onExpand}>
+                {label}
+            </PrunerLabel>
             {expanded && (
                 <>
                     <AreaChartComponent
                         onBrush={v => {
-                            onChange(v);
+                            onChange(+format('.3f')(v));
                             onSubmit(v);
                         }}
                         counts={plainValues}
-                        title="Drag to Prune"
+                        xLabel={xLabel}
                     />
-                    <Input
-                        onChange={v => onChange(+v.currentTarget.value)}
-                        value={value}
-                    />
-                    <Button onClick={() => onSubmit(value)}>Submit</Button>
+                    <TextInputGroup>
+                        <Input
+                            onChange={v => onChange(+v.currentTarget.value)}
+                            value={value}
+                        />
+                        <SubmitButton onClick={() => onSubmit(value)}>
+                            Update
+                        </SubmitButton>
+                    </TextInputGroup>
                 </>
             )}
-        </div>
+        </PrunerContainer>
     );
 };
 
@@ -308,6 +350,7 @@ interface SmartPrunerProps {
     plainValues: Map<number, number>;
     onChange: (val: number) => void;
     onSubmit: (size: number) => void;
+    xLabel: string;
     value: number;
 }
 
@@ -321,6 +364,7 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
     plainValues,
     onChange,
     onSubmit,
+    xLabel,
     value,
 }) => {
     const [type, setType] = useState<'raw' | 'smart'>('raw');
@@ -332,10 +376,10 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
     };
 
     return (
-        <div>
-            <span onClick={onExpand}>
-                <Label>{label}</Label>
-            </span>
+        <PrunerContainer>
+            <PrunerLabel expanded={expanded} onClick={onExpand}>
+                {label}
+            </PrunerLabel>
             {expanded && (
                 <span>
                     <RadioGroup>
@@ -346,7 +390,7 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                             onChange={() => handleChange('raw')}
                             type="radio"
                         />
-                        <RadioLabel htmlFor={`${id}raw`}>Raw</RadioLabel>
+                        <RadioLabel htmlFor={`${id}raw`}>Plain</RadioLabel>
                         <RadioButton
                             checked={type === 'smart'}
                             id={`${id}smart`}
@@ -359,59 +403,105 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                     {type === 'raw' && (
                         <AreaChartComponent
                             onBrush={val => {
-                                onChange(val);
+                                onChange(+format('.3f')(val));
                                 onSubmit(val);
                             }}
                             counts={plainValues}
-                            title="Drag to Prune"
+                            xLabel={xLabel}
                         />
                     )}
                     {type === 'smart' && (
                         <AreaChartComponent
                             onBrush={val => {
-                                onChange(val);
+                                onChange(+format('.3f')(val));
                                 onSubmit(median + val * median);
                             }}
                             counts={madValues}
-                            title="Drag to Prune"
+                            xLabel={`${xLabel} in MADs from median`}
                         />
                     )}
-                    <Input
-                        onChange={v => onChange(+v.currentTarget.value)}
-                        value={value}
-                    />
-                    <Button onClick={() => onSubmit(value)}>Submit</Button>
+                    <TextInputGroup>
+                        <Input
+                            onChange={v => onChange(+v.currentTarget.value)}
+                            value={value}
+                        />
+                        <SubmitButton onClick={() => onSubmit(value)}>
+                            Update
+                        </SubmitButton>
+                    </TextInputGroup>
                 </span>
             )}
-        </div>
+        </PrunerContainer>
     );
 };
 
-/* todo: we probably want Arial as global font */
-const Label = styled.p`
+const PrunerContainer = styled.div`
     cursor: pointer;
-    font-family: Arial;
-    margin: 0.25em 0.25em;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    max-width: 300px;
+    + {PrunerContainer} {
+        margin-bottom: 10px;
+    }
+`;
+
+const PrunerLabel: React.FC<{ expanded: boolean; onClick: () => void }> = ({
+    children,
+    expanded,
+    onClick,
+}) => (
+    <PrunerLabelContainer onClick={onClick}>
+        {children}
+        {expanded ? <CaretDownIcon /> : <CaretUpIcon />}
+    </PrunerLabelContainer>
+);
+
+const PrunerLabelContainer = styled.div`
+    display: flex;
+    flex-direction: columns;
+    justify-content: space-between;
 `;
 
 const Input = styled.input`
     &:focus,
     &:focus-visible {
-        border-color: ${props => props.theme.palette.lightGrey};
+        border-color: ${props => props.theme.palette.grey};
         outline: none;
     }
     background-color: ${props => props.theme.palette.white};
-    border: 0.1em solid ${props => props.theme.palette.primary};
+    border: 0.1em solid ${props => props.theme.palette.gray};
     color: ${props => props.theme.palette.grey};
     margin: 2;
     padding: 0.25em 0.5em;
-    width: 200px;
+    width: 100px;
 `;
 
-const RadioButton = styled.input``;
-const RadioGroup = styled.div``;
-const RadioLabel = styled.label`
+const RadioButton = styled.input.attrs({ type: 'radio' })`
+    margin: 0px;
+    margin-right: 3px;
+`;
+const RadioGroup = styled.div`
+    align-items: center;
+    display: flex;
+    margin-top: 5px;
+`;
+
+const RadioLabel = styled(Label)`
+    margin-left: 3px;
     cursor: pointer;
+    font-size: 12px;
+    + input[type='radio'] {
+        margin-left: 3px;
+    }
+`;
+
+const ChartGroup = styled.div``;
+
+const TextInputGroup = styled.div`
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
 `;
 
 /**
