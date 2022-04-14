@@ -1,8 +1,8 @@
-import { TMCNodeBase } from '../prepareData';
-import { carToRadius, carToTheta, getMAD, hierarchize } from '../Util';
+import { carToRadius, carToTheta, getMAD, hierarchize } from '../util';
 import { uuid } from 'lodash-uuid';
 import { pointRadial } from 'd3-shape';
-import { quantile } from 'd3-array';
+import { median } from 'd3-array';
+import { TMCNodeBase } from '../types';
 
 /**
  * Make some test data that mimics TMC input
@@ -41,6 +41,10 @@ const makeTestHierarchicalNodes = (
 ) => hierarchize(makeTestNode(maxDepth, depth));
 
 describe('Test getMad', () => {
+    test('It should return the median for a list of numbers with an even length', () => {
+        expect(median([4, 3, 1, 2, 10, 10])).toEqual(3.5);
+    });
+
     /* compare results with scipy.stats.median_abs_deviation w/ default args */
     test('It should return the Median Absolute Deviation for a list of numbers with an odd length', () => {
         expect(getMAD([4, 3, 5, 1, 2])).toEqual(1);
@@ -48,10 +52,6 @@ describe('Test getMad', () => {
 
     test('It should return the Median Absolute Deviation for a list of numbers with an even length', () => {
         expect(getMAD([4, 3, 1, 2, 10, 10])).toEqual(2);
-    });
-
-    test('It should return the Median Absolute Deviation for a list of numbers with an even length', () => {
-        expect(quantile([4, 3, 1, 2, 10, 10], 0.5)).toEqual(3.5);
     });
 });
 

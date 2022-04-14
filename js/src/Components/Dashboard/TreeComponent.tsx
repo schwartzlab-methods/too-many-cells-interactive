@@ -8,7 +8,7 @@ import React, {
 import { HierarchyNode } from 'd3-hierarchy';
 import { TMCNode } from './../../types';
 import { Tree as TreeViz } from './../../Visualizations';
-import { TreeContext } from './Dashboard';
+import { BaseTreeContext, TreeContext } from './Dashboard';
 
 interface TreeComponentProps {
     data: HierarchyNode<TMCNode>;
@@ -23,6 +23,9 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data, onLoad }) => {
     useEffect(() => {
         if (Tree) {
             Object.assign(Tree, treeContext);
+            /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
+            Tree.setContext = (ctx: BaseTreeContext) =>
+                treeContext.setTreeContext!({ ...treeContext, ...ctx });
             Tree.render();
         }
     }, [treeContext]);
@@ -31,7 +34,13 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data, onLoad }) => {
 
     useLayoutEffect(() => {
         if (data) {
-            const _Tree = new TreeViz(`.${selector.current}`, '.legend', data);
+            const _Tree = new TreeViz(
+                `.${selector.current}`,
+                '.legend',
+                data,
+                (ctx: BaseTreeContext) =>
+                    treeContext.setTreeContext!({ ...treeContext, ...ctx })
+            );
             setTree(_Tree);
             _Tree.render();
             onLoad(_Tree);

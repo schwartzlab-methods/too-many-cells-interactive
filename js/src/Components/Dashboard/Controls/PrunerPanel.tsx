@@ -75,6 +75,7 @@ const PrunerPanel: React.FC = () => {
         if (treeContext.rootPositionedTree) {
             return getDistanceGroups(
                 treeContext.rootPositionedTree!,
+                getMaxCutoffDistance(treeContext.rootPositionedTree!),
                 pruneTreeByMinDistance
             );
         } else return new Map();
@@ -84,6 +85,7 @@ const PrunerPanel: React.FC = () => {
         if (treeContext.rootPositionedTree) {
             return getDistanceMadGroups(
                 treeContext.rootPositionedTree!,
+                getMaxCutoffDistance(treeContext.rootPositionedTree!),
                 pruneTreeByMinDistance
             );
         } else return new Map();
@@ -93,6 +95,7 @@ const PrunerPanel: React.FC = () => {
         if (treeContext.rootPositionedTree) {
             return getDistanceMadGroups(
                 treeContext.rootPositionedTree!,
+                getMaxCutoffDistanceSearch(treeContext.rootPositionedTree!),
                 pruneTreeByMinDistanceSearch
             );
         } else return new Map();
@@ -102,6 +105,7 @@ const PrunerPanel: React.FC = () => {
         if (treeContext.rootPositionedTree) {
             return getDistanceGroups(
                 treeContext.rootPositionedTree!,
+                getMaxCutoffDistanceSearch(treeContext.rootPositionedTree!),
                 pruneTreeByMinDistanceSearch
             );
         } else return new Map();
@@ -262,9 +266,14 @@ const PrunerPanel: React.FC = () => {
                 onClick={() => {
                     setPrunerVals(initialPrunerVal);
                     setExpanded(undefined);
+                    const visibleNodes = buildTree(
+                        treeContext.rootPositionedTree!,
+                        treeContext.w!
+                    );
+
                     treeContext.setTreeContext!({
                         ...treeContext,
-                        visibleNodes: treeContext.rootPositionedTree,
+                        visibleNodes,
                     });
                 }}
             >
@@ -496,8 +505,6 @@ const RadioLabel = styled(Label)`
     }
 `;
 
-const ChartGroup = styled.div``;
-
 const TextInputGroup = styled.div`
     display: flex;
     flex-direction: row;
@@ -570,10 +577,27 @@ const getMaxCutoffDistance = (tree: HierarchyNode<TMCNode>) => {
             tree.children.flatMap(d =>
                 d.children ? d.children.map(d => d.data.distance || 0) : 0
             )
-        );
+        )!;
     } else return 0;
 };
 
+/**
+ * Find the minimum size-cutoff value needed to display at least one generation of the tree
+ * This ends up being the smallest child of the root
+ */
+const getMaxCutoffDistanceSearch = (tree: HierarchyNode<TMCNode>) => {
+    if (tree.children) {
+        return min(tree.children.map(d => d.data.distance || 0))!;
+    } else return 0;
+};
+
+/**
+ * Stopping criteria to stop at the node immediate after a node with DOUBLE distance.
+ * So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE.
+ * Includes L and R in the final result."
+ *
+ * https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
+ */
 const pruneTreeByMinDistance = (
     tree: HierarchyNode<TMCNode>,
     distance: number
@@ -586,17 +610,19 @@ const pruneTreeByMinDistance = (
     });
 
 /* 
-    hmm this is the same as above, and why shouldn't it be? unless we want it to stop at first cut  
-    todo: look at docs, we may want to cut the node and children?
-*/
+    Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, 
+    keep that path, otherwise prune it. This argument assists in finding distant nodes."
+    https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L44
+    */
 const pruneTreeByMinDistanceSearch = (
     tree: HierarchyNode<TMCNode>,
     distance: number
 ) =>
     tree.copy().eachAfter(d => {
         if (!d.data.distance || d.data.distance < distance) {
-            //keep the node, even though it's under the threshold, but eliminate the children
-            d.children = undefined;
+            if (d.parent) {
+                d.parent.children = undefined;
+            }
         }
     });
 
@@ -615,15 +641,14 @@ const pruneTreeByDepth = (tree: HierarchyNode<TMCNode>, depth: number) =>
  */
 const getDistanceGroups = (
     tree: HierarchyNode<TMCNode>,
+    cutoffDistance: number,
     pruneFn: (
         tree: HierarchyNode<TMCNode>,
         size: number
     ) => HierarchyNode<TMCNode>,
     binCount = 50
 ) => {
-    const maxSize = getMaxCutoffDistance(tree)!;
-
-    const bounds = ticks(0, maxSize, binCount);
+    const bounds = ticks(0, cutoffDistance, binCount);
 
     return bounds.reduce(
         (acc, curr) => acc.set(curr, pruneFn(tree, curr).descendants().length),
@@ -636,13 +661,12 @@ const getDistanceGroups = (
  */
 const getDistanceMadGroups = (
     tree: HierarchyNode<TMCNode>,
+    cutoffDistance: number,
     pruneFn: (
         tree: HierarchyNode<TMCNode>,
         size: number
     ) => HierarchyNode<TMCNode>
 ) => {
-    const maxSize = getMaxCutoffDistance(tree)!;
-
     const values = tree
         .descendants()
         .map(d => d.data.distance!)
@@ -651,7 +675,7 @@ const getDistanceMadGroups = (
     const mad = getMAD(values)!;
     const med = median(values)!;
 
-    const maxMads = Math.ceil((maxSize - med) / mad);
+    const maxMads = Math.ceil((cutoffDistance - med) / mad);
 
     const bounds = range(0, maxMads).map(m => ({
         size: med + m * mad,

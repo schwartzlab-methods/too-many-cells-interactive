@@ -88,7 +88,6 @@ export default Dashboard;
 const Container = styled.div`
     display: flex;
     flex-direction: row;
-    font-family: Ariel;
 `;
 
 const Group = styled.div`

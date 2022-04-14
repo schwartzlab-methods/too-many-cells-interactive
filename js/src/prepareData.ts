@@ -45,7 +45,7 @@ const isObject = (item: any): item is object =>
 const makeNode = (
     data: Record<string, any>[][] | Record<string, any>[],
     parent?: TMCNodeBase
-) => {
+): TMCNodeBase => {
     const node = {} as TMCNodeBase;
     node.parent = parent;
     node.id = uuid();

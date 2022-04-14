@@ -61,14 +61,14 @@ const LegendItem: React.FC<LegendItemProps> = ({
     useClickAway(containerRef, () => setPickerOpen(false));
 
     return (
-        <LegendItemContainer ref={containerRef}>
+        <LegendItemContainer>
             <LegendDot
                 fill={color}
                 stroke={color}
                 onClick={() => setPickerOpen(true)}
             />
             {label}
-            <Popover open={pickerOpen}>
+            <Popover ref={containerRef} open={pickerOpen}>
                 <ColorPicker color={color} updateColor={updateColor} />
             </Popover>
         </LegendItemContainer>

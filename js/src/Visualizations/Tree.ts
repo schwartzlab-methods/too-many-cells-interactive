@@ -5,7 +5,6 @@ import {
     HierarchyNode,
     HierarchyPointLink,
     HierarchyPointNode,
-    tree,
 } from 'd3-hierarchy';
 import { arc, pie, pointRadial } from 'd3-shape';
 import { ScaleLinear, scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
@@ -16,7 +15,7 @@ import { rgb } from 'd3-color';
 import { format } from 'd3-format';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import { buildTree, carToRadius, carToTheta, squared } from './../util';
-import { TMCNode } from './../types';
+import { isLinkNode, TMCNode } from './../types';
 import { BaseTreeContext } from '../Components/Dashboard/Dashboard';
 
 // for debugging
@@ -232,16 +231,20 @@ class RadialTree implements BaseTreeContext {
     selector: string;
     strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
+    setContext: (context: BaseTreeContext) => any;
     transitionTime = 250;
     visibleNodes: HierarchyPointNode<TMCNode>;
     w = 1000;
     constructor(
         selector: string,
         legendSelector: string,
-        tree: HierarchyNode<TMCNode>
+        tree: HierarchyNode<TMCNode>,
+        setContext: (context: BaseTreeContext) => any
     ) {
         this.selector = selector;
         this.legendSelector = legendSelector;
+
+        this.setContext = setContext;
 
         this.svg = select(this.selector)
             .append('svg')
@@ -643,6 +646,39 @@ class RadialTree implements BaseTreeContext {
             );
     };
 
+    registerClickHandlers = (
+        selection:
+            | Selection<SVGGElement, HierarchyPointNode<TMCNode>, any, any>
+            | Selection<SVGGElement, HierarchyPointLink<TMCNode>, any, any>
+    ) => {
+        const that = this;
+        selection.on('click', function (event, d) {
+            const targetNodeId = isLinkNode(d)
+                ? d.target.data.id
+                : (d as HierarchyPointNode<TMCNode>).data.id;
+
+            if (event.ctrlKey) {
+                const visibleNodes = buildTree(
+                    that.visibleNodes.find(n => n.data.id === targetNodeId)!,
+                    that.w
+                );
+                that.setContext({ visibleNodes });
+            } else if (event.shiftKey) {
+                const visibleNodes = buildTree(
+                    that.visibleNodes.copy().eachAfter(n => {
+                        if (n.data.id === targetNodeId) {
+                            n.children = undefined;
+                            n.data.children = null;
+                        }
+                    }),
+                    that.w
+                );
+
+                that.setContext({ visibleNodes });
+            }
+        });
+    };
+
     render = () => {
         const textSizeScale = scaleLinear([10, 40]).domain(
             extent(this.visibleNodes.leaves().map(d => d.value!)) as [
@@ -717,6 +753,8 @@ class RadialTree implements BaseTreeContext {
                 exit => exit.remove()
             );
 
+        this.nodes.call(this.registerClickHandlers);
+
         this.links = this.linkContainer
             .selectAll<SVGGElement, HierarchyPointLink<TMCNode>>('g.link')
             .data(this.visibleNodes.links(), d => makeLinkId(d))
@@ -735,6 +773,8 @@ class RadialTree implements BaseTreeContext {
                 selectAll('.tooltip').style('visibility', 'hidden')
             )
             .attr('stroke', this.strokeVisible ? 'black' : 'none');
+
+        this.links.call(this.registerClickHandlers);
 
         /* append nodes */
         this.nodes
@@ -815,7 +855,24 @@ class RadialTree implements BaseTreeContext {
 
                     .attr('fill', d => that.labelScale(d.data[0]));
             })
-            .style('visibility', this.piesVisible ? 'visible' : 'hidden');
+            .style('visibility', this.piesVisible ? 'visible' : 'hidden')
+            .on('click', (event, d) => {
+                if (event.shiftKey) {
+                    const prunedChildren = this.rootPositionedTree.find(
+                        n => n.data.id === d.data.id
+                    )?.children;
+
+                    const newNodes = this.visibleNodes.copy().each(n => {
+                        if (n.data.id === d.data.id) {
+                            n.data.children =
+                                prunedChildren?.map(d => d.data) || null;
+                        }
+                    });
+
+                    const visibleNodes = buildTree(newNodes, this.w);
+                    this.setContext({ visibleNodes });
+                }
+            });
 
         /* Append distance arcs --> have to go on top of everything */
         this.container
