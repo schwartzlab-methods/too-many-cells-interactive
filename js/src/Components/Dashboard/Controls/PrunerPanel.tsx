@@ -4,7 +4,7 @@ import React, { useCallback, useContext, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { TMCNode } from '../../../types';
 import { max } from 'lodash';
-import { buildTree, getMAD, pruneTreeByMinValue } from '../../../util';
+import { buildTreeLayout, getMAD, pruneTreeByMinValue } from '../../../util';
 import { TreeContext } from '../Dashboard';
 import {
     AreaChartComponent,
@@ -155,7 +155,7 @@ const PrunerPanel: React.FC = () => {
                 depth
             );
 
-            const visibleNodes = buildTree(pruned, treeContext.w!);
+            const visibleNodes = buildTreeLayout(pruned, treeContext.w!);
 
             treeContext.setTreeContext!({
                 ...treeContext,
@@ -172,7 +172,7 @@ const PrunerPanel: React.FC = () => {
                 size
             );
 
-            const visibleNodes = buildTree(pruned, treeContext.w!);
+            const visibleNodes = buildTreeLayout(pruned, treeContext.w!);
 
             treeContext.setTreeContext!({
                 ...treeContext,
@@ -195,7 +195,7 @@ const PrunerPanel: React.FC = () => {
                           distance
                       );
 
-                const visibleNodes = buildTree(pruned, treeContext.w!);
+                const visibleNodes = buildTreeLayout(pruned, treeContext.w!);
 
                 treeContext.setTreeContext!({
                     ...treeContext,
@@ -266,7 +266,7 @@ const PrunerPanel: React.FC = () => {
                 onClick={() => {
                     setPrunerVals(initialPrunerVal);
                     setExpanded(undefined);
-                    const visibleNodes = buildTree(
+                    const visibleNodes = buildTreeLayout(
                         treeContext.rootPositionedTree!,
                         treeContext.w!
                     );

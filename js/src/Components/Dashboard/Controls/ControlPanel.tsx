@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import styled from 'styled-components';
 import DisplayButtons from './DisplayButtons';
 import PrunerPanel from './PrunerPanel';
@@ -7,10 +7,22 @@ import { Column } from './../../Layout';
 import { TreeContext } from '../Dashboard';
 import Input from '../../Input';
 import { Label } from '../../Typography';
+import Checkbox from '../../Checkbox';
+import { tree } from 'd3-hierarchy';
+import { extent } from 'd3-array';
 
 const ControlPanel: React.FC = () => {
+    const treeContext = useContext(TreeContext);
+
+    const branchScalingDisabled = useMemo(() => {
+        return (
+            treeContext.branchSizeScale?.domain()[0] ===
+            treeContext.branchSizeScale?.domain()[1]
+        );
+    }, [treeContext]);
+
     return (
-        <Group>
+        <Row>
             <Column>
                 <DisplayButtons />
                 <Legend />
@@ -26,13 +38,37 @@ const ControlPanel: React.FC = () => {
                         max={50}
                     />
                 </SliderGroup>
+                <Checkbox
+                    checked={branchScalingDisabled}
+                    label="Branch width scaling disabled"
+                    onClick={() => {
+                        const branchSizeScale = treeContext.branchSizeScale;
+
+                        if (branchSizeScale) {
+                            branchSizeScale.domain(
+                                branchScalingDisabled
+                                    ? (extent(
+                                          treeContext
+                                              .visibleNodes!.descendants()
+                                              .map(d => d.value!)
+                                      ) as [number, number])
+                                    : [1, 1]
+                            );
+                        }
+
+                        treeContext.setTreeContext!({
+                            ...treeContext,
+                            branchSizeScale,
+                        });
+                    }}
+                />
             </Column>
             <PrunerPanel />
-        </Group>
+        </Row>
     );
 };
 
-const Group = styled.div`
+const Row = styled.div`
     display: flex;
     flex-direction: row;
     flex-wrap: no-wrap;
@@ -71,7 +107,7 @@ const Slider: React.FC<SliderProps> = ({ contextKey, label, max }) => {
         <Column>
             <Label>{label}</Label>
             {treeContext[contextKey] && (
-                <Group>
+                <Row>
                     <input
                         type="range"
                         max={max}
@@ -84,7 +120,7 @@ const Slider: React.FC<SliderProps> = ({ contextKey, label, max }) => {
                         value={treeContext[contextKey]!.range()[1]}
                         onChange={handleChange}
                     />
-                </Group>
+                </Row>
             )}
         </Column>
     );

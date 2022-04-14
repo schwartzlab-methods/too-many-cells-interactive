@@ -1,10 +1,6 @@
 import { median } from 'd3-array';
-import {
-    HierarchyNode,
-    HierarchyPointNode,
-    stratify,
-    tree,
-} from 'd3-hierarchy';
+import { HierarchyNode, HierarchyPointNode, tree } from 'd3-hierarchy';
+import { buildTree } from './prepareData';
 import { TMCNode } from './types';
 
 /**
@@ -80,14 +76,13 @@ export const pruneTreeByMinValue = (
  * @param w width of the viewport
  * @returns Hierarchy point node (i.e., tree structure with polar position coordinates bound)
  */
-export const buildTree = (nodes: HierarchyNode<TMCNode>, w: number) =>
+export const buildTreeLayout = (nodes: HierarchyNode<TMCNode>, w: number) =>
     tree<TMCNode>()
         .size([2 * Math.PI, (w / 2) * 0.9])
         .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
 
 /**
  * Add a node's children to the tree and recalculate layout
- *
  */
 export const reinstateNode = (
     originalTree: HierarchyPointNode<TMCNode>,
@@ -108,15 +103,5 @@ export const reinstateNode = (
             (node.children || []).flatMap(c => c.descendants().map(d => d.data))
         );
 
-    /* todo: this should be its own function  */
-    return buildTree(
-        stratify<TMCNode>()(newNodes)
-            .sort((a, b) => {
-                const aval = a.data.items ? a.data.items.length : 0;
-                const bval = b.data.items ? b.data.items.length : 0;
-                return aval > bval ? -1 : 1;
-            })
-            .sum(d => (d.items ? d.items.length : 0)),
-        width
-    );
+    return buildTreeLayout(buildTree(newNodes), width);
 };

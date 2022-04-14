@@ -6,6 +6,16 @@ import { uuid } from 'lodash-uuid';
 import { TMCNode, TMCFlatNode, RoseNode, RoseNodeObj } from './types';
 import { HierarchyNode, stratify } from 'd3-hierarchy';
 
+export const buildTree = (node: TMCFlatNode[]) => {
+    return (stratify<TMCFlatNode>()(node) as HierarchyNode<TMCNode>)
+        .sort((a, b) => {
+            const aval = a.data.items ? a.data.items.length : 0;
+            const bval = b.data.items ? b.data.items.length : 0;
+            return aval > bval ? -1 : 1;
+        })
+        .sum(d => (d.items ? d.items.length : 0));
+};
+
 /**
  * Import TMC Rosetree, flatten, and pass to d3 hierarchy for rebuilding into
  *  tree that is compatible with D3 layout
@@ -15,7 +25,7 @@ import { HierarchyNode, stratify } from 'd3-hierarchy';
  */
 export const getData = () => {
     const flat = flatten(data as RoseNode);
-    const tree = stratify<TMCFlatNode>()(flat) as HierarchyNode<TMCNode>;
+    const tree = buildTree(flat);
     const labelMap: Record<string, string> = {};
     labels.split('\n').forEach((l: string, i: number) => {
         if (i == 0) {
@@ -26,12 +36,6 @@ export const getData = () => {
     });
 
     return tree
-        .sort((a, b) => {
-            const aval = a.data.items ? a.data.items.length : 0;
-            const bval = b.data.items ? b.data.items.length : 0;
-            return aval > bval ? -1 : 1;
-        })
-        .sum(d => (d.items ? d.items.length : 0))
         .eachAfter(n => {
             n.data.labelCount = n
                 .descendants()

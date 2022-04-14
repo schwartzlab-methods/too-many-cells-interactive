@@ -15,7 +15,7 @@ import { rgb } from 'd3-color';
 import { format } from 'd3-format';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import {
-    buildTree,
+    buildTreeLayout,
     carToRadius,
     carToTheta,
     reinstateNode,
@@ -263,12 +263,14 @@ class RadialTree implements BaseTreeContext {
             .attr('class', 'container')
             .attr('stroke-width', '1px');
 
-        this.rootPositionedTree = buildTree(tree, this.w);
-        this.visibleNodes = buildTree(tree, this.w);
+        this.rootPositionedTree = buildTreeLayout(tree, this.w);
+        this.visibleNodes = buildTreeLayout(tree, this.w);
 
-        this.branchSizeScale = scaleLinear([0.1, 22]).domain(
+        this.branchSizeScale = scaleLinear([0.1, 12]).domain(
             extent(tree.descendants().map(d => d.value!)) as [number, number]
         );
+
+        //this.branchSizeScale.domain([1, 1]).clamp();
 
         this.distanceScale = scaleLinear([0, 1]).domain(
             extent(tree.descendants().map(d => +(d.data.distance || 0))) as [
@@ -664,13 +666,17 @@ class RadialTree implements BaseTreeContext {
                 : (d as HierarchyPointNode<TMCNode>).data.id;
 
             if (event.ctrlKey) {
-                const visibleNodes = buildTree(
-                    that.visibleNodes.find(n => n.data.id === targetNodeId)!,
-                    that.w
-                );
+                const targetNode = that.visibleNodes
+                    .find(n => n.data.id === targetNodeId)!
+                    .copy();
+                // if we reinstate, stratify() will fail if
+                // root node data has a parent
+                targetNode.parent = null;
+                targetNode.data.parentId = undefined;
+                const visibleNodes = buildTreeLayout(targetNode, that.w);
                 that.setContext({ visibleNodes });
             } else if (event.shiftKey) {
-                const visibleNodes = buildTree(
+                const visibleNodes = buildTreeLayout(
                     that.visibleNodes.copy().eachAfter(n => {
                         if (n.data.id === targetNodeId) {
                             n.children = undefined;
