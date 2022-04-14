@@ -1,32 +1,12 @@
 import { median } from 'd3-array';
-import { hierarchy, HierarchyNode, tree } from 'd3-hierarchy';
-import { TMCNodeBase, TMCNode } from './types';
+import {
+    HierarchyNode,
+    HierarchyPointNode,
+    stratify,
+    tree,
+} from 'd3-hierarchy';
+import { TMCNode } from './types';
 
-/**
- * Sort chlildren in descending order -- important for ensuring stable node IDs
- *
- * @param node
- * @returns Hierarchy Node
- */
-export const sortChildren = <T extends TMCNodeBase>(node: HierarchyNode<T>) =>
-    node.sort((a, b) => {
-        const aval = a.data.items ? a.data.items.length : 0;
-        const bval = b.data.items ? b.data.items.length : 0;
-        return aval > bval ? -1 : 1;
-    });
-
-/**
- * Prepare data for use by d3's hierarchical layouts
- * @param data a TooManyCells node, converted from nested-list form
- * @returns HiearchyNode w/ data prop containing node properties
- */
-export const hierarchize = (data: TMCNodeBase) =>
-    sortChildren
-        .call(
-            null,
-            hierarchy(data)
-        ) /* set {@code value} for each node as sum of {@code item}s in descendants */
-        .sum(d => (d.items ? d.items.length : 0));
 /**
  * Calculate the distance from the origin, used to get radius value for polar coordinates
  *
@@ -86,8 +66,7 @@ export const pruneTreeByMinValue = (
 ) => {
     const newTree = tree.copy().eachBefore(d => {
         if (d.value! < minSize) {
-            if (d.data.parent && d.parent) {
-                d.data.parent.children = null;
+            if (d.parent) {
                 d.parent.children = undefined;
             }
         }
@@ -107,35 +86,37 @@ export const buildTree = (nodes: HierarchyNode<TMCNode>, w: number) =>
         .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
 
 /**
- * Remove a node and all its children from the tree and recalculate layout
+ * Add a node's children to the tree and recalculate layout
  *
- * @param tree HierarchyNode
- * @param nodeId string The ID of the node to prune
  */
-export const pruneNodeById = (
-    tree: HierarchyNode<TMCNode>,
+export const reinstateNode = (
+    originalTree: HierarchyPointNode<TMCNode>,
+    prunedTree: HierarchyPointNode<TMCNode>,
     nodeId: string,
     width: number
 ) => {
-    const node = tree.find(n => n.data.id === nodeId);
+    const node = originalTree.find(n => n.data.id === nodeId);
+
     if (!node) {
         throw 'Node not found!';
     }
-    const descIds = node.descendants().map(d => d.data.id);
-    const newNodes = tree
-        .descendants()
-        .filter(n => !descIds.includes(n.data.id))
-        .map(d => d.data);
-    //return buildTree(hierarchize(newNodes), width);
-};
 
-/**
- * Add a node and all its children to the tree and recalculate layout
- *
- * @param tree HierarchyNode
- * @param nodeId string The ID of the node to prune
- */
-export const reinstateNode = (
-    tree: HierarchyNode<TMCNode>,
-    node: HierarchyNode<TMCNode>
-) => {};
+    const newNodes = prunedTree
+        .descendants()
+        .map(d => d.data)
+        .concat(
+            (node.children || []).flatMap(c => c.descendants().map(d => d.data))
+        );
+
+    /* todo: this should be its own function  */
+    return buildTree(
+        stratify<TMCNode>()(newNodes)
+            .sort((a, b) => {
+                const aval = a.data.items ? a.data.items.length : 0;
+                const bval = b.data.items ? b.data.items.length : 0;
+                return aval > bval ? -1 : 1;
+            })
+            .sum(d => (d.items ? d.items.length : 0)),
+        width
+    );
+};

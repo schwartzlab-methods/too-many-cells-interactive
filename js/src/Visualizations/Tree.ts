@@ -14,7 +14,13 @@ import { schemePaired } from 'd3-scale-chromatic';
 import { rgb } from 'd3-color';
 import { format } from 'd3-format';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
-import { buildTree, carToRadius, carToTheta, squared } from './../util';
+import {
+    buildTree,
+    carToRadius,
+    carToTheta,
+    reinstateNode,
+    squared,
+} from './../util';
 import { isLinkNode, TMCNode } from './../types';
 import { BaseTreeContext } from '../Components/Dashboard/Dashboard';
 
@@ -241,6 +247,8 @@ class RadialTree implements BaseTreeContext {
         tree: HierarchyNode<TMCNode>,
         setContext: (context: BaseTreeContext) => any
     ) {
+        const that = this;
+
         this.selector = selector;
         this.legendSelector = legendSelector;
 
@@ -296,8 +304,6 @@ class RadialTree implements BaseTreeContext {
             .style('color', 'white')
             .style('border-radius', '5px')
             .style('padding', '5px');
-
-        const that = this;
 
         this.branchDragBehavior = drag<SVGPolygonElement, any>()
             .on(
@@ -668,7 +674,6 @@ class RadialTree implements BaseTreeContext {
                     that.visibleNodes.copy().eachAfter(n => {
                         if (n.data.id === targetNodeId) {
                             n.children = undefined;
-                            n.data.children = null;
                         }
                     }),
                     that.w
@@ -680,6 +685,8 @@ class RadialTree implements BaseTreeContext {
     };
 
     render = () => {
+        const that = this;
+
         const textSizeScale = scaleLinear([10, 40]).domain(
             extent(this.visibleNodes.leaves().map(d => d.value!)) as [
                 number,
@@ -692,7 +699,6 @@ class RadialTree implements BaseTreeContext {
             .data(this.visibleNodes.descendants(), d => d.data.nodeId)
             .join(
                 enter => {
-                    const that = this;
                     return (
                         enter
                             .append('g')
@@ -730,7 +736,6 @@ class RadialTree implements BaseTreeContext {
                     );
                 },
                 update => {
-                    const that = this;
                     return update
                         .transition()
                         .delay(this.transitionTime)
@@ -824,7 +829,6 @@ class RadialTree implements BaseTreeContext {
 
         /* pies */
 
-        const that = this;
         this.nodes
             .selectAll('g.pie')
             .data(d => [d])
@@ -837,7 +841,7 @@ class RadialTree implements BaseTreeContext {
                     .attr('class', 'pie')
                     .data(
                         getPie(Object.entries(outer.data.labelCount)),
-                        () => `${outer.data.nodeId}-${outer.data.children}`
+                        () => `${outer.data.nodeId}-${outer.children}`
                     )
                     .join('path')
                     .attr('stroke', 'none')
@@ -858,18 +862,13 @@ class RadialTree implements BaseTreeContext {
             .style('visibility', this.piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {
                 if (event.shiftKey) {
-                    const prunedChildren = this.rootPositionedTree.find(
-                        n => n.data.id === d.data.id
-                    )?.children;
-
-                    const newNodes = this.visibleNodes.copy().each(n => {
-                        if (n.data.id === d.data.id) {
-                            n.data.children =
-                                prunedChildren?.map(d => d.data) || null;
-                        }
-                    });
-
-                    const visibleNodes = buildTree(newNodes, this.w);
+                    const visibleNodes = reinstateNode(
+                        this.rootPositionedTree,
+                        this.visibleNodes,
+                        d.data.id,
+                        this.w
+                    );
+                    event.stopPropagation();
                     this.setContext({ visibleNodes });
                 }
             });
