@@ -1,20 +1,29 @@
 import { HierarchyPointLink, HierarchyPointNode } from 'd3-hierarchy';
 
-interface Item {
+export interface RoseNodeItem {
     _barcode: { unCell: string };
     _cellRow: { unRow: number };
 }
 
-export interface TMCNodeBase {
-    parent: TMCNodeBase | undefined;
-    children: TMCNodeBase[] | null;
-    id: string;
-    items: Item[] | null;
+export interface RoseNodeObj {
+    _item: RoseNodeItem[] | null;
+    _distance: number | null;
+    _significance: number | null;
+}
+
+export type RoseNode = [RoseNodeObj, RoseNode[][]] | [][];
+
+export interface TMCFlatNode {
     distance: number | null;
+    id: string;
+    items: RoseNodeItem[] | null;
+    labelCount?: Record<string, number>;
+    nodeId?: number;
+    parentId: string | undefined;
     significance: number | null;
 }
 
-export interface TMCNode extends TMCNodeBase {
+export interface TMCNode extends TMCFlatNode {
     labelCount: Record<string, number>;
     nodeId: number;
 }

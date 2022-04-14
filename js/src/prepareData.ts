@@ -3,13 +3,19 @@
 import data from './data/tabula_muris_all_simple/cluster_tree.json';
 import labels from './data/tabula_muris_all_simple/labels.csv';
 import { uuid } from 'lodash-uuid';
-import { TMCNodeBase, TMCNode } from './types';
-import { hierarchize } from './util';
-import { HierarchyNode } from 'd3-hierarchy';
+import { TMCNode, TMCFlatNode, RoseNode, RoseNodeObj } from './types';
+import { HierarchyNode, stratify } from 'd3-hierarchy';
 
+/**
+ * Import TMC Rosetree, flatten, and pass to d3 hierarchy for rebuilding into
+ *  tree that is compatible with D3 layout
+ * Flattening tree as intermediate step is useful for filtering and rebuilding later on
+ *
+ * @returns HierarchyNode<TMCNode> Root tree that can be passed to D3 layout
+ */
 export const getData = () => {
-    const treelike = makeNode(data);
-    const hiearchized = hierarchize(treelike) as HierarchyNode<TMCNode>;
+    const flat = flatten(data as RoseNode);
+    const tree = stratify<TMCFlatNode>()(flat) as HierarchyNode<TMCNode>;
     const labelMap: Record<string, string> = {};
     labels.split('\n').forEach((l: string, i: number) => {
         if (i == 0) {
@@ -19,8 +25,13 @@ export const getData = () => {
         labelMap[k] = v;
     });
 
-    return hiearchized
-        .copy()
+    return tree
+        .sort((a, b) => {
+            const aval = a.data.items ? a.data.items.length : 0;
+            const bval = b.data.items ? b.data.items.length : 0;
+            return aval > bval ? -1 : 1;
+        })
+        .sum(d => (d.items ? d.items.length : 0))
         .eachAfter(n => {
             n.data.labelCount = n
                 .descendants()
@@ -42,23 +53,29 @@ export const getData = () => {
 const isObject = (item: any): item is object =>
     !!item && typeof item === 'object' && !Array.isArray(item);
 
-const makeNode = (
-    data: Record<string, any>[][] | Record<string, any>[],
-    parent?: TMCNodeBase
-): TMCNodeBase => {
-    const node = {} as TMCNodeBase;
-    node.parent = parent;
+const flatten = (
+    data: RoseNode,
+    nodes: TMCFlatNode[] = [],
+    parentId?: string
+): TMCFlatNode[] => {
+    const node = {} as TMCFlatNode;
+    node.parentId = parentId;
     node.id = uuid();
-    const meta = data.find(content => isObject(content));
-    node.items = meta?._item;
-    node.distance = meta?._distance;
-    node.significance = meta?._significance;
-    let children = data.filter(item => Array.isArray(item)).flat() as Record<
-        string,
-        any
-    >[][];
-    node.children = children.map(child => makeNode(child, node));
-    return node;
-};
+    const meta = data.find(content => isObject(content)) as
+        | RoseNodeObj
+        | undefined;
 
-export default makeNode(data);
+    node.items = meta?._item ?? null;
+    node.distance = meta?._distance ?? null;
+    node.significance = meta?._significance ?? null;
+    nodes.push(node);
+    for (let item of data) {
+        if (Array.isArray(item)) {
+            for (let i of item) {
+                flatten(i as RoseNode, nodes, node.id);
+            }
+        }
+    }
+
+    return nodes;
+};
