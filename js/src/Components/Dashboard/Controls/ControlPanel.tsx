@@ -8,7 +8,6 @@ import { TreeContext } from '../Dashboard';
 import Input from '../../Input';
 import { Label } from '../../Typography';
 import Checkbox from '../../Checkbox';
-import { tree } from 'd3-hierarchy';
 import { extent } from 'd3-array';
 
 const ControlPanel: React.FC = () => {

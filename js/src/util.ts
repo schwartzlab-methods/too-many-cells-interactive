@@ -76,7 +76,7 @@ export const pruneTreeByMinValue = (
  * @param w width of the viewport
  * @returns Hierarchy point node (i.e., tree structure with polar position coordinates bound)
  */
-export const buildTreeLayout = (nodes: HierarchyNode<TMCNode>, w: number) =>
+export const calculateTreeLayout = (nodes: HierarchyNode<TMCNode>, w: number) =>
     tree<TMCNode>()
         .size([2 * Math.PI, (w / 2) * 0.9])
         .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
@@ -103,5 +103,5 @@ export const reinstateNode = (
             (node.children || []).flatMap(c => c.descendants().map(d => d.data))
         );
 
-    return buildTreeLayout(buildTree(newNodes), width);
+    return calculateTreeLayout(buildTree(newNodes), width);
 };

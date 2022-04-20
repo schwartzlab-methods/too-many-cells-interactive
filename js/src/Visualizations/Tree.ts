@@ -1,21 +1,22 @@
 import 'd3-transition'; // must be imported before selection
+import { extent, max, min, sum } from 'd3-array';
 import { dispatch } from 'd3-dispatch';
-import { BaseType, select, selectAll, Selection } from 'd3-selection';
+import { color, rgb } from 'd3-color';
+import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
+import { format } from 'd3-format';
 import {
     HierarchyNode,
     HierarchyPointLink,
     HierarchyPointNode,
 } from 'd3-hierarchy';
-import { arc, pie, pointRadial } from 'd3-shape';
+import { interpolate } from 'd3-interpolate';
 import { ScaleLinear, scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
-import { extent, max, min, sum } from 'd3-array';
+import { schemeSet1 } from 'd3-scale-chromatic';
+import { BaseType, select, selectAll, Selection } from 'd3-selection';
+import { arc, pie, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
-import { schemePaired } from 'd3-scale-chromatic';
-import { rgb } from 'd3-color';
-import { format } from 'd3-format';
-import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import {
-    buildTreeLayout,
+    calculateTreeLayout,
     carToRadius,
     carToTheta,
     reinstateNode,
@@ -85,7 +86,7 @@ const getSideB = (midpoint: Point, m: number, offsets: Point): Point => {
 /**
  *
  * @param point midpoint of trapezoid base
- * @param offset length of base / 2
+ * @param offsets length of base / 2
  * @param m slope of line to which base is perpendicular
  * @returns [[x1,y1],[x2,y2]]
  */
@@ -183,6 +184,34 @@ const getBlendedColor = (
     return blendWeighted(weightedColors).toString();
 };
 
+/**
+ * If label count is greater than count of colors in scale,
+ *  return a new scale with the extra colors evently interpolated
+ *
+ * @param labels
+ * @returns string[]
+ */
+const interpolateColorScale = (labels: string[]) => {
+    if (labels.length <= schemeSet1.length) {
+        return schemeSet1;
+    }
+
+    const step = (schemeSet1.length - 1) / labels.length;
+
+    return Array(labels.length)
+        .fill(null)
+        .map((_, i) => {
+            const base = Math.floor(i * step);
+            const next = base + 1;
+            const k = i * step - base;
+            const interpolated = interpolate(
+                schemeSet1[base],
+                schemeSet1[next]
+            )(k);
+            return color(interpolated)!.formatHex();
+        });
+};
+
 const showToolTip = (data: TMCNode, e: MouseEvent) => {
     selectAll('.tooltip')
         .html(function () {
@@ -263,14 +292,12 @@ class RadialTree implements BaseTreeContext {
             .attr('class', 'container')
             .attr('stroke-width', '1px');
 
-        this.rootPositionedTree = buildTreeLayout(tree, this.w);
-        this.visibleNodes = buildTreeLayout(tree, this.w);
+        this.rootPositionedTree = calculateTreeLayout(tree, this.w);
+        this.visibleNodes = calculateTreeLayout(tree, this.w);
 
         this.branchSizeScale = scaleLinear([0.1, 12]).domain(
             extent(tree.descendants().map(d => d.value!)) as [number, number]
         );
-
-        //this.branchSizeScale.domain([1, 1]).clamp();
 
         this.distanceScale = scaleLinear([0, 1]).domain(
             extent(tree.descendants().map(d => +(d.data.distance || 0))) as [
@@ -456,7 +483,9 @@ class RadialTree implements BaseTreeContext {
             )
         ).filter(Boolean) as string[];
 
-        this.labelScale = scaleOrdinal(schemePaired).domain(labels);
+        const scaleColors = interpolateColorScale(labels);
+
+        this.labelScale = scaleOrdinal(scaleColors).domain(labels);
 
         this.pieScale = scaleLinear([5, 20])
             .domain(
@@ -673,10 +702,10 @@ class RadialTree implements BaseTreeContext {
                 // root node data has a parent
                 targetNode.parent = null;
                 targetNode.data.parentId = undefined;
-                const visibleNodes = buildTreeLayout(targetNode, that.w);
+                const visibleNodes = calculateTreeLayout(targetNode, that.w);
                 that.setContext({ visibleNodes });
             } else if (event.shiftKey) {
-                const visibleNodes = buildTreeLayout(
+                const visibleNodes = calculateTreeLayout(
                     that.visibleNodes.copy().eachAfter(n => {
                         if (n.data.id === targetNodeId) {
                             n.children = undefined;
