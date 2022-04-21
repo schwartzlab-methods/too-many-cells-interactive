@@ -1,5 +1,5 @@
 import { median, min, quantile, range, ticks } from 'd3-array';
-import { HierarchyNode, tree } from 'd3-hierarchy';
+import { HierarchyNode } from 'd3-hierarchy';
 import React, { useCallback, useContext, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { TMCNode } from '../../../types';
@@ -17,9 +17,71 @@ import {
 } from './../../../Components';
 //https://github.com/styled-components/styled-components/issues/1449
 import Button from '../../Button';
-import Input from '../../Input';
+import { NumberInput } from '../../Input';
 import { Label } from '../../Typography';
 import { format } from 'd3-format';
+
+const ChartContainer = styled.div<{ expanded: boolean }>`
+    opacity: ${props => (props.expanded ? 1 : 0)};
+    transition: 0.5s opacity cubic-bezier(0.73, 0.32, 0.34, 1.5);
+`;
+
+const PrunerContainer = styled.div<{ expanded: boolean }>`
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    max-width: 300px;
+    height: ${props => (props.expanded ? '220px' : '25px')};
+    + {PrunerContainer} {
+        margin-bottom: 10px;
+    }
+    transition: 0.25s height cubic-bezier(.73,.32,.34,1.5)
+`;
+
+const PrunerLabelContainer = styled.div`
+    display: flex;
+    flex-direction: columns;
+    justify-content: space-between;
+`;
+
+const PrunerPanelContainer = styled.div`
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    justify-content: flex-start;
+`;
+
+const RadioButton = styled.input.attrs({ type: 'radio' })`
+    margin: 0px;
+    margin-right: 3px;
+`;
+const RadioGroup = styled.div`
+    align-items: center;
+    display: flex;
+    margin-top: 5px;
+`;
+
+const RadioLabel = styled(Label)`
+    margin-left: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    + input[type='radio'] {
+        margin-left: 3px;
+    }
+`;
+
+const SubmitButton = styled(Button)`
+    align-self: flex-start;
+    margin-left: 5px;
+`;
+
+const TextInputGroup = styled.div`
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+`;
 
 type Pruner = 'depth' | 'distance' | 'distanceSearch' | 'size';
 
@@ -38,7 +100,6 @@ const PrunerPanel: React.FC = () => {
 
     const treeContext = useContext(TreeContext);
 
-    /* prune by size values */
     const sizeGroupsPlain = useMemo(() => {
         if (treeContext.rootPositionedTree) {
             return getSizeGroups(treeContext.rootPositionedTree!);
@@ -74,7 +135,6 @@ const PrunerPanel: React.FC = () => {
         } else return 0;
     }, [treeContext.rootPositionedTree]);
 
-    /* prune by distance values */
     const distanceGroupsPlain = useMemo(() => {
         if (treeContext.rootPositionedTree) {
             return getDistanceGroups(
@@ -138,8 +198,6 @@ const PrunerPanel: React.FC = () => {
         } else return 0;
     }, [treeContext.rootPositionedTree]);
 
-    /* prune by depth props */
-
     const depthSearchGroupsPlain = useMemo(() => {
         if (treeContext.rootPositionedTree) {
             return getDepthGroups(treeContext.rootPositionedTree!);
@@ -151,53 +209,15 @@ const PrunerPanel: React.FC = () => {
         setExpanded(expanded === id ? undefined : id);
     };
 
-    /* todo: the following three could be collapsed by just passing in callback */
-    const updateDepth = useCallback(
-        (depth: number) => {
-            const pruned = pruneTreeByDepth(
-                treeContext.rootPositionedTree!,
-                depth
-            );
-
-            const visibleNodes = calculateTreeLayout(pruned, treeContext.w!);
-
-            treeContext.setTreeContext!({
-                ...treeContext,
-                visibleNodes,
-            });
-        },
-        [treeContext]
-    );
-
-    const updateMinNodeSize = useCallback(
-        (size: number) => {
-            const pruned = pruneTreeByMinValue(
-                treeContext.rootPositionedTree!,
-                size
-            );
-
-            const visibleNodes = calculateTreeLayout(pruned, treeContext.w!);
-
-            treeContext.setTreeContext!({
-                ...treeContext,
-                visibleNodes,
-            });
-        },
-        [treeContext]
-    );
-
-    const updateMinDistance = useCallback(
-        (search = false) =>
+    const prune = useCallback(
+        (
+                cb: (
+                    tree: HierarchyNode<TMCNode>,
+                    pruneVal: number
+                ) => HierarchyNode<TMCNode>
+            ) =>
             (distance: number) => {
-                const pruned = search
-                    ? pruneTreeByMinDistanceSearch(
-                          treeContext.rootPositionedTree!,
-                          distance
-                      )
-                    : pruneTreeByMinDistance(
-                          treeContext.rootPositionedTree!,
-                          distance
-                      );
+                const pruned = cb(treeContext.rootPositionedTree!, distance);
 
                 const visibleNodes = calculateTreeLayout(
                     pruned,
@@ -212,7 +232,7 @@ const PrunerPanel: React.FC = () => {
         [treeContext]
     );
 
-    const updatePrunerVal = (pruner: Pruner) => (val: number) =>
+    const updatePrunerVal = (pruner: Pruner) => (val: number | string) =>
         setPrunerVals({ ...initialPrunerVal, [pruner]: val });
 
     return (
@@ -226,7 +246,7 @@ const PrunerPanel: React.FC = () => {
                 median={sizeMedian}
                 onChange={updatePrunerVal('size')}
                 onExpand={onExpand('size')}
-                onSubmit={updateMinNodeSize}
+                onSubmit={prune(pruneTreeByMinValue)}
                 plainValues={sizeGroupsPlain}
                 value={prunerVals.size}
                 xLabel="Size"
@@ -240,7 +260,7 @@ const PrunerPanel: React.FC = () => {
                 median={distanceMedian}
                 onChange={updatePrunerVal('distance')}
                 onExpand={onExpand('distance')}
-                onSubmit={updateMinDistance()}
+                onSubmit={prune(pruneTreeByMinDistance)}
                 plainValues={distanceGroupsPlain}
                 value={prunerVals.distance}
                 xLabel="Distance"
@@ -254,7 +274,7 @@ const PrunerPanel: React.FC = () => {
                 median={distanceMedian}
                 onChange={updatePrunerVal('distanceSearch')}
                 onExpand={onExpand('distanceSearch')}
-                onSubmit={updateMinDistance(true)}
+                onSubmit={prune(pruneTreeByMinDistanceSearch)}
                 plainValues={distanceSearchGroupsPlain}
                 value={prunerVals.distanceSearch}
                 xLabel="Distance (Search)"
@@ -264,7 +284,7 @@ const PrunerPanel: React.FC = () => {
                 label="Prune by depth"
                 onExpand={onExpand('depth')}
                 onChange={updatePrunerVal('depth')}
-                onSubmit={updateDepth}
+                onSubmit={prune(pruneTreeByDepth)}
                 plainValues={depthSearchGroupsPlain}
                 xLabel="Depth"
                 value={prunerVals.depth}
@@ -290,26 +310,13 @@ const PrunerPanel: React.FC = () => {
     );
 };
 
-const PrunerPanelContainer = styled.div`
-    align-self: flex-start;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    justify-content: flex-start;
-`;
-
 export default PrunerPanel;
-
-const SubmitButton = styled(Button)`
-    align-self: flex-start;
-    margin-left: 5px;
-`;
 
 interface PrunerProps {
     expanded: boolean;
     label: string;
     onExpand: () => void;
-    onChange: (val: number) => void;
+    onChange: (val: number | string) => void;
     onSubmit: (size: number) => void;
     plainValues: Map<number, number>;
     xLabel: string;
@@ -342,15 +349,11 @@ const Pruner: React.FC<PrunerProps> = ({
                             counts={plainValues}
                             xLabel={xLabel}
                         />
-                        <TextInputGroup>
-                            <Input
-                                onChange={v => onChange(+v.currentTarget.value)}
-                                value={value}
-                            />
-                            <SubmitButton onClick={() => onSubmit(value)}>
-                                Update
-                            </SubmitButton>
-                        </TextInputGroup>
+                        <UpdateBox
+                            onChange={v => onChange(v)}
+                            onSubmit={() => onSubmit(value)}
+                            value={value}
+                        />
                     </>
                 )}
             </ChartContainer>
@@ -367,7 +370,7 @@ interface SmartPrunerProps {
     median: number;
     onExpand: () => void;
     plainValues: Map<number, number>;
-    onChange: (val: number) => void;
+    onChange: (val: number | string) => void;
     onSubmit: (size: number) => void;
     xLabel: string;
     value: number;
@@ -442,39 +445,17 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                                 xLabel={`${xLabel} in MADs from median`}
                             />
                         )}
-                        <TextInputGroup>
-                            <Input
-                                onChange={v => onChange(+v.currentTarget.value)}
-                                value={value}
-                            />
-                            <SubmitButton onClick={() => onSubmit(value)}>
-                                Update
-                            </SubmitButton>
-                        </TextInputGroup>
+                        <UpdateBox
+                            onChange={v => onChange(v)}
+                            onSubmit={() => onSubmit(value)}
+                            value={value}
+                        />
                     </>
                 )}
             </ChartContainer>
         </PrunerContainer>
     );
 };
-
-const ChartContainer = styled.div<{ expanded: boolean }>`
-    opacity: ${props => (props.expanded ? 1 : 0)};
-    transition: 0.5s opacity cubic-bezier(0.73, 0.32, 0.34, 1.5);
-`;
-
-const PrunerContainer = styled.div<{ expanded: boolean }>`
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    max-width: 300px;
-    height: ${props => (props.expanded ? '220px' : '25px')};
-    + {PrunerContainer} {
-        margin-bottom: 10px;
-    }
-    transition: 0.25s height cubic-bezier(.73,.32,.34,1.5)
-`;
 
 const PrunerLabel: React.FC<{ expanded: boolean; onClick: () => void }> = ({
     children,
@@ -487,36 +468,26 @@ const PrunerLabel: React.FC<{ expanded: boolean; onClick: () => void }> = ({
     </PrunerLabelContainer>
 );
 
-const PrunerLabelContainer = styled.div`
-    display: flex;
-    flex-direction: columns;
-    justify-content: space-between;
-`;
+interface UpdateBoxProps {
+    onChange: (val: number | string) => void;
+    onSubmit: (val: number) => void;
+    value: number;
+}
 
-const RadioButton = styled.input.attrs({ type: 'radio' })`
-    margin: 0px;
-    margin-right: 3px;
-`;
-const RadioGroup = styled.div`
-    align-items: center;
-    display: flex;
-    margin-top: 5px;
-`;
-
-const RadioLabel = styled(Label)`
-    margin-left: 3px;
-    cursor: pointer;
-    font-size: 12px;
-    + input[type='radio'] {
-        margin-left: 3px;
-    }
-`;
-
-const TextInputGroup = styled.div`
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-`;
+const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => {
+    return (
+        <TextInputGroup
+            onKeyUp={e => {
+                if (e.code === 'Enter') {
+                    onSubmit(value);
+                }
+            }}
+        >
+            <NumberInput onChange={v => onChange(v)} value={value} />
+            <SubmitButton onClick={() => onSubmit(value)}>Update</SubmitButton>
+        </TextInputGroup>
+    );
+};
 
 /**
  * Find the minimum size-cutoff value needed to display at least one generation of the tree

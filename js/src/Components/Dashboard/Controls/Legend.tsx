@@ -5,7 +5,7 @@ import useClickAway from './../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
 import { TreeContext } from './../Dashboard';
 import { Column } from './../../Layout';
-import Input from '../../Input';
+import { Input } from '../../Input';
 
 const Legend: React.FC = () => {
     const treeContext = useContext(TreeContext);

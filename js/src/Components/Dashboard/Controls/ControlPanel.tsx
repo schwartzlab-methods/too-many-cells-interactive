@@ -5,7 +5,7 @@ import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
 import { Column } from './../../Layout';
 import { TreeContext } from '../Dashboard';
-import Input from '../../Input';
+import { Input } from '../../Input';
 import { Label } from '../../Typography';
 import Checkbox from '../../Checkbox';
 import { extent } from 'd3-array';

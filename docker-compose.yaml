@@ -8,6 +8,5 @@ services:
     ports:
       - 8080:8080
     environment:
-      - API_HOST_PORT
       - APP_PORT
     entrypoint: "yarn start"

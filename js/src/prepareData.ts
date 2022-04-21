@@ -1,7 +1,5 @@
-//import data from './data/workshop/cluster_tree.json';
-//import labels from './data/workshop/labels.csv';
-import data from './data/tabula_muris_all_simple/cluster_tree.json';
-import labels from './data/tabula_muris_all_simple/labels.csv';
+import data from './data/cluster_tree.json';
+import labels from './data/labels.csv';
 import { uuid } from 'lodash-uuid';
 import { TMCNode, TMCFlatNode, RoseNode, RoseNodeObj } from './types';
 import { HierarchyNode, stratify } from 'd3-hierarchy';

@@ -13,10 +13,9 @@ module.exports = {
                 exclude: /node_modules/,
             },
             {
-                test: /\.csv/,
+                test: /labels\.csv/,
                 type: 'asset/source',
             },
-
             {
                 test: /\.s[ac]ss$/i,
                 use: ['style-loader', 'css-loader', 'sass-loader'],
@@ -32,11 +31,12 @@ module.exports = {
     },
     plugins: [
         new HtmlWebpackPlugin({
+            favicon: './public/favicon.ico',
             template: './src/template.ejs',
         }),
     ],
     devServer: {
         compress: true,
-        port: process.env.APP_PORT,
+        port: 8080,
     },
 };
