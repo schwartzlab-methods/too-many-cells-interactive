@@ -2,6 +2,7 @@
 
 set -eo pipefail
 
+# build: `docker build -t too-many-cells-js:latest .`
 # Simple script to start container with data directory mounted and optional port specified
 # assumes that container is already pulled and built and is called too-many-cells-js:latest
 # user must pass in --data-dir argument with absolute path of directory containing files called cluster_tree.json and labels.csv
@@ -10,7 +11,6 @@ set -eo pipefail
 PORT=8080
 
 while [ ! -z "$1" ]; do
-    echo $1
     if [[ "$1" == '--data-dir' ]]; then 
         shift
         DATA_DIR=$1

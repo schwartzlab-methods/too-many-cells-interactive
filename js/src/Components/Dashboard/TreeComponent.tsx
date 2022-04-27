@@ -12,10 +12,9 @@ import { BaseTreeContext, TreeContext } from './Dashboard';
 
 interface TreeComponentProps {
     data: HierarchyNode<TMCNode>;
-    onLoad: (tree: TreeViz) => void;
 }
 
-const TreeComponent: React.FC<TreeComponentProps> = ({ data, onLoad }) => {
+const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
     const [Tree, setTree] = useState<TreeViz>();
 
     const treeContext = useContext(TreeContext);
@@ -42,8 +41,6 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data, onLoad }) => {
                     treeContext.setTreeContext!({ ...treeContext, ...ctx })
             );
             setTree(_Tree);
-            _Tree.render();
-            onLoad(_Tree);
         }
     }, [data]);
 

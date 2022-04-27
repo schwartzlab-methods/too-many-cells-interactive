@@ -53,6 +53,7 @@ export const getSizePrunedRemainder = (
 };
 
 /**
+ * @param tree The original tree (i.e., tree with all possible nodes)
  * @param minSize Minimum value for node (and therefore all children) in order to remain in the graphic
  * @returns tree pruned of nodes (and siblings) that did not meet {@code minSize}
  */

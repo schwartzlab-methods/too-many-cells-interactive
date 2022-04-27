@@ -186,7 +186,7 @@ const getBlendedColor = (
 
 /**
  * If label count is greater than count of colors in scale,
- *  return a new scale with the extra colors evently interpolated
+ *  return a new scale with the extra colors evenly interpolated
  *
  * @param labels
  * @returns string[]
@@ -246,7 +246,6 @@ class RadialTree implements BaseTreeContext {
     distanceScale: ScaleLinear<number, number>;
     distanceVisible = false;
     h = 1000;
-    //labelScale = scaleOrdinal(['#66C2A5', '#EF966E']).domain(labels);
     labelScale: ScaleOrdinal<string, string>;
     legendSelector: string;
     linkContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
@@ -495,6 +494,21 @@ class RadialTree implements BaseTreeContext {
                 ]
             )
             .clamp(true);
+
+        /* in the current implementation, this will provoke a call to render() in the parent component */
+        this.setContext({
+            branchSizeScale: this.branchSizeScale,
+            distanceVisible: this.distanceVisible,
+            labelScale: this.labelScale,
+            nodeIdsVisible: this.nodeIdsVisible,
+            nodeCountsVisible: this.nodeCountsVisible,
+            piesVisible: this.piesVisible,
+            pieScale: this.pieScale,
+            rootPositionedTree: this.rootPositionedTree,
+            strokeVisible: this.strokeVisible,
+            visibleNodes: this.visibleNodes,
+            w: this.w,
+        });
     }
 
     drawNodeCounter = () => {

@@ -1,8 +1,10 @@
 import { HierarchyNode } from 'd3-hierarchy';
 import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
 import React, { createContext, useEffect, useState } from 'react';
-import styled, { ThemeProvider } from 'styled-components';
+import { ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
+import { Column, Row } from '../Layout';
+import { Title } from '../Typography';
 import { getData } from './../../prepareData';
 import ControlPanel from './Controls/ControlPanel';
 import TreeComponent from './TreeComponent';
@@ -47,52 +49,20 @@ const Dashboard: React.FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <TreeContext.Provider value={{ ...treeContext, setTreeContext }}>
-                <Container>
-                    <Group>
-                        {data && (
-                            <TreeComponent
-                                onLoad={tree => {
-                                    if (!Object.values(treeContext).length) {
-                                        setTreeContext({
-                                            branchSizeScale:
-                                                tree.branchSizeScale,
-                                            distanceVisible:
-                                                tree.distanceVisible,
-                                            labelScale: tree.labelScale,
-                                            nodeIdsVisible: tree.nodeIdsVisible,
-                                            nodeCountsVisible:
-                                                tree.nodeCountsVisible,
-                                            piesVisible: tree.piesVisible,
-                                            pieScale: tree.pieScale,
-                                            rootPositionedTree:
-                                                tree.rootPositionedTree,
-                                            strokeVisible: tree.strokeVisible,
-                                            visibleNodes: tree.visibleNodes,
-                                            w: tree.w,
-                                        });
-                                    }
-                                }}
-                                data={data}
-                            />
-                        )}
-                    </Group>
-                    <Group>{<ControlPanel />}</Group>
-                </Container>
+                <Column>
+                    <Title>TooManyCellsJs</Title>
+                    <Row>
+                        <Row basis="50%">
+                            {data && <TreeComponent data={data} />}
+                        </Row>
+                        <Row basis="50%">
+                            <ControlPanel />
+                        </Row>
+                    </Row>
+                </Column>
             </TreeContext.Provider>
         </ThemeProvider>
     );
 };
 
 export default Dashboard;
-
-const Container = styled.div`
-    display: flex;
-    flex-direction: row;
-`;
-
-const Group = styled.div`
-    display: flex;
-    flex-direction: row;
-    flex-basis: 50%;
-    flex-grow: 1;
-`;

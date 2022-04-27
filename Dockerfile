@@ -8,4 +8,4 @@ RUN yarn install
 
 ENTRYPOINT ["yarn"]
 
-CMD ["run","start"]
+CMD ["run","start-cold"]

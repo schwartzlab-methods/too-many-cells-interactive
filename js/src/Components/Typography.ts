@@ -1,9 +1,13 @@
-import React from 'react';
 import styled from 'styled-components';
 
 export const Text = styled.p`
     margin: 0px;
     font-size: 16px;
+`;
+
+export const Title = styled.h3`
+    margin: 5px;
+    font-size: 24px;
 `;
 
 export const Caption = styled.p`

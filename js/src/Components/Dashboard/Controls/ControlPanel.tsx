@@ -1,14 +1,14 @@
 import React, { useContext, useMemo } from 'react';
+import { extent } from 'd3-array';
 import styled from 'styled-components';
 import DisplayButtons from './DisplayButtons';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
-import { Column } from './../../Layout';
+import { Column, Row } from './../../Layout';
 import { TreeContext } from '../Dashboard';
 import { Input } from '../../Input';
 import { Label } from '../../Typography';
 import Checkbox from '../../Checkbox';
-import { extent } from 'd3-array';
 
 const ControlPanel: React.FC = () => {
     const treeContext = useContext(TreeContext);
@@ -66,15 +66,6 @@ const ControlPanel: React.FC = () => {
         </Row>
     );
 };
-
-const Row = styled.div`
-    display: flex;
-    flex-direction: row;
-    flex-wrap: no-wrap;
-    flex-grow: 1;
-    margin: 5px;
-    padding: 10px;
-`;
 
 export default ControlPanel;
 
