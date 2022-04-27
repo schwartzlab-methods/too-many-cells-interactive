@@ -23,7 +23,10 @@ import {
     squared,
 } from './../util';
 import { isLinkNode, TMCNode } from './../types';
-import { DisplayContext } from '../Components/Dashboard/Dashboard';
+import {
+    DisplayContext,
+    PruneContext,
+} from '../Components/Dashboard/Dashboard';
 
 // for debugging
 (window as any).select = select;
@@ -264,6 +267,7 @@ class RadialTree implements DisplayContext {
     rootPositionedTree: HierarchyPointNode<TMCNode>;
     selector: string;
     setDisplayContext: (context: DisplayContext) => any;
+    setPruneContext: (context: Partial<PruneContext>) => any;
     strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
     transitionTime = 250;
@@ -273,7 +277,8 @@ class RadialTree implements DisplayContext {
         selector: string,
         legendSelector: string,
         tree: HierarchyNode<TMCNode>,
-        setDisplayContext: (context: DisplayContext) => any
+        setDisplayContext: (context: DisplayContext) => any,
+        setPruneContext: (context: Partial<PruneContext>) => any
     ) {
         const that = this;
 
@@ -281,6 +286,7 @@ class RadialTree implements DisplayContext {
         this.legendSelector = legendSelector;
 
         this.setDisplayContext = setDisplayContext;
+        this.setPruneContext = setPruneContext;
 
         this.svg = select(this.selector)
             .append('svg')
@@ -504,9 +510,7 @@ class RadialTree implements DisplayContext {
             nodeCountsVisible: this.nodeCountsVisible,
             piesVisible: this.piesVisible,
             pieScale: this.pieScale,
-            rootPositionedTree: this.rootPositionedTree,
             strokeVisible: this.strokeVisible,
-            visibleNodes: this.visibleNodes,
             w: this.w,
         });
     }
@@ -717,7 +721,7 @@ class RadialTree implements DisplayContext {
                 targetNode.parent = null;
                 targetNode.data.parentId = undefined;
                 const visibleNodes = calculateTreeLayout(targetNode, that.w);
-                that.setDisplayContext({ visibleNodes });
+                //that.setDisplayContext({ visibleNodes });
             } else if (event.shiftKey) {
                 const visibleNodes = calculateTreeLayout(
                     that.visibleNodes.copy().eachAfter(n => {
@@ -728,7 +732,7 @@ class RadialTree implements DisplayContext {
                     that.w
                 );
 
-                that.setDisplayContext({ visibleNodes });
+                //that.setDisplayContext({ visibleNodes });
             }
         });
     };
@@ -918,7 +922,7 @@ class RadialTree implements DisplayContext {
                         this.w
                     );
                     event.stopPropagation();
-                    this.setDisplayContext({ visibleNodes });
+                    //this.setDisplayContext({ visibleNodes });
                 }
             });
 

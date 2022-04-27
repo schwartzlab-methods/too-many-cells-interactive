@@ -8,7 +8,7 @@ import React, {
 import { HierarchyNode } from 'd3-hierarchy';
 import { TMCNode } from './../../types';
 import { Tree as TreeViz } from './../../Visualizations';
-import { DisplayContext, TreeContext } from './Dashboard';
+import { DisplayContext, PruneContext, TreeContext } from './Dashboard';
 
 interface TreeComponentProps {
     data: HierarchyNode<TMCNode>;
@@ -17,7 +17,8 @@ interface TreeComponentProps {
 const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
     const [Tree, setTree] = useState<TreeViz>();
 
-    const { setDisplayContext, displayContext } = useContext(TreeContext);
+    const { displayContext, pruneContext, setDisplayContext, setPruneContext } =
+        useContext(TreeContext);
 
     useEffect(() => {
         if (Tree) {
@@ -29,6 +30,18 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
         }
     }, [displayContext]);
 
+    useEffect(() => {
+        if (Tree) {
+            Object.assign(Tree, displayContext);
+            /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
+            Tree.setPruneContext = (ctx: Partial<PruneContext>) =>
+                setPruneContext(ctx);
+            Tree.render();
+        }
+    }, [pruneContext]);
+
+    /* todo: listen to pruneContext and calculate/set visible or root nodes, depending on value */
+
     const selector = useRef<string>('tree');
 
     useLayoutEffect(() => {
@@ -37,7 +50,8 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                 `.${selector.current}`,
                 '.legend',
                 data,
-                (ctx: DisplayContext) => setDisplayContext(ctx)
+                (ctx: DisplayContext) => setDisplayContext(ctx),
+                (ctx: Partial<PruneContext>) => setPruneContext(ctx)
             );
             setTree(_Tree);
         }

@@ -11,7 +11,8 @@ import { Label } from '../../Typography';
 import Checkbox from '../../Checkbox';
 
 const ControlPanel: React.FC = () => {
-    const { displayContext, setDisplayContext } = useContext(TreeContext);
+    const { displayContext, setDisplayContext, visibleNodes } =
+        useContext(TreeContext);
 
     const branchScalingDisabled = useMemo(() => {
         return (
@@ -47,8 +48,8 @@ const ControlPanel: React.FC = () => {
                             branchSizeScale.domain(
                                 branchScalingDisabled
                                     ? (extent(
-                                          displayContext
-                                              .visibleNodes!.descendants()
+                                          visibleNodes!
+                                              .descendants()
                                               .map(d => d.value!)
                                       ) as [number, number])
                                     : [1, 1]

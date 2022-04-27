@@ -98,111 +98,112 @@ const PrunerPanel: React.FC = () => {
 
     const [expanded, setExpanded] = useState<Pruner>();
 
-    const { displayContext, setDisplayContext } = useContext(TreeContext);
+    const { displayContext, rootPositionedTree, setDisplayContext } =
+        useContext(TreeContext);
 
     const sizeGroupsPlain = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
-            return getSizeGroups(displayContext.rootPositionedTree!);
+        if (rootPositionedTree) {
+            return getSizeGroups(rootPositionedTree!);
         } else return new Map();
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const sizeGroupsMad = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
-            return getSizeMadGroups(displayContext.rootPositionedTree!);
+        if (rootPositionedTree) {
+            return getSizeMadGroups(rootPositionedTree!);
         } else return new Map();
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const sizeMadValue = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
+        if (rootPositionedTree) {
             return getMAD(
-                displayContext.rootPositionedTree
+                rootPositionedTree
                     .descendants()
                     .map(v => v.data.distance!)
                     .filter(Boolean)
             )!;
         } else return 0;
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const sizeMedian = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
+        if (rootPositionedTree) {
             return quantile(
-                displayContext.rootPositionedTree
+                rootPositionedTree
                     .descendants()
                     .map(v => v.value!)
                     .filter(Boolean),
                 0.5
             )!;
         } else return 0;
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const distanceGroupsPlain = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
+        if (rootPositionedTree) {
             return getDistanceGroups(
-                displayContext.rootPositionedTree!,
-                getMaxCutoffDistance(displayContext.rootPositionedTree!),
+                rootPositionedTree!,
+                getMaxCutoffDistance(rootPositionedTree!),
                 pruneTreeByMinDistance
             );
         } else return new Map();
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const distanceGroupsMad = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
+        if (rootPositionedTree) {
             return getDistanceMadGroups(
-                displayContext.rootPositionedTree!,
-                getMaxCutoffDistance(displayContext.rootPositionedTree!),
+                rootPositionedTree!,
+                getMaxCutoffDistance(rootPositionedTree!),
                 pruneTreeByMinDistance
             );
         } else return new Map();
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const distanceSearchGroupsMad = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
+        if (rootPositionedTree) {
             return getDistanceMadGroups(
-                displayContext.rootPositionedTree!,
-                getMaxCutoffDistanceSearch(displayContext.rootPositionedTree!),
+                rootPositionedTree!,
+                getMaxCutoffDistanceSearch(rootPositionedTree!),
                 pruneTreeByMinDistanceSearch
             );
         } else return new Map();
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const distanceSearchGroupsPlain = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
+        if (rootPositionedTree) {
             return getDistanceGroups(
-                displayContext.rootPositionedTree!,
-                getMaxCutoffDistanceSearch(displayContext.rootPositionedTree!),
+                rootPositionedTree!,
+                getMaxCutoffDistanceSearch(rootPositionedTree!),
                 pruneTreeByMinDistanceSearch
             );
         } else return new Map();
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const distanceMadValue = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
+        if (rootPositionedTree) {
             return getMAD(
-                displayContext.rootPositionedTree
+                rootPositionedTree
                     .descendants()
                     .map(v => v.data.distance!)
                     .filter(Boolean)
             )!;
         } else return 0;
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const distanceMedian = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
+        if (rootPositionedTree) {
             return quantile(
-                displayContext.rootPositionedTree
+                rootPositionedTree
                     .descendants()
                     .map(v => v.data.distance!)
                     .filter(Boolean),
                 0.5
             )!;
         } else return 0;
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const depthSearchGroupsPlain = useMemo(() => {
-        if (displayContext.rootPositionedTree) {
-            return getDepthGroups(displayContext.rootPositionedTree!);
+        if (rootPositionedTree) {
+            return getDepthGroups(rootPositionedTree!);
         } else return new Map();
-    }, [displayContext.rootPositionedTree]);
+    }, [rootPositionedTree]);
 
     const onExpand = (id: Pruner) => () => {
         updatePrunerVal(id)(0);
@@ -217,16 +218,16 @@ const PrunerPanel: React.FC = () => {
                 ) => HierarchyNode<TMCNode>
             ) =>
             (distance: number) => {
-                const pruned = cb(displayContext.rootPositionedTree!, distance);
+                const pruned = cb(rootPositionedTree!, distance);
 
                 const visibleNodes = calculateTreeLayout(
                     pruned,
                     displayContext.w!
                 );
 
-                setDisplayContext({
+                /* setDisplayContext({
                     visibleNodes,
-                });
+                }); */
             },
         [displayContext]
     );
@@ -293,13 +294,13 @@ const PrunerPanel: React.FC = () => {
                     setPrunerVals(initialPrunerVal);
                     setExpanded(undefined);
                     const visibleNodes = calculateTreeLayout(
-                        displayContext.rootPositionedTree!,
+                        rootPositionedTree!,
                         displayContext.w!
                     );
 
-                    setDisplayContext({
+                    /* setDisplayContext({
                         visibleNodes,
-                    });
+                    }); */
                 }}
             >
                 Reset
