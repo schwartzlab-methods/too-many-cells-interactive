@@ -1,6 +1,6 @@
 import { HierarchyNode } from 'd3-hierarchy';
 import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useState } from 'react';
 import { ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
 import { Column, Row } from '../Layout';
@@ -18,7 +18,7 @@ const theme = {
     },
 };
 
-export interface BaseTreeContext {
+export interface DisplayContext {
     branchSizeScale?: ScaleLinear<number, number>;
     distanceVisible?: boolean;
     labelScale?: ScaleOrdinal<string, string>;
@@ -32,15 +32,40 @@ export interface BaseTreeContext {
     w?: number;
 }
 
-interface TreeContext extends BaseTreeContext {
-    setTreeContext?: (newContext: BaseTreeContext) => void;
+export interface BaseTreeContext {
+    displayContext: DisplayContext;
 }
 
-export const TreeContext = createContext<TreeContext>({});
+interface TreeContext extends BaseTreeContext {
+    //setTreeContext: (newContext: BaseTreeContext) => void;
+    setDisplayContext: (newContext: DisplayContext) => void;
+}
+
+export const TreeContext = createContext<TreeContext>({
+    /* initialize so that typescript doesn't complain about the value possibly being null */
+    displayContext: {},
+    setDisplayContext: (newContext: DisplayContext) => {
+        throw 'Uninitialized context!';
+    },
+});
 
 const Dashboard: React.FC = () => {
     const [data, setData] = useState<HierarchyNode<TMCNode>>();
-    const [treeContext, setTreeContext] = useState<BaseTreeContext>({});
+    const [treeContext, _setTreeContext] = useState<BaseTreeContext>({
+        displayContext: {},
+    });
+
+    const setDisplayContext = useCallback(
+        (contextSlice: DisplayContext) =>
+            _setTreeContext({
+                ...treeContext,
+                displayContext: {
+                    ...treeContext.displayContext,
+                    ...contextSlice,
+                },
+            }),
+        [treeContext]
+    );
 
     useEffect(() => {
         setData(getData());
@@ -48,7 +73,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <ThemeProvider theme={theme}>
-            <TreeContext.Provider value={{ ...treeContext, setTreeContext }}>
+            <TreeContext.Provider value={{ ...treeContext, setDisplayContext }}>
                 <Column>
                     <Title>TooManyCellsJs</Title>
                     <Row>

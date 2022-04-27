@@ -1,8 +1,7 @@
 import React, { useContext, useMemo } from 'react';
 import styled from 'styled-components';
-import Button from '../../Button';
 import Checkbox from '../../Checkbox';
-import { BaseTreeContext, TreeContext } from '../Dashboard';
+import { DisplayContext, TreeContext } from '../Dashboard';
 
 const DisplayButtons: React.FC = () => {
     return (
@@ -22,18 +21,17 @@ const DisplayButtons: React.FC = () => {
 export default DisplayButtons;
 
 interface ToggleCheckboxProps {
-    propName: keyof BaseTreeContext;
+    propName: keyof DisplayContext;
     label: string;
 }
 
 const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({ propName, label }) => {
-    const treeContext = useContext(TreeContext);
-    const checked = useMemo(() => !!treeContext[propName], [treeContext]);
+    const { displayContext, setDisplayContext } = useContext(TreeContext);
+    const checked = useMemo(() => !!displayContext[propName], [displayContext]);
 
-    const toggleTreeProp = (prop: keyof BaseTreeContext) =>
-        treeContext.setTreeContext!({
-            ...treeContext,
-            [prop]: !treeContext[prop],
+    const toggleTreeProp = (prop: keyof DisplayContext) =>
+        setDisplayContext({
+            [prop]: !displayContext[prop],
         });
 
     return (

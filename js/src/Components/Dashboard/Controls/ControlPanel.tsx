@@ -11,14 +11,14 @@ import { Label } from '../../Typography';
 import Checkbox from '../../Checkbox';
 
 const ControlPanel: React.FC = () => {
-    const treeContext = useContext(TreeContext);
+    const { displayContext, setDisplayContext } = useContext(TreeContext);
 
     const branchScalingDisabled = useMemo(() => {
         return (
-            treeContext.branchSizeScale?.domain()[0] ===
-            treeContext.branchSizeScale?.domain()[1]
+            displayContext.branchSizeScale?.domain()[0] ===
+            displayContext.branchSizeScale?.domain()[1]
         );
-    }, [treeContext]);
+    }, [displayContext]);
 
     return (
         <Row>
@@ -41,13 +41,13 @@ const ControlPanel: React.FC = () => {
                     checked={branchScalingDisabled}
                     label="Branch width scaling disabled"
                     onClick={() => {
-                        const branchSizeScale = treeContext.branchSizeScale;
+                        const branchSizeScale = displayContext.branchSizeScale;
 
                         if (branchSizeScale) {
                             branchSizeScale.domain(
                                 branchScalingDisabled
                                     ? (extent(
-                                          treeContext
+                                          displayContext
                                               .visibleNodes!.descendants()
                                               .map(d => d.value!)
                                       ) as [number, number])
@@ -55,8 +55,7 @@ const ControlPanel: React.FC = () => {
                             );
                         }
 
-                        treeContext.setTreeContext!({
-                            ...treeContext,
+                        setDisplayContext({
                             branchSizeScale,
                         });
                     }}
@@ -80,34 +79,33 @@ interface SliderProps {
 }
 
 const Slider: React.FC<SliderProps> = ({ contextKey, label, max }) => {
-    const treeContext = useContext(TreeContext);
+    const { displayContext, setDisplayContext } = useContext(TreeContext);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        treeContext[contextKey]?.range([
-            treeContext[contextKey]!.range()[0],
+        displayContext[contextKey]?.range([
+            displayContext[contextKey]!.range()[0],
             +e.currentTarget.value,
         ]);
-        treeContext.setTreeContext!({
-            ...treeContext,
-            [contextKey]: treeContext[contextKey],
+        setDisplayContext({
+            [contextKey]: displayContext[contextKey],
         });
     };
 
     return (
         <Column>
             <Label>{label}</Label>
-            {treeContext[contextKey] && (
+            {displayContext[contextKey] && (
                 <Row>
                     <input
                         type="range"
                         max={max}
-                        min={treeContext[contextKey]!.range()[0]}
+                        min={displayContext[contextKey]!.range()[0]}
                         step={1}
-                        value={treeContext[contextKey]!.range()[1]}
+                        value={displayContext[contextKey]!.range()[1]}
                         onChange={handleChange}
                     />
                     <Input
-                        value={treeContext[contextKey]!.range()[1]}
+                        value={displayContext[contextKey]!.range()[1]}
                         onChange={handleChange}
                     />
                 </Row>

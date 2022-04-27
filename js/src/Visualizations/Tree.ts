@@ -23,7 +23,7 @@ import {
     squared,
 } from './../util';
 import { isLinkNode, TMCNode } from './../types';
-import { BaseTreeContext } from '../Components/Dashboard/Dashboard';
+import { DisplayContext } from '../Components/Dashboard/Dashboard';
 
 // for debugging
 (window as any).select = select;
@@ -239,7 +239,7 @@ const makeLinkId = (link: HierarchyPointLink<TMCNode>) =>
 
 const deltaBehavior = dispatch('nodeDelta', 'linkDelta');
 
-class RadialTree implements BaseTreeContext {
+class RadialTree implements DisplayContext {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
     branchSizeScale: ScaleLinear<number, number>;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
@@ -263,9 +263,9 @@ class RadialTree implements BaseTreeContext {
     piesVisible = true;
     rootPositionedTree: HierarchyPointNode<TMCNode>;
     selector: string;
+    setDisplayContext: (context: DisplayContext) => any;
     strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
-    setContext: (context: BaseTreeContext) => any;
     transitionTime = 250;
     visibleNodes: HierarchyPointNode<TMCNode>;
     w = 1000;
@@ -273,14 +273,14 @@ class RadialTree implements BaseTreeContext {
         selector: string,
         legendSelector: string,
         tree: HierarchyNode<TMCNode>,
-        setContext: (context: BaseTreeContext) => any
+        setDisplayContext: (context: DisplayContext) => any
     ) {
         const that = this;
 
         this.selector = selector;
         this.legendSelector = legendSelector;
 
-        this.setContext = setContext;
+        this.setDisplayContext = setDisplayContext;
 
         this.svg = select(this.selector)
             .append('svg')
@@ -496,7 +496,7 @@ class RadialTree implements BaseTreeContext {
             .clamp(true);
 
         /* in the current implementation, this will provoke a call to render() in the parent component */
-        this.setContext({
+        this.setDisplayContext({
             branchSizeScale: this.branchSizeScale,
             distanceVisible: this.distanceVisible,
             labelScale: this.labelScale,
@@ -717,7 +717,7 @@ class RadialTree implements BaseTreeContext {
                 targetNode.parent = null;
                 targetNode.data.parentId = undefined;
                 const visibleNodes = calculateTreeLayout(targetNode, that.w);
-                that.setContext({ visibleNodes });
+                that.setDisplayContext({ visibleNodes });
             } else if (event.shiftKey) {
                 const visibleNodes = calculateTreeLayout(
                     that.visibleNodes.copy().eachAfter(n => {
@@ -728,7 +728,7 @@ class RadialTree implements BaseTreeContext {
                     that.w
                 );
 
-                that.setContext({ visibleNodes });
+                that.setDisplayContext({ visibleNodes });
             }
         });
     };
@@ -918,7 +918,7 @@ class RadialTree implements BaseTreeContext {
                         this.w
                     );
                     event.stopPropagation();
-                    this.setContext({ visibleNodes });
+                    this.setDisplayContext({ visibleNodes });
                 }
             });
 

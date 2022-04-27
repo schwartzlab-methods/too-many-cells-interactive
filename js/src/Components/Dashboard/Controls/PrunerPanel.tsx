@@ -98,111 +98,111 @@ const PrunerPanel: React.FC = () => {
 
     const [expanded, setExpanded] = useState<Pruner>();
 
-    const treeContext = useContext(TreeContext);
+    const { displayContext, setDisplayContext } = useContext(TreeContext);
 
     const sizeGroupsPlain = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
-            return getSizeGroups(treeContext.rootPositionedTree!);
+        if (displayContext.rootPositionedTree) {
+            return getSizeGroups(displayContext.rootPositionedTree!);
         } else return new Map();
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const sizeGroupsMad = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
-            return getSizeMadGroups(treeContext.rootPositionedTree!);
+        if (displayContext.rootPositionedTree) {
+            return getSizeMadGroups(displayContext.rootPositionedTree!);
         } else return new Map();
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const sizeMadValue = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
+        if (displayContext.rootPositionedTree) {
             return getMAD(
-                treeContext.rootPositionedTree
+                displayContext.rootPositionedTree
                     .descendants()
                     .map(v => v.data.distance!)
                     .filter(Boolean)
             )!;
         } else return 0;
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const sizeMedian = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
+        if (displayContext.rootPositionedTree) {
             return quantile(
-                treeContext.rootPositionedTree
+                displayContext.rootPositionedTree
                     .descendants()
                     .map(v => v.value!)
                     .filter(Boolean),
                 0.5
             )!;
         } else return 0;
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const distanceGroupsPlain = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
+        if (displayContext.rootPositionedTree) {
             return getDistanceGroups(
-                treeContext.rootPositionedTree!,
-                getMaxCutoffDistance(treeContext.rootPositionedTree!),
+                displayContext.rootPositionedTree!,
+                getMaxCutoffDistance(displayContext.rootPositionedTree!),
                 pruneTreeByMinDistance
             );
         } else return new Map();
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const distanceGroupsMad = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
+        if (displayContext.rootPositionedTree) {
             return getDistanceMadGroups(
-                treeContext.rootPositionedTree!,
-                getMaxCutoffDistance(treeContext.rootPositionedTree!),
+                displayContext.rootPositionedTree!,
+                getMaxCutoffDistance(displayContext.rootPositionedTree!),
                 pruneTreeByMinDistance
             );
         } else return new Map();
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const distanceSearchGroupsMad = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
+        if (displayContext.rootPositionedTree) {
             return getDistanceMadGroups(
-                treeContext.rootPositionedTree!,
-                getMaxCutoffDistanceSearch(treeContext.rootPositionedTree!),
+                displayContext.rootPositionedTree!,
+                getMaxCutoffDistanceSearch(displayContext.rootPositionedTree!),
                 pruneTreeByMinDistanceSearch
             );
         } else return new Map();
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const distanceSearchGroupsPlain = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
+        if (displayContext.rootPositionedTree) {
             return getDistanceGroups(
-                treeContext.rootPositionedTree!,
-                getMaxCutoffDistanceSearch(treeContext.rootPositionedTree!),
+                displayContext.rootPositionedTree!,
+                getMaxCutoffDistanceSearch(displayContext.rootPositionedTree!),
                 pruneTreeByMinDistanceSearch
             );
         } else return new Map();
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const distanceMadValue = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
+        if (displayContext.rootPositionedTree) {
             return getMAD(
-                treeContext.rootPositionedTree
+                displayContext.rootPositionedTree
                     .descendants()
                     .map(v => v.data.distance!)
                     .filter(Boolean)
             )!;
         } else return 0;
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const distanceMedian = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
+        if (displayContext.rootPositionedTree) {
             return quantile(
-                treeContext.rootPositionedTree
+                displayContext.rootPositionedTree
                     .descendants()
                     .map(v => v.data.distance!)
                     .filter(Boolean),
                 0.5
             )!;
         } else return 0;
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const depthSearchGroupsPlain = useMemo(() => {
-        if (treeContext.rootPositionedTree) {
-            return getDepthGroups(treeContext.rootPositionedTree!);
+        if (displayContext.rootPositionedTree) {
+            return getDepthGroups(displayContext.rootPositionedTree!);
         } else return new Map();
-    }, [treeContext.rootPositionedTree]);
+    }, [displayContext.rootPositionedTree]);
 
     const onExpand = (id: Pruner) => () => {
         updatePrunerVal(id)(0);
@@ -217,19 +217,18 @@ const PrunerPanel: React.FC = () => {
                 ) => HierarchyNode<TMCNode>
             ) =>
             (distance: number) => {
-                const pruned = cb(treeContext.rootPositionedTree!, distance);
+                const pruned = cb(displayContext.rootPositionedTree!, distance);
 
                 const visibleNodes = calculateTreeLayout(
                     pruned,
-                    treeContext.w!
+                    displayContext.w!
                 );
 
-                treeContext.setTreeContext!({
-                    ...treeContext,
+                setDisplayContext({
                     visibleNodes,
                 });
             },
-        [treeContext]
+        [displayContext]
     );
 
     const updatePrunerVal = (pruner: Pruner) => (val: number | string) =>
@@ -294,12 +293,11 @@ const PrunerPanel: React.FC = () => {
                     setPrunerVals(initialPrunerVal);
                     setExpanded(undefined);
                     const visibleNodes = calculateTreeLayout(
-                        treeContext.rootPositionedTree!,
-                        treeContext.w!
+                        displayContext.rootPositionedTree!,
+                        displayContext.w!
                     );
 
-                    treeContext.setTreeContext!({
-                        ...treeContext,
+                    setDisplayContext({
                         visibleNodes,
                     });
                 }}

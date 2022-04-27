@@ -8,30 +8,29 @@ import { Column } from './../../Layout';
 import { Input } from '../../Input';
 
 const Legend: React.FC = () => {
-    const treeContext = useContext(TreeContext);
+    const { displayContext, setDisplayContext } = useContext(TreeContext);
 
     return (
         <Column>
-            {treeContext.labelScale &&
-                treeContext.labelScale
+            {displayContext.labelScale &&
+                displayContext.labelScale
                     .domain()
                     .sort((a, b) => (a < b ? -1 : 1))
                     .map(d => (
                         <LegendItem
                             key={d}
                             label={d}
-                            color={treeContext.labelScale!(d)}
+                            color={displayContext.labelScale!(d)}
                             updateColor={(color: string) => {
-                                const currColor = treeContext.labelScale!(d);
-                                const newRange = treeContext
+                                const currColor = displayContext.labelScale!(d);
+                                const newRange = displayContext
                                     .labelScale!.range()
                                     .map(r => (currColor === r ? color : r));
 
-                                treeContext.labelScale?.range(newRange);
+                                displayContext.labelScale?.range(newRange);
 
-                                treeContext.setTreeContext!({
-                                    ...treeContext,
-                                    labelScale: treeContext.labelScale,
+                                setDisplayContext({
+                                    labelScale: displayContext.labelScale,
                                 });
                             }}
                         />
