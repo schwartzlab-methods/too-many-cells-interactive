@@ -118,7 +118,7 @@ const Dashboard: React.FC = () => {
                     ...contextSlice,
                 },
             }),
-        [setTreeContext, treeContext.displayContext]
+        [setTreeContext, treeContext]
     );
 
     const setPruneContext = useCallback(
@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
             });
             setTreeContext({ pruneContext });
         },
-        [setTreeContext, treeContext.pruneContext]
+        [setTreeContext, treeContext]
     );
 
     useEffect(() => {

@@ -495,6 +495,7 @@ class RadialTree implements DisplayContext {
             .clamp(true);
 
         /* in the current implementation, this will provoke a call to render() in the container component */
+
         this.ContextManager.setContext({
             displayContext: {
                 branchSizeScale: this.branchSizeScale,

@@ -26,6 +26,7 @@ import {
     AllPruner,
     ValuePruneType,
     ClickPruneType,
+    DisplayContext,
 } from './Dashboard';
 
 interface TreeComponentProps {
@@ -35,6 +36,7 @@ interface TreeComponentProps {
 export class ContextManager {
     private context!: TreeContext;
     pruneContext!: Readonly<PruneContext[]>;
+    displayContext!: Readonly<DisplayContext>;
     setContext!: (ctx: Partial<TreeContext>) => void;
     setPruneContext!: (ctx: Partial<PruneContext>) => void;
     constructor(
@@ -50,6 +52,7 @@ export class ContextManager {
     ) => {
         this.context = context;
         this.pruneContext = this.context.pruneContext;
+        this.displayContext = this.context.displayContext;
         this.setContext = setContext;
         this.setPruneContext = this.context.setPruneContext;
     };
@@ -68,17 +71,37 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
     useEffect(() => {
         if (Tree) {
             Object.assign(Tree, displayContext);
-            /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
-            Tree.ContextManager.refresh(treeContext, setTreeContext);
-
             Tree.render();
         }
     }, [displayContext]);
 
+    useEffect(() => {
+        if (Tree) {
+            /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
+            Tree.ContextManager.refresh(treeContext, setTreeContext);
+        }
+    }, [treeContext, setTreeContext]);
+
     /* 
-        todo: having to set the nodes on the tree and the context is bad (on conditions 1 and 2) 
-        it will also kick off another render cycle...
-        
+        todo: 
+            - extract conditionals into semantically-named functions
+            - consolidate state by moving everything that's in context manager out of Tree
+                - this means initilializing these properties (including scales, visibleNodes and rootPositionedTree)
+                    in this component. That way, they'll never be undefined.
+                - it also means further wrapping the (a) updateContext function so that it will handle updating React and D3 context values at once
+                    - this is especially important for the first 3 codepaths
+                        - here's we're updating display context? yeah, that's a better pattern,
+                            this function will update display context (which will contain root and visible nodes)
+                            and useEffect that watches only display context will take care of rerender
+                        - but note that the call to object.assign() is at cross-purposes with ContextManager
+                        - what it out to do is update (display)ContextManager and rerender, which formalizes the process
+            - to recap:
+                put visible nodes and rootpositionedtree on contextManager
+                set contextManager values ahead of time and pass to constructor, removing those properties from Tree
+                have the dispaycontext useEffect update the manager and call render, rather than using object.assign
+                the below should not make calls to setTreeContext but instead setDisplayContext, letting the parent take care of the rerender
+                
+
     */
 
     useEffect(() => {
@@ -105,7 +128,7 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                     if latest is longer than previous rerender tree using previous prune context as basis
                 */
                 Tree.rootPositionedTree = Tree.visibleNodes;
-                setTreeContext({ rootPositionedTree: Tree.rootPositionedTree });
+                setTreeContext({ rootPositionedTree: Tree.visibleNodes });
                 Tree.render();
             } else if (
                 previousPruneContext.current &&
@@ -117,7 +140,7 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                         since the former will always be prior to the latter (value pruners will reset click pruners)
                 */
                 let i = 0;
-                let _tree = Tree.originalTree as HierarchyNode<TMCNode>;
+                let _tree = Tree.originalTree.copy() as HierarchyNode<TMCNode>;
                 while (i < pruneContext.length) {
                     _tree = runPrune(pruneContext[i].valuePruner, _tree);
                     _tree = runClickPrunes(
@@ -126,6 +149,7 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                     );
                     i++;
                 }
+
                 Tree.visibleNodes = Tree.rootPositionedTree =
                     calculateTreeLayout(_tree, Tree.w);
 
@@ -158,7 +182,7 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                     : undefined;
 
                 const newTree = pruneTree(
-                    Tree.rootPositionedTree,
+                    Tree.rootPositionedTree.copy(),
                     current,
                     previous
                 )!;
@@ -167,9 +191,6 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
             }
 
             previousPruneContext.current = pruneContext;
-
-            /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
-            Tree!.ContextManager.refresh(treeContext, setTreeContext);
         }
     }, [pruneContext]);
 
