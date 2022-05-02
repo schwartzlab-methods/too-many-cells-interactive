@@ -1,14 +1,14 @@
 import React, { useContext, useMemo } from 'react';
 import { extent } from 'd3-array';
 import styled from 'styled-components';
+import { Input } from '../../Input';
+import Checkbox from '../../Checkbox';
+import { Column, Row } from '../../Layout';
+import { TreeContext } from '../Dashboard';
+import { Label } from '../../Typography';
 import DisplayButtons from './DisplayButtons';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
-import { Column, Row } from './../../Layout';
-import { TreeContext } from '../Dashboard';
-import { Input } from '../../Input';
-import { Label } from '../../Typography';
-import Checkbox from '../../Checkbox';
 
 const ControlPanel: React.FC = () => {
     const { displayContext, setDisplayContext, visibleNodes } =

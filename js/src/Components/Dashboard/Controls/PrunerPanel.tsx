@@ -1,25 +1,26 @@
-import { median, min, quantile, range, ticks } from 'd3-array';
-import { HierarchyNode } from 'd3-hierarchy';
 import React, { useCallback, useContext, useMemo, useState } from 'react';
+import { median, min, quantile, range, ticks } from 'd3-array';
+import { format } from 'd3-format';
+import { HierarchyNode } from 'd3-hierarchy';
 import styled from 'styled-components';
-import { TMCNode } from '../../../types';
 import { max } from 'lodash';
+import { TMCNode } from '../../../types';
 import {
-    calculateTreeLayout,
     getMAD,
+    pruneTreeByMinDistance,
+    pruneTreeByMinDistanceSearch,
     pruneTreeByMinValue,
 } from '../../../util';
-import { TreeContext } from '../Dashboard';
+import { TreeContext, ValuePruneType } from '../Dashboard';
 import {
     AreaChartComponent,
     CaretDownIcon,
     CaretUpIcon,
-} from './../../../Components';
+} from '../../../Components';
 //https://github.com/styled-components/styled-components/issues/1449
 import Button from '../../Button';
 import { NumberInput } from '../../Input';
 import { Label } from '../../Typography';
-import { format } from 'd3-format';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -83,23 +84,25 @@ const TextInputGroup = styled.div`
     flex-wrap: nowrap;
 `;
 
-type Pruner = 'depth' | 'distance' | 'distanceSearch' | 'size';
-
-const initialPrunerVal: Record<Pruner, number> = {
-    depth: 0,
-    distance: 0,
-    distanceSearch: 0,
-    size: 0,
-};
-
 const PrunerPanel: React.FC = () => {
-    const [prunerVals, setPrunerVals] =
-        useState<Record<Pruner, number>>(initialPrunerVal);
+    /* we need to sync local state across these handlers, so we set it here */
+    const [prunerVal, setPrunerVal] = useState<number | string>(0);
 
-    const [expanded, setExpanded] = useState<Pruner>();
+    const [expanded, setExpanded] = useState<ValuePruneType>();
 
-    const { displayContext, rootPositionedTree, setDisplayContext } =
-        useContext(TreeContext);
+    const { rootPositionedTree, setPruneContext } = useContext(TreeContext);
+
+    const setValuePruner = useCallback(
+        (key: ValuePruneType, value: number) => {
+            return setPruneContext({
+                valuePruner: {
+                    key,
+                    value,
+                },
+            });
+        },
+        [setPruneContext]
+    );
 
     const sizeGroupsPlain = useMemo(() => {
         if (rootPositionedTree) {
@@ -205,98 +208,75 @@ const PrunerPanel: React.FC = () => {
         } else return new Map();
     }, [rootPositionedTree]);
 
-    const onExpand = (id: Pruner) => () => {
-        updatePrunerVal(id)(0);
+    const onExpand = (id: ValuePruneType) => () => {
         setExpanded(expanded === id ? undefined : id);
+        updatePrunerVal(0);
     };
 
-    const prune = useCallback(
-        (
-                cb: (
-                    tree: HierarchyNode<TMCNode>,
-                    pruneVal: number
-                ) => HierarchyNode<TMCNode>
-            ) =>
-            (distance: number) => {
-                const pruned = cb(rootPositionedTree!, distance);
+    const pruneByContext = (contextKey: ValuePruneType) => (val: number) => {
+        return setValuePruner(contextKey, val);
+    };
 
-                const visibleNodes = calculateTreeLayout(
-                    pruned,
-                    displayContext.w!
-                );
-
-                /* setDisplayContext({
-                    visibleNodes,
-                }); */
-            },
-        [displayContext]
-    );
-
-    const updatePrunerVal = (pruner: Pruner) => (val: number | string) =>
-        setPrunerVals({ ...initialPrunerVal, [pruner]: val });
+    const updatePrunerVal = (val: number | string) => setPrunerVal(val);
 
     return (
         <PrunerPanelContainer>
             <SmartPruner
-                expanded={expanded === 'size'}
-                id="size"
+                expanded={expanded === 'minSize'}
+                id="minSize"
                 label="Prune by size"
                 madValues={sizeGroupsMad}
                 madSize={sizeMadValue}
                 median={sizeMedian}
-                onChange={updatePrunerVal('size')}
-                onExpand={onExpand('size')}
-                onSubmit={prune(pruneTreeByMinValue)}
+                onChange={updatePrunerVal}
+                onExpand={onExpand('minSize')}
+                onSubmit={pruneByContext('minSize')}
                 plainValues={sizeGroupsPlain}
-                value={prunerVals.size}
+                value={prunerVal}
                 xLabel="Size"
             />
             <SmartPruner
-                expanded={expanded === 'distance'}
-                id="distance"
+                expanded={expanded === 'minDistance'}
+                id="minDistance"
                 label="Prune by distance"
                 madValues={distanceGroupsMad}
                 madSize={distanceMadValue}
                 median={distanceMedian}
-                onChange={updatePrunerVal('distance')}
-                onExpand={onExpand('distance')}
-                onSubmit={prune(pruneTreeByMinDistance)}
+                onChange={updatePrunerVal}
+                onExpand={onExpand('minDistance')}
+                onSubmit={pruneByContext('minDistance')}
                 plainValues={distanceGroupsPlain}
-                value={prunerVals.distance}
+                value={prunerVal}
                 xLabel="Distance"
             />
             <SmartPruner
-                expanded={expanded === 'distanceSearch'}
-                id="distanceSearch"
+                expanded={expanded === 'minDistanceSearch'}
+                id="minDistanceSearch"
                 label="Prune by distance (search)"
                 madValues={distanceSearchGroupsMad}
                 madSize={distanceMadValue}
                 median={distanceMedian}
-                onChange={updatePrunerVal('distanceSearch')}
-                onExpand={onExpand('distanceSearch')}
-                onSubmit={prune(pruneTreeByMinDistanceSearch)}
+                onChange={updatePrunerVal}
+                onExpand={onExpand('minDistanceSearch')}
+                onSubmit={pruneByContext('minDistanceSearch')}
                 plainValues={distanceSearchGroupsPlain}
-                value={prunerVals.distanceSearch}
+                value={prunerVal}
                 xLabel="Distance (Search)"
             />
             <Pruner
-                expanded={expanded === 'depth'}
+                expanded={expanded === 'minDepth'}
                 label="Prune by depth"
-                onExpand={onExpand('depth')}
-                onChange={updatePrunerVal('depth')}
-                onSubmit={prune(pruneTreeByDepth)}
+                onExpand={onExpand('minDepth')}
+                onChange={updatePrunerVal}
+                onSubmit={pruneByContext('minDepth')}
                 plainValues={depthSearchGroupsPlain}
                 xLabel="Depth"
-                value={prunerVals.depth}
+                value={prunerVal}
             />
             <SubmitButton
                 onClick={() => {
-                    setPrunerVals(initialPrunerVal);
+                    setPrunerVal(0);
                     setExpanded(undefined);
-                    const visibleNodes = calculateTreeLayout(
-                        rootPositionedTree!,
-                        displayContext.w!
-                    );
 
                     /* setDisplayContext({
                         visibleNodes,
@@ -319,7 +299,7 @@ interface PrunerProps {
     onSubmit: (size: number) => void;
     plainValues: Map<number, number>;
     xLabel: string;
-    value: number;
+    value: number | string;
 }
 
 const Pruner: React.FC<PrunerProps> = ({
@@ -350,7 +330,7 @@ const Pruner: React.FC<PrunerProps> = ({
                         />
                         <UpdateBox
                             onChange={v => onChange(v)}
-                            onSubmit={() => onSubmit(value)}
+                            onSubmit={() => onSubmit(+value)}
                             value={value}
                         />
                     </>
@@ -362,7 +342,7 @@ const Pruner: React.FC<PrunerProps> = ({
 
 interface SmartPrunerProps {
     expanded: boolean;
-    id: Pruner;
+    id: ValuePruneType;
     label: string;
     madSize: number;
     madValues: Map<number, number>;
@@ -372,7 +352,7 @@ interface SmartPrunerProps {
     onChange: (val: number | string) => void;
     onSubmit: (size: number) => void;
     xLabel: string;
-    value: number;
+    value: number | string;
 }
 
 const SmartPruner: React.FC<SmartPrunerProps> = ({
@@ -446,7 +426,7 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                         )}
                         <UpdateBox
                             onChange={v => onChange(v)}
-                            onSubmit={() => onSubmit(value)}
+                            onSubmit={() => onSubmit(+value)}
                             value={value}
                         />
                     </>
@@ -469,8 +449,8 @@ const PrunerLabel: React.FC<{ expanded: boolean; onClick: () => void }> = ({
 
 interface UpdateBoxProps {
     onChange: (val: number | string) => void;
-    onSubmit: (val: number) => void;
-    value: number;
+    onSubmit: (val: number | string) => void;
+    value: number | string;
 }
 
 const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => {
@@ -567,51 +547,6 @@ const getMaxCutoffDistanceSearch = (tree: HierarchyNode<TMCNode>) => {
         return min(tree.children.map(d => d.data.distance || 0))!;
     } else return 0;
 };
-
-/**
- * Stopping criteria to stop at the node immediate after a node with DOUBLE distance.
- * So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE.
- * Includes L and R in the final result."
- *
- * https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
- */
-const pruneTreeByMinDistance = (
-    tree: HierarchyNode<TMCNode>,
-    distance: number
-) =>
-    tree.copy().eachBefore(d => {
-        if (!d.data.distance || d.data.distance < distance) {
-            //keep the node, even though it's under the threshold, but eliminate the children
-            d.children = undefined;
-        }
-    });
-
-/* 
-    Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, 
-    keep that path, otherwise prune it. This argument assists in finding distant nodes."
-    https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L44
-    */
-const pruneTreeByMinDistanceSearch = (
-    tree: HierarchyNode<TMCNode>,
-    distance: number
-) =>
-    tree.copy().eachAfter(d => {
-        if (!d.data.distance || d.data.distance < distance) {
-            if (d.parent) {
-                d.parent.children = undefined;
-            }
-        }
-    });
-
-/* 
-
-*/
-const pruneTreeByDepth = (tree: HierarchyNode<TMCNode>, depth: number) =>
-    tree.copy().eachAfter(d => {
-        if (d.depth > depth && d.parent) {
-            d.parent!.children = undefined;
-        }
-    });
 
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree

@@ -24,8 +24,8 @@ import {
 } from './../util';
 import { isLinkNode, TMCNode } from './../types';
 import {
+    BaseTreeContext,
     DisplayContext,
-    PruneContext,
 } from '../Components/Dashboard/Dashboard';
 
 // for debugging
@@ -266,8 +266,7 @@ class RadialTree implements DisplayContext {
     piesVisible = true;
     rootPositionedTree: HierarchyPointNode<TMCNode>;
     selector: string;
-    setDisplayContext: (context: DisplayContext) => any;
-    setPruneContext: (context: Partial<PruneContext>) => any;
+    setTreeContext: (context: Partial<BaseTreeContext>) => void;
     strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
     transitionTime = 250;
@@ -277,16 +276,14 @@ class RadialTree implements DisplayContext {
         selector: string,
         legendSelector: string,
         tree: HierarchyNode<TMCNode>,
-        setDisplayContext: (context: DisplayContext) => any,
-        setPruneContext: (context: Partial<PruneContext>) => any
+        setTreeContext: (context: Partial<BaseTreeContext>) => void
     ) {
         const that = this;
 
         this.selector = selector;
         this.legendSelector = legendSelector;
 
-        this.setDisplayContext = setDisplayContext;
-        this.setPruneContext = setPruneContext;
+        this.setTreeContext = setTreeContext;
 
         this.svg = select(this.selector)
             .append('svg')
@@ -501,17 +498,21 @@ class RadialTree implements DisplayContext {
             )
             .clamp(true);
 
-        /* in the current implementation, this will provoke a call to render() in the parent component */
-        this.setDisplayContext({
-            branchSizeScale: this.branchSizeScale,
-            distanceVisible: this.distanceVisible,
-            labelScale: this.labelScale,
-            nodeIdsVisible: this.nodeIdsVisible,
-            nodeCountsVisible: this.nodeCountsVisible,
-            piesVisible: this.piesVisible,
-            pieScale: this.pieScale,
-            strokeVisible: this.strokeVisible,
-            w: this.w,
+        /* in the current implementation, this will provoke a call to render() in the container component */
+        this.setTreeContext({
+            displayContext: {
+                branchSizeScale: this.branchSizeScale,
+                distanceVisible: this.distanceVisible,
+                labelScale: this.labelScale,
+                nodeIdsVisible: this.nodeIdsVisible,
+                nodeCountsVisible: this.nodeCountsVisible,
+                piesVisible: this.piesVisible,
+                pieScale: this.pieScale,
+                strokeVisible: this.strokeVisible,
+                w: this.w,
+            },
+            rootPositionedTree: this.rootPositionedTree,
+            visibleNodes: this.visibleNodes,
         });
     }
 

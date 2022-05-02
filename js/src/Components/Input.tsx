@@ -16,7 +16,7 @@ export const Input = styled.input`
 
 interface NumberInputProps {
     onChange: (arg: string | number) => void;
-    value: number;
+    value: string | number;
 }
 
 export const NumberInput: React.FC<NumberInputProps> = ({

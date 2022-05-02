@@ -71,6 +71,64 @@ export const pruneTreeByMinValue = (
     return newTree;
 };
 
+export const pruneTreeByDepth = (tree: HierarchyNode<TMCNode>, depth: number) =>
+    tree.copy().eachAfter(d => {
+        if (d.depth > depth && d.parent) {
+            d.parent!.children = undefined;
+        }
+    });
+
+/**
+ * Stopping criteria to stop at the node immediate after a node with DOUBLE distance.
+ * So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE.
+ * Includes L and R in the final result."
+ *
+ * https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
+ */
+export const pruneTreeByMinDistance = (
+    tree: HierarchyNode<TMCNode>,
+    distance: number
+) =>
+    tree.copy().eachBefore(d => {
+        if (!d.data.distance || d.data.distance < distance) {
+            //keep the node, even though it's under the threshold, but eliminate the children
+            d.children = undefined;
+        }
+    });
+
+/* 
+    Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, 
+    keep that path, otherwise prune it. This argument assists in finding distant nodes."
+    https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L44
+    */
+export const pruneTreeByMinDistanceSearch = (
+    tree: HierarchyNode<TMCNode>,
+    distance: number
+) =>
+    tree.copy().eachAfter(d => {
+        if (!d.data.distance || d.data.distance < distance) {
+            if (d.parent) {
+                d.parent.children = undefined;
+            }
+        }
+    });
+
+export const setRootNode = (tree: HierarchyNode<TMCNode>, nodeId: string) => {
+    const targetNode = tree.find(n => n.data.id === nodeId)!.copy();
+    // if we reinstate, stratify() will fail if
+    // root node data has a parent
+    targetNode.parent = null;
+    targetNode.data.parentId = undefined;
+    return targetNode;
+};
+
+export const collapseNode = (tree: HierarchyNode<TMCNode>, nodeId: string) =>
+    tree.copy().eachAfter(n => {
+        if (n.data.id === nodeId) {
+            n.children = undefined;
+        }
+    });
+
 /**
  *
  * @param nodes Hierarchy node
