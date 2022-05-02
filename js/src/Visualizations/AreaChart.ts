@@ -1,6 +1,6 @@
 import { extent } from 'd3-array';
 import { axisBottom, axisRight } from 'd3-axis';
-import { brushX, BrushSelection, D3BrushEvent, brushSelection } from 'd3-brush';
+import { brushX, BrushSelection, D3BrushEvent } from 'd3-brush';
 import { ScaleLinear, scaleLinear } from 'd3-scale';
 import { select, Selection } from 'd3-selection';
 import { area, curveBasis } from 'd3-shape';
@@ -22,9 +22,9 @@ export default class Histogram {
     margin = 40;
     onBrush: (val: number) => void;
     title?: string;
-    xScale: ScaleLinear<number, number>;
+    xScale!: ScaleLinear<number, number>;
     xLabel: string;
-    yScale: ScaleLinear<number, number>;
+    yScale!: ScaleLinear<number, number>;
     constructor(
         counts: Map<number, number>,
         onBrush: (val: number) => void,
@@ -41,28 +41,9 @@ export default class Histogram {
             .append('g')
             .attr('class', 'container');
 
-        this.xScale = scaleLinear([
-            0 + this.margin + 12,
-            this.w - this.margin,
-        ]).domain(
-            extent(Array.from(this.counts.keys()).map(d => +d)) as [
-                number,
-                number
-            ]
-        );
-
         this.title = title;
 
         this.xLabel = xLabel;
-
-        this.yScale = scaleLinear([
-            this.h - this.margin,
-            this.title ? this.margin : this.margin / 2,
-        ])
-            .domain(
-                extent(Array.from(this.counts.values())) as [number, number]
-            )
-            .nice();
     }
 
     setBrush = () => {
@@ -104,7 +85,7 @@ export default class Histogram {
             brush.move(select(this), [x0, x2]);
         };
 
-        const brush = brushX()
+        const brush = brushX<null>()
             .extent([
                 [this.margin, this.title ? this.margin : this.margin / 2],
                 [this.w - this.margin, this.h - this.margin],
@@ -118,17 +99,42 @@ export default class Histogram {
             .on('end', () => (startX = 0));
 
         this.svg
-            .append('g')
+            .selectAll<any, any>('g.brush-container')
+            //dummy data for enter/exit on rerender
+            .data([null])
+            .join('g')
+            .attr('class', 'brush-container')
             .call(brush)
             .on('click', function () {
-                brushSelection(this);
                 brush.move(select(this), [0, 0]);
                 that.onBrush(0);
-            });
+            })
+            //reset
+            .call(brush.move, [0, 0]);
     };
 
     render = () => {
         const bins = Array.from(this.counts.keys());
+        ``;
+
+        this.xScale = scaleLinear([
+            0 + this.margin + 12,
+            this.w - this.margin,
+        ]).domain(
+            extent(Array.from(this.counts.keys()).map(d => +d)) as [
+                number,
+                number
+            ]
+        );
+
+        this.yScale = scaleLinear([
+            this.h - this.margin,
+            this.title ? this.margin : this.margin / 2,
+        ])
+            .domain(
+                extent(Array.from(this.counts.values())) as [number, number]
+            )
+            .nice();
 
         if (this.title) {
             this.svg
@@ -146,7 +152,7 @@ export default class Histogram {
             .x(([k]) => this.xScale(k)!)
             .curve(curveBasis)
             .y1(([_, v]) => this.yScale(v))
-            .y0(this.yScale(0));
+            .y0(this.yScale.range()[0]);
 
         this.svg
             .selectAll('path.area')
@@ -154,6 +160,8 @@ export default class Histogram {
             .join('path')
             .attr('class', 'area')
             // note that this is and other number casting is just to keep typescript happy, the key is already a number
+            .transition()
+            .duration(500)
             .attr('d', d => areaG(d.map(([d, e]) => [+d, e])))
             .attr('fill', '#3a83c5');
 
@@ -165,14 +173,19 @@ export default class Histogram {
         const ticks = bins.filter((_, i) => !(i % ratio));
 
         this.svg
-            .append('g')
+            .selectAll<any, any>('g.x-axis')
+            .data([Math.random()])
+            .join('g')
             .attr('class', 'x-axis')
             .attr('transform', `translate(0, ${this.h - this.margin})`)
+            .transition()
+            .duration(500)
             .call(
                 axisBottom(this.xScale)
                     .tickSizeOuter(0)
                     .tickValues(ticks.map(t => +t))
             )
+            .selection()
             .style('font-size', 8)
             .append('g')
             .append('text')
@@ -183,9 +196,15 @@ export default class Histogram {
             .style('font-size', 12);
 
         this.svg
-            .append('g')
-            .call(axisRight(this.yScale))
+            .selectAll<any, any>('g.y-axis')
+            .data([Math.random()])
+            .join('g')
+            .attr('class', 'y-axis')
             .attr('transform', 'translate(12,0)')
+            .transition()
+            .duration(500)
+            .call(axisRight(this.yScale))
+            .selection()
             .append('g')
             .append('text')
             .attr('transform', `translate(-12, ${this.h / 2}), rotate(90)`)

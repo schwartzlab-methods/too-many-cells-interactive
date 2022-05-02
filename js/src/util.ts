@@ -1,5 +1,6 @@
 import { median } from 'd3-array';
 import { HierarchyNode, HierarchyPointNode, tree } from 'd3-hierarchy';
+import { PruneContext } from './Components/Dashboard/Dashboard';
 import { buildTree } from './prepareData';
 import { TMCNode } from './types';
 
@@ -164,3 +165,6 @@ export const reinstateNode = (
 
     return calculateTreeLayout(buildTree(newNodes), width);
 };
+
+export const pruneContextIsEmpty = (ctx: Readonly<PruneContext>) =>
+    !ctx.clickPruneHistory.length && !Object.values(ctx.valuePruner).length;

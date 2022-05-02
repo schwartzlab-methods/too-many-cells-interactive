@@ -1,5 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { AreaChart } from './../../Visualizations';
+import styled from 'styled-components';
+import { Text } from '../Typography';
+import { AreaChart } from '../../Visualizations';
 
 interface AreaChartComponentProps {
     counts: Map<number, number>;
@@ -39,7 +41,27 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
         chart.render();
     }, []);
 
-    return <div className={selector.current} style={{ width: '100%' }} />;
+    useEffect(() => {
+        if (chart) {
+            chart.counts = counts;
+            chart.render();
+        }
+    }, [counts]);
+
+    return counts.size < 3 ? (
+        <ErrorContainer>
+            <Text>
+                This filter is incompatible with the current distribution of
+                nodes.
+            </Text>
+        </ErrorContainer>
+    ) : (
+        <div className={selector.current} style={{ width: '100%' }} />
+    );
 };
+
+const ErrorContainer = styled.div`
+    padding: 10px;
+`;
 
 export default AreaChartComponent;

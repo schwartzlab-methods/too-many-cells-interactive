@@ -273,18 +273,6 @@ const PrunerPanel: React.FC = () => {
                 xLabel="Depth"
                 value={prunerVal}
             />
-            <SubmitButton
-                onClick={() => {
-                    setPrunerVal(0);
-                    setExpanded(undefined);
-
-                    /* setDisplayContext({
-                        visibleNodes,
-                    }); */
-                }}
-            >
-                Reset
-            </SubmitButton>
         </PrunerPanelContainer>
     );
 };

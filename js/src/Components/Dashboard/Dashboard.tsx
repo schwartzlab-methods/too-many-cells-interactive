@@ -1,11 +1,13 @@
 import React, { createContext, useCallback, useEffect, useState } from 'react';
 import { HierarchyNode } from 'd3-hierarchy';
 import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
-import { ThemeProvider } from 'styled-components';
+import styled, { ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
 import { Column, Row } from '../Layout';
-import { Title } from '../Typography';
+import { Text, Title } from '../Typography';
 import { getData } from '../../prepareData';
+import { pruneContextIsEmpty } from '../../util';
+import Button from '../Button';
 import ControlPanel from './Controls/ControlPanel';
 import TreeComponent from './TreeComponent';
 
@@ -59,19 +61,19 @@ export interface PruneContext {
     clickPruneHistory: ClickPruner[];
 }
 
-/* 
-    todo: we may never actually need to set visibleNodes or rootPositioned tree outside of the tree component, so
-        we may not ever need *setters* for these values, though the pruners will need to read rootpositioned tree at the least, i think 
+const makeFreshPruneContext = () => ({
+    valuePruner: {},
+    clickPruneHistory: [],
+});
 
-*/
 export interface BaseTreeContext {
-    displayContext: DisplayContext;
-    pruneContext: PruneContext[];
-    rootPositionedTree?: HierarchyNode<TMCNode>;
-    visibleNodes?: HierarchyNode<TMCNode>;
+    displayContext: Readonly<DisplayContext>;
+    pruneContext: Readonly<PruneContext[]>;
+    rootPositionedTree?: Readonly<HierarchyNode<TMCNode>>;
+    visibleNodes?: Readonly<HierarchyNode<TMCNode>>;
 }
 
-interface TreeContext extends BaseTreeContext {
+export interface TreeContext extends BaseTreeContext {
     setDisplayContext: (newContext: DisplayContext) => void;
     setPruneContext: (newContext: Partial<PruneContext>) => void;
     setTreeContext: (newContext: Partial<BaseTreeContext>) => void;
@@ -80,12 +82,7 @@ interface TreeContext extends BaseTreeContext {
 export const TreeContext = createContext<TreeContext>({
     /* initialize so that typescript doesn't complain about the value possibly being null */
     displayContext: { w: 2000000 },
-    pruneContext: [
-        {
-            valuePruner: {},
-            clickPruneHistory: [],
-        },
-    ],
+    pruneContext: [makeFreshPruneContext()],
     /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
     setDisplayContext: (newContext: DisplayContext) => {
         throw 'Uninitialized setter!';
@@ -104,12 +101,7 @@ const Dashboard: React.FC = () => {
     const [data, setData] = useState<HierarchyNode<TMCNode>>();
     const [treeContext, _setTreeContext] = useState<BaseTreeContext>({
         displayContext: { w: 100000 },
-        pruneContext: [
-            {
-                valuePruner: {},
-                clickPruneHistory: [],
-            },
-        ],
+        pruneContext: [makeFreshPruneContext()],
     });
 
     const setTreeContext = useCallback(
@@ -131,7 +123,7 @@ const Dashboard: React.FC = () => {
 
     const setPruneContext = useCallback(
         (contextSlice: Partial<PruneContext>) => {
-            const latest = treeContext.pruneContext.slice(-1)[0]!;
+            const latest = treeContext.pruneContext.slice(-1)[0];
             const pruneContext = treeContext.pruneContext.slice(0, -1).concat({
                 ...latest,
                 ...contextSlice,
@@ -157,6 +149,56 @@ const Dashboard: React.FC = () => {
             >
                 <Column>
                     <Title>TooManyCellsJs</Title>
+                    <Row margin="5px">
+                        <Button
+                            disabled={
+                                treeContext.pruneContext.length === 1 &&
+                                pruneContextIsEmpty(
+                                    treeContext.pruneContext.slice(-1)[0]
+                                )
+                            }
+                            onClick={() =>
+                                setTreeContext({
+                                    pruneContext: [makeFreshPruneContext()],
+                                })
+                            }
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            disabled={pruneContextIsEmpty(
+                                treeContext.pruneContext.slice(-1)[0]
+                            )}
+                            onClick={() => {
+                                const pruneContext =
+                                    treeContext.pruneContext.slice();
+                                pruneContext.push(makeFreshPruneContext());
+                                setTreeContext({ pruneContext });
+                            }}
+                        >
+                            Apply
+                        </Button>
+                        {treeContext.pruneContext.map((ctx, i) => (
+                            <PruneStep
+                                key={i}
+                                active={
+                                    i === treeContext.pruneContext.length - 1
+                                }
+                                empty={pruneContextIsEmpty(ctx)}
+                                index={i}
+                                pruneContext={ctx}
+                                setActive={() => {
+                                    setTreeContext({
+                                        pruneContext:
+                                            treeContext.pruneContext.slice(
+                                                0,
+                                                i + 1
+                                            ),
+                                    });
+                                }}
+                            />
+                        ))}
+                    </Row>
                     <Row>
                         <Row basis="50%">
                             {data && <TreeComponent data={data} />}
@@ -170,5 +212,48 @@ const Dashboard: React.FC = () => {
         </ThemeProvider>
     );
 };
+
+/* todo: 
+    need 
+        1. a popover explaining what's going on
+*/
+
+interface PruneStepProps {
+    active: boolean;
+    empty: boolean;
+    index: number;
+    pruneContext: PruneContext;
+    setActive: () => void;
+}
+
+const PruneStep: React.FC<PruneStepProps> = ({
+    active,
+    empty,
+    index,
+    pruneContext,
+    setActive,
+}) => {
+    return (
+        <PruneStepContainer
+            onClick={() => !empty && setActive()}
+            active={active}
+            empty={empty}
+        >
+            <Text>Prune {index + 1}</Text>
+        </PruneStepContainer>
+    );
+};
+
+const PruneStepContainer = styled.div<{ active: boolean; empty: boolean }>`
+    background-color: ${props => props.theme.palette.primary};
+    border: ${props =>
+        props.active ? `solid 2px ${props.theme.palette.grey}` : 'auto'};
+    cursor: ${props => (props.empty ? 'auto' : 'pointer')};
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    margin: 5px;
+    border-radius: 3px;
+`;
 
 export default Dashboard;

@@ -15,18 +15,10 @@ import { schemeSet1 } from 'd3-scale-chromatic';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
-import {
-    calculateTreeLayout,
-    carToRadius,
-    carToTheta,
-    reinstateNode,
-    squared,
-} from './../util';
-import { isLinkNode, TMCNode } from './../types';
-import {
-    BaseTreeContext,
-    DisplayContext,
-} from '../Components/Dashboard/Dashboard';
+import { calculateTreeLayout, carToRadius, carToTheta, squared } from '../util';
+import { isLinkNode, TMCNode } from '../types';
+import { ClickPruner, DisplayContext } from '../Components/Dashboard/Dashboard';
+import { ContextManager } from '../Components/Dashboard/TreeComponent';
 
 // for debugging
 (window as any).select = select;
@@ -167,8 +159,8 @@ const getBlendArgs = (
     labelScale: ScaleOrdinal<string, string>
 ) => {
     const ret: { color: string; weight: number }[] = [];
-    for (let label in labelCounts) {
-        let colorsWithWeights = {} as {
+    for (const label in labelCounts) {
+        const colorsWithWeights = {} as {
             color: string;
             weight: number;
         };
@@ -246,6 +238,7 @@ class RadialTree implements DisplayContext {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
     branchSizeScale: ScaleLinear<number, number>;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
+    ContextManager: ContextManager;
     distanceScale: ScaleLinear<number, number>;
     distanceVisible = false;
     h = 1000;
@@ -262,28 +255,28 @@ class RadialTree implements DisplayContext {
     nodeIdsVisible = false;
     nodeCountsVisible = false;
     nodeContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
+    originalTree: HierarchyPointNode<TMCNode>;
     pieScale: ScaleLinear<number, number>;
     piesVisible = true;
     rootPositionedTree: HierarchyPointNode<TMCNode>;
     selector: string;
-    setTreeContext: (context: Partial<BaseTreeContext>) => void;
     strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
     transitionTime = 250;
     visibleNodes: HierarchyPointNode<TMCNode>;
     w = 1000;
     constructor(
-        selector: string,
+        ContextManager: ContextManager,
         legendSelector: string,
-        tree: HierarchyNode<TMCNode>,
-        setTreeContext: (context: Partial<BaseTreeContext>) => void
+        selector: string,
+        tree: HierarchyNode<TMCNode>
     ) {
         const that = this;
 
         this.selector = selector;
         this.legendSelector = legendSelector;
 
-        this.setTreeContext = setTreeContext;
+        this.ContextManager = ContextManager;
 
         this.svg = select(this.selector)
             .append('svg')
@@ -294,7 +287,10 @@ class RadialTree implements DisplayContext {
             .attr('class', 'container')
             .attr('stroke-width', '1px');
 
-        this.rootPositionedTree = calculateTreeLayout(tree, this.w);
+        this.rootPositionedTree = this.originalTree = calculateTreeLayout(
+            tree,
+            this.w
+        );
         this.visibleNodes = calculateTreeLayout(tree, this.w);
 
         this.branchSizeScale = scaleLinear([0.1, 12]).domain(
@@ -499,7 +495,7 @@ class RadialTree implements DisplayContext {
             .clamp(true);
 
         /* in the current implementation, this will provoke a call to render() in the container component */
-        this.setTreeContext({
+        this.ContextManager.setContext({
             displayContext: {
                 branchSizeScale: this.branchSizeScale,
                 distanceVisible: this.distanceVisible,
@@ -605,7 +601,7 @@ class RadialTree implements DisplayContext {
                 this.visibleNodes.links(),
                 // (d: HierarchyPointLink<TMCNode>) =>
                 //     `${makeLinkId(d)}-${this.labelScale.range().join(' ')}`
-                (d: HierarchyPointLink<TMCNode>) => Math.random()
+                () => Math.random()
             )
             .join('linearGradient')
             .attr('gradientUnits', 'userSpaceOnUse')
@@ -709,31 +705,30 @@ class RadialTree implements DisplayContext {
     ) => {
         const that = this;
         selection.on('click', function (event, d) {
+            let pruner: ClickPruner = {};
             const targetNodeId = isLinkNode(d)
                 ? d.target.data.id
                 : (d as HierarchyPointNode<TMCNode>).data.id;
 
             if (event.ctrlKey) {
-                const targetNode = that.visibleNodes
-                    .find(n => n.data.id === targetNodeId)!
-                    .copy();
-                // if we reinstate, stratify() will fail if
-                // root node data has a parent
-                targetNode.parent = null;
-                targetNode.data.parentId = undefined;
-                const visibleNodes = calculateTreeLayout(targetNode, that.w);
-                //that.setDisplayContext({ visibleNodes });
+                pruner = {
+                    key: 'setRootNode',
+                    value: targetNodeId,
+                };
             } else if (event.shiftKey) {
-                const visibleNodes = calculateTreeLayout(
-                    that.visibleNodes.copy().eachAfter(n => {
-                        if (n.data.id === targetNodeId) {
-                            n.children = undefined;
-                        }
-                    }),
-                    that.w
-                );
+                pruner = {
+                    key: 'setCollapsedNode',
+                    value: targetNodeId,
+                };
+            }
+            if (pruner.key) {
+                const newHistory = that.ContextManager.pruneContext
+                    .slice(-1)[0]
+                    .clickPruneHistory.concat(pruner);
 
-                //that.setDisplayContext({ visibleNodes });
+                that.ContextManager.setPruneContext({
+                    clickPruneHistory: newHistory,
+                });
             }
         });
     };
@@ -877,7 +872,7 @@ class RadialTree implements DisplayContext {
             .style('cursor', 'pointer')
             .style('font-size', d => textSizeScale(d.value!))
             .attr('class', 'node-count')
-            .text(d => (!!d.children ? null : d.value!))
+            .text(d => (d.children ? null : d.value!))
             .attr('text-anchor', 'middle')
             .style('visibility', this.nodeCountsVisible ? 'visible' : 'hidden');
 
@@ -916,14 +911,30 @@ class RadialTree implements DisplayContext {
             .style('visibility', this.piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {
                 if (event.shiftKey) {
-                    const visibleNodes = reinstateNode(
-                        this.rootPositionedTree,
-                        this.visibleNodes,
-                        d.data.id,
-                        this.w
-                    );
+                    const collapsed = that.ContextManager.pruneContext
+                        .slice(-1)[0]
+                        .clickPruneHistory.find(
+                            p =>
+                                p.key === 'setCollapsedNode' &&
+                                p.value === d.data.id
+                        );
+                    if (collapsed) {
+                        const clickPruneHistory =
+                            that.ContextManager.pruneContext
+                                .slice(-1)[0]
+                                ?.clickPruneHistory.filter(
+                                    h =>
+                                        !(
+                                            h.key === 'setCollapsedNode' &&
+                                            h.value === d.data.id
+                                        )
+                                );
+                        that.ContextManager.setPruneContext({
+                            clickPruneHistory,
+                        });
+                    }
+
                     event.stopPropagation();
-                    //this.setDisplayContext({ visibleNodes });
                 }
             });
 
