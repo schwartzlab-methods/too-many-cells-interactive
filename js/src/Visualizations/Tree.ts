@@ -10,7 +10,7 @@ import {
     HierarchyPointNode,
 } from 'd3-hierarchy';
 import { interpolate } from 'd3-interpolate';
-import { ScaleLinear, scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
+import { ScaleLinear, scaleLinear, ScaleOrdinal } from 'd3-scale';
 import { schemeSet1 } from 'd3-scale-chromatic';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, pointRadial } from 'd3-shape';
@@ -186,7 +186,7 @@ const getBlendedColor = (
  * @param labels
  * @returns string[]
  */
-const interpolateColorScale = (labels: string[]) => {
+export const interpolateColorScale = (labels: string[]) => {
     if (labels.length <= schemeSet1.length) {
         return schemeSet1;
     }
@@ -234,15 +234,12 @@ const makeLinkId = (link: HierarchyPointLink<TMCNode>) =>
 
 const deltaBehavior = dispatch('nodeDelta', 'linkDelta');
 
-class RadialTree implements DisplayContext {
+class RadialTree {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
-    branchSizeScale: ScaleLinear<number, number>;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
     ContextManager: ContextManager;
     distanceScale: ScaleLinear<number, number>;
-    distanceVisible = false;
     h = 1000;
-    labelScale: ScaleOrdinal<string, string>;
     legendSelector: string;
     linkContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
     links?: Selection<SVGGElement, HierarchyPointLink<TMCNode>, any, any>;
@@ -252,24 +249,15 @@ class RadialTree implements DisplayContext {
         unknown
     >;
     nodes?: Selection<SVGGElement, HierarchyPointNode<TMCNode>, any, any>;
-    nodeIdsVisible = false;
-    nodeCountsVisible = false;
     nodeContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
     originalTree: HierarchyPointNode<TMCNode>;
-    pieScale: ScaleLinear<number, number>;
-    piesVisible = true;
-    rootPositionedTree: HierarchyPointNode<TMCNode>;
     selector: string;
-    strokeVisible = false;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
     transitionTime = 250;
-    visibleNodes: HierarchyPointNode<TMCNode>;
-    w = 1000;
     constructor(
         ContextManager: ContextManager,
         legendSelector: string,
-        selector: string,
-        tree: HierarchyNode<TMCNode>
+        selector: string
     ) {
         const that = this;
 
@@ -278,30 +266,31 @@ class RadialTree implements DisplayContext {
 
         this.ContextManager = ContextManager;
 
+        this.originalTree = calculateTreeLayout(
+            this.ContextManager.displayContext.rootPositionedTree.copy(),
+            this.ContextManager.displayContext.w
+        );
+
         this.svg = select(this.selector)
             .append('svg')
-            .attr('viewBox', [-this.w / 2, -this.h / 2, this.w, this.h]);
+            .attr('viewBox', [
+                -this.ContextManager.displayContext.w / 2,
+                -this.h / 2,
+                this.ContextManager.displayContext.w,
+                this.h,
+            ]);
 
         this.container = this.svg
             .append('g')
             .attr('class', 'container')
             .attr('stroke-width', '1px');
 
-        this.rootPositionedTree = this.originalTree = calculateTreeLayout(
-            tree,
-            this.w
-        );
-        this.visibleNodes = calculateTreeLayout(tree, this.w);
-
-        this.branchSizeScale = scaleLinear([0.1, 12]).domain(
-            extent(tree.descendants().map(d => d.value!)) as [number, number]
-        );
-
         this.distanceScale = scaleLinear([0, 1]).domain(
-            extent(tree.descendants().map(d => +(d.data.distance || 0))) as [
-                number,
-                number
-            ]
+            extent(
+                this.ContextManager.displayContext.rootPositionedTree
+                    .descendants()
+                    .map(d => +(d.data.distance || 0))
+            ) as [number, number]
         );
 
         this.linkContainer = this.container
@@ -399,8 +388,12 @@ class RadialTree implements DisplayContext {
                                     drawScaledTrapezoid(
                                         pointRadial(d.source.x, d.source.y),
                                         pointRadial(d.target.x, d.target.y),
-                                        that.branchSizeScale(d.source.value!),
-                                        that.branchSizeScale(d.target.value!)
+                                        that.ContextManager.displayContext.branchSizeScale(
+                                            d.source.value!
+                                        ),
+                                        that.ContextManager.displayContext.branchSizeScale(
+                                            d.target.value!
+                                        )
                                     ).toString()
                             );
                         }
@@ -435,8 +428,12 @@ class RadialTree implements DisplayContext {
                         drawScaledTrapezoid(
                             pointRadial(d.source.x, d.source.y),
                             [x, y],
-                            that.branchSizeScale(d.source.value!),
-                            that.branchSizeScale(d.target.value!)
+                            that.ContextManager.displayContext.branchSizeScale(
+                                d.source.value!
+                            ),
+                            that.ContextManager.displayContext.branchSizeScale(
+                                d.target.value!
+                            )
                         ).toString()
                     )
                 );
@@ -472,60 +469,22 @@ class RadialTree implements DisplayContext {
                 }
             )
             .on('end', () => deltaBehavior.on('nodeDelta', null));
-
-        const labels = Array.from(
-            new Set(
-                this.rootPositionedTree
-                    .descendants()
-                    .flatMap(d => Object.keys(d.data.labelCount))
-            )
-        ).filter(Boolean) as string[];
-
-        const scaleColors = interpolateColorScale(labels);
-
-        this.labelScale = scaleOrdinal(scaleColors).domain(labels);
-
-        this.pieScale = scaleLinear([5, 20])
-            .domain(
-                extent(this.visibleNodes.leaves().map(d => d.value!)) as [
-                    number,
-                    number
-                ]
-            )
-            .clamp(true);
-
-        /* in the current implementation, this will provoke a call to render() in the container component */
-
-        this.ContextManager.setContext({
-            displayContext: {
-                branchSizeScale: this.branchSizeScale,
-                distanceVisible: this.distanceVisible,
-                labelScale: this.labelScale,
-                nodeIdsVisible: this.nodeIdsVisible,
-                nodeCountsVisible: this.nodeCountsVisible,
-                piesVisible: this.piesVisible,
-                pieScale: this.pieScale,
-                strokeVisible: this.strokeVisible,
-                w: this.w,
-            },
-            rootPositionedTree: this.rootPositionedTree,
-            visibleNodes: this.visibleNodes,
-        });
     }
 
     drawNodeCounter = () => {
+        const { visibleNodes } = this.ContextManager.displayContext;
         this.svg
             .selectAll<SVGGElement, Record<string, number>>('g.node-counter')
             .data(
                 [
                     {
-                        nodes: this.visibleNodes.descendants().length,
-                        leaves: this.visibleNodes.leaves().length,
+                        nodes: visibleNodes.descendants().length,
+                        leaves: visibleNodes.leaves().length,
                         minVal: min(
-                            this.visibleNodes.descendants().map(d => d.value!)
+                            visibleNodes.descendants().map(d => d.value!)
                         ),
                         maxVal: max(
-                            this.visibleNodes.descendants().map(d => d.value!)
+                            visibleNodes.descendants().map(d => d.value!)
                         ),
                     },
                 ],
@@ -535,7 +494,9 @@ class RadialTree implements DisplayContext {
             .attr('class', 'node-counter')
             .attr(
                 'transform',
-                `translate(${this.w / 2 - 150},${-this.h / 2 + 15})`
+                `translate(${this.ContextManager.displayContext.w / 2 - 150},${
+                    -this.h / 2 + 15
+                })`
             )
             .append('text')
             .append('tspan')
@@ -554,39 +515,6 @@ class RadialTree implements DisplayContext {
             .text(d => `Max val: ${d.maxVal}`);
     };
 
-    toggleStroke = () => {
-        Object.assign(this, { strokeVisible: !this.strokeVisible });
-        this.render();
-    };
-
-    toggleDistance = () => {
-        this.distanceVisible = !this.distanceVisible;
-        this.svg
-            .selectAll('path.distance')
-            .style('visibility', this.distanceVisible ? 'visible' : 'hidden');
-    };
-
-    toggleNodeCounts = () => {
-        this.nodeCountsVisible = !this.nodeCountsVisible;
-        this.svg
-            .selectAll('.node-count')
-            .style('visibility', this.nodeCountsVisible ? 'visible' : 'hidden');
-    };
-
-    toggleNodeIds = () => {
-        this.nodeIdsVisible = !this.nodeIdsVisible;
-        this.svg
-            .selectAll('.node-id')
-            .style('visibility', this.nodeIdsVisible ? 'visible' : 'hidden');
-    };
-
-    togglePies = () => {
-        this.piesVisible = !this.piesVisible;
-        this.svg
-            .selectAll('.pie')
-            .style('visibility', this.piesVisible ? 'visible' : 'hidden');
-    };
-
     /* todo: why is add label scale not triggering rerender? why do nodes rerender every time? */
     renderLinks = (
         selection: Selection<
@@ -599,7 +527,7 @@ class RadialTree implements DisplayContext {
         const gradients = this.container
             .selectAll<BaseType, HierarchyPointLink<TMCNode>>('linearGradient')
             .data(
-                this.visibleNodes.links(),
+                this.ContextManager.displayContext.visibleNodes.links(),
                 // (d: HierarchyPointLink<TMCNode>) =>
                 //     `${makeLinkId(d)}-${this.labelScale.range().join(' ')}`
                 () => Math.random()
@@ -616,15 +544,23 @@ class RadialTree implements DisplayContext {
             .append('stop')
             .attr('offset', '40%')
             .attr('stop-color', d =>
-                getBlendedColor(d.source.data.labelCount, this.labelScale)
+                getBlendedColor(
+                    d.source.data.labelCount,
+                    this.ContextManager.displayContext.labelScale
+                )
             );
 
         gradients
             .append('stop')
             .attr('offset', '85%')
             .attr('stop-color', d =>
-                getBlendedColor(d.target.data.labelCount, this.labelScale)
+                getBlendedColor(
+                    d.target.data.labelCount,
+                    this.ContextManager.displayContext.labelScale
+                )
             );
+
+        const { branchSizeScale } = this.ContextManager.displayContext;
 
         return selection
             .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
@@ -657,8 +593,8 @@ class RadialTree implements DisplayContext {
                             return drawScaledTrapezoid(
                                 pointRadial(d.source.x, d.source.y),
                                 pointRadial(d.target.x, d.target.y),
-                                this.branchSizeScale(d.source.value!),
-                                this.branchSizeScale(d.target.value!)
+                                branchSizeScale(d.source.value!),
+                                branchSizeScale(d.target.value!)
                             ).toString();
                         });
                 },
@@ -672,8 +608,8 @@ class RadialTree implements DisplayContext {
                             drawScaledTrapezoid(
                                 pointRadial(d.source.x, d.source.y),
                                 pointRadial(d.target.x, d.target.y),
-                                this.branchSizeScale(d.source.value!),
-                                this.branchSizeScale(d.target.value!)
+                                branchSizeScale(d.source.value!),
+                                branchSizeScale(d.target.value!)
                             ).toString()
                         ),
                 exit =>
@@ -692,7 +628,12 @@ class RadialTree implements DisplayContext {
                         )
                         .remove()
             )
-            .attr('stroke', this.strokeVisible ? 'black' : 'none')
+            .attr(
+                'stroke',
+                this.ContextManager.displayContext.strokeVisible
+                    ? 'black'
+                    : 'none'
+            )
             .attr(
                 'fill',
                 d => `url('#${d.source.data.id}-${d.target.data.id}')`
@@ -737,16 +678,25 @@ class RadialTree implements DisplayContext {
     render = () => {
         const that = this;
 
+        const {
+            branchSizeScale,
+            distanceVisible,
+            labelScale,
+            nodeCountsVisible,
+            nodeIdsVisible,
+            pieScale,
+            piesVisible,
+            strokeVisible,
+            visibleNodes,
+        } = this.ContextManager.displayContext;
+
         const textSizeScale = scaleLinear([10, 40]).domain(
-            extent(this.visibleNodes.leaves().map(d => d.value!)) as [
-                number,
-                number
-            ]
+            extent(visibleNodes.leaves().map(d => d.value!)) as [number, number]
         );
 
         this.nodes = this.nodeContainer
             .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>('g.node')
-            .data(this.visibleNodes.descendants(), d => d.data.nodeId)
+            .data(visibleNodes.descendants(), d => d.data.nodeId)
             .join(
                 enter => {
                     return (
@@ -812,7 +762,7 @@ class RadialTree implements DisplayContext {
 
         this.links = this.linkContainer
             .selectAll<SVGGElement, HierarchyPointLink<TMCNode>>('g.link')
-            .data(this.visibleNodes.links(), d => makeLinkId(d))
+            .data(visibleNodes.links(), d => makeLinkId(d))
             .join('g')
             .attr('class', 'link');
 
@@ -827,7 +777,7 @@ class RadialTree implements DisplayContext {
             .on('mouseout', () =>
                 selectAll('.tooltip').style('visibility', 'hidden')
             )
-            .attr('stroke', this.strokeVisible ? 'black' : 'none');
+            .attr('stroke', strokeVisible ? 'black' : 'none');
 
         this.links.call(this.registerClickHandlers);
 
@@ -840,15 +790,13 @@ class RadialTree implements DisplayContext {
             .data((d: HierarchyPointNode<TMCNode>) => [d])
             .join('circle')
             .attr('class', 'node')
-            .attr('stroke', this.strokeVisible ? 'black' : 'none')
+            .attr('stroke', strokeVisible ? 'black' : 'none')
             .attr('fill', d =>
                 d.children
-                    ? getBlendedColor(d.data.labelCount, this.labelScale)
+                    ? getBlendedColor(d.data.labelCount, labelScale)
                     : null
             )
-            .attr('r', d =>
-                d.children ? this.branchSizeScale(d.value || 0) : 0
-            );
+            .attr('r', d => (d.children ? branchSizeScale(d.value || 0) : 0));
 
         /* append node ids */
         this.nodes
@@ -861,7 +809,7 @@ class RadialTree implements DisplayContext {
             .attr('class', 'node-id')
             .text(d => d.data.nodeId)
             .attr('text-anchor', 'middle')
-            .style('visibility', this.nodeIdsVisible ? 'visible' : 'hidden');
+            .style('visibility', nodeIdsVisible ? 'visible' : 'hidden');
 
         /* LEAF ADORNMENTS */
 
@@ -875,7 +823,7 @@ class RadialTree implements DisplayContext {
             .attr('class', 'node-count')
             .text(d => (d.children ? null : d.value!))
             .attr('text-anchor', 'middle')
-            .style('visibility', this.nodeCountsVisible ? 'visible' : 'hidden');
+            .style('visibility', nodeCountsVisible ? 'visible' : 'hidden');
 
         /* pies */
 
@@ -901,15 +849,15 @@ class RadialTree implements DisplayContext {
                         !outer.children
                             ? arc()({
                                   innerRadius: 0,
-                                  outerRadius: that.pieScale(outer.value!),
+                                  outerRadius: pieScale(outer.value!),
                                   ...d,
                               })
                             : null
                     )
 
-                    .attr('fill', d => that.labelScale(d.data[0]));
+                    .attr('fill', d => labelScale(d.data[0]));
             })
-            .style('visibility', this.piesVisible ? 'visible' : 'hidden')
+            .style('visibility', piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {
                 if (event.shiftKey) {
                     const collapsed = that.ContextManager.pruneContext
@@ -944,7 +892,7 @@ class RadialTree implements DisplayContext {
             .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>(
                 'path.distance'
             )
-            .data(this.visibleNodes.descendants(), d => d.data.nodeId)
+            .data(visibleNodes.descendants(), d => d.data.nodeId)
             .join('path')
             .on('mouseover', (e: MouseEvent, d: HierarchyNode<TMCNode>) =>
                 showToolTip(d.data, e)
@@ -953,7 +901,7 @@ class RadialTree implements DisplayContext {
                 selectAll('.tooltip').style('visibility', 'hidden')
             )
             .attr('class', 'distance')
-            .style('visibility', this.distanceVisible ? 'visible' : 'hidden')
+            .style('visibility', distanceVisible ? 'visible' : 'hidden')
             .attr(
                 'transform',
                 d => `translate(${pointRadial(d.x, d.y).toString()})`

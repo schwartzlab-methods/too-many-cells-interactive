@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import { HierarchyNode } from 'd3-hierarchy';
+import { HierarchyNode, tree } from 'd3-hierarchy';
 import { TMCNode } from '../../types';
 import { Tree as TreeViz } from '../../Visualizations';
 import {
@@ -29,14 +29,10 @@ import {
     DisplayContext,
 } from './Dashboard';
 
-interface TreeComponentProps {
-    data: HierarchyNode<TMCNode>;
-}
-
 export class ContextManager {
     private context!: TreeContext;
     pruneContext!: Readonly<PruneContext[]>;
-    displayContext!: Readonly<DisplayContext>;
+    displayContext!: Readonly<Required<DisplayContext>>;
     setContext!: (ctx: Partial<TreeContext>) => void;
     setPruneContext!: (ctx: Partial<PruneContext>) => void;
     constructor(
@@ -52,25 +48,39 @@ export class ContextManager {
     ) => {
         this.context = context;
         this.pruneContext = this.context.pruneContext;
-        this.displayContext = this.context.displayContext;
+        this.displayContext = this.context
+            .displayContext as Required<DisplayContext>;
         this.setContext = setContext;
         this.setPruneContext = this.context.setPruneContext;
     };
 }
 
-const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
+const TreeComponent: React.FC = () => {
     const [Tree, setTree] = useState<TreeViz>();
 
-    /* initialize to 1 in order to skip unecessary rerender */
     const previousPruneContext = useRef<Readonly<PruneContext[]>>();
 
     const treeContext = useContext(TreeContext);
 
-    const { displayContext, pruneContext, setTreeContext } = treeContext;
+    const { displayContext, pruneContext, setDisplayContext, setTreeContext } =
+        treeContext;
+
+    useLayoutEffect(() => {
+        if (treeContext.displayContext.rootPositionedTree && !Tree) {
+            const Manager = new ContextManager(treeContext, setTreeContext);
+            const _Tree = new TreeViz(
+                Manager,
+                '.legend',
+                `.${selector.current}`
+            );
+            setTree(_Tree);
+            _Tree.render();
+        }
+    }, [treeContext]);
 
     useEffect(() => {
         if (Tree) {
-            Object.assign(Tree, displayContext);
+            Tree.ContextManager.refresh(treeContext, setTreeContext);
             Tree.render();
         }
     }, [displayContext]);
@@ -82,28 +92,7 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
         }
     }, [treeContext, setTreeContext]);
 
-    /* 
-        todo: 
-            - extract conditionals into semantically-named functions
-            - consolidate state by moving everything that's in context manager out of Tree
-                - this means initilializing these properties (including scales, visibleNodes and rootPositionedTree)
-                    in this component. That way, they'll never be undefined.
-                - it also means further wrapping the (a) updateContext function so that it will handle updating React and D3 context values at once
-                    - this is especially important for the first 3 codepaths
-                        - here's we're updating display context? yeah, that's a better pattern,
-                            this function will update display context (which will contain root and visible nodes)
-                            and useEffect that watches only display context will take care of rerender
-                        - but note that the call to object.assign() is at cross-purposes with ContextManager
-                        - what it out to do is update (display)ContextManager and rerender, which formalizes the process
-            - to recap:
-                put visible nodes and rootpositionedtree on contextManager
-                set contextManager values ahead of time and pass to constructor, removing those properties from Tree
-                have the dispaycontext useEffect update the manager and call render, rather than using object.assign
-                the below should not make calls to setTreeContext but instead setDisplayContext, letting the parent take care of the rerender
-                
-
-    */
-
+    /* TODO: these conditionals should be semantic */
     useEffect(() => {
         if (Tree && previousPruneContext.current !== pruneContext) {
             if (
@@ -114,12 +103,10 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                 /* 
                     if previous exists and current is length 1 and empty, this is a refresh
                 */
-                Tree.rootPositionedTree = Tree.visibleNodes = Tree.originalTree;
-                setTreeContext({
-                    rootPositionedTree: Tree.rootPositionedTree,
-                    visibleNodes: Tree.visibleNodes,
+                setDisplayContext({
+                    rootPositionedTree: Tree.originalTree,
+                    visibleNodes: Tree.originalTree,
                 });
-                Tree.render();
             } else if (
                 previousPruneContext.current &&
                 previousPruneContext.current.length < pruneContext.length
@@ -127,9 +114,9 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                 /* 
                     if latest is longer than previous rerender tree using previous prune context as basis
                 */
-                Tree.rootPositionedTree = Tree.visibleNodes;
-                setTreeContext({ rootPositionedTree: Tree.visibleNodes });
-                Tree.render();
+                setDisplayContext({
+                    rootPositionedTree: displayContext.visibleNodes,
+                });
             } else if (
                 previousPruneContext.current &&
                 previousPruneContext.current.length > pruneContext.length
@@ -150,15 +137,12 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                     i++;
                 }
 
-                Tree.visibleNodes = Tree.rootPositionedTree =
-                    calculateTreeLayout(_tree, Tree.w);
+                const newTree = calculateTreeLayout(_tree, displayContext.w!);
 
-                setTreeContext({
-                    rootPositionedTree: Tree.rootPositionedTree,
-                    visibleNodes: Tree.visibleNodes,
+                setDisplayContext({
+                    rootPositionedTree: newTree,
+                    visibleNodes: newTree,
                 });
-
-                Tree.render();
             } else if (
                 previousPruneContext.current &&
                 pruneContextIsEmpty(pruneContext.slice(-1)[0])
@@ -167,9 +151,9 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                     if previous exists and current is empty (and above is false), this is a refresh,
                     so just set visible nodes to all nodes
                 */
-                Tree.visibleNodes = Tree.rootPositionedTree;
-                setTreeContext({ visibleNodes: Tree.visibleNodes });
-                Tree.render();
+                setDisplayContext({
+                    visibleNodes: displayContext.rootPositionedTree,
+                });
             } else if (
                 /* execute change to current pruning context */
                 !previousPruneContext.current ||
@@ -182,12 +166,16 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
                     : undefined;
 
                 const newTree = pruneTree(
-                    Tree.rootPositionedTree.copy(),
+                    displayContext.rootPositionedTree!.copy(),
                     current,
                     previous
                 )!;
-                Tree.visibleNodes = calculateTreeLayout(newTree, Tree.w);
-                Tree.render();
+                setDisplayContext({
+                    visibleNodes: calculateTreeLayout(
+                        newTree,
+                        displayContext.w!
+                    ),
+                });
             }
 
             previousPruneContext.current = pruneContext;
@@ -195,19 +183,6 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ data }) => {
     }, [pruneContext]);
 
     const selector = useRef<string>('tree');
-
-    useLayoutEffect(() => {
-        if (data) {
-            const Manager = new ContextManager(treeContext, setTreeContext);
-            const _Tree = new TreeViz(
-                Manager,
-                '.legend',
-                `.${selector.current}`,
-                data
-            );
-            setTree(_Tree);
-        }
-    }, [data]);
 
     return <div className={selector.current} style={{ width: '100%' }} />;
 };

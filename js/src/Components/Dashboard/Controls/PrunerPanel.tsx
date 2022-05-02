@@ -90,7 +90,10 @@ const PrunerPanel: React.FC = () => {
 
     const [expanded, setExpanded] = useState<ValuePruneType>();
 
-    const { rootPositionedTree, setPruneContext } = useContext(TreeContext);
+    const {
+        displayContext: { rootPositionedTree },
+        setPruneContext,
+    } = useContext(TreeContext);
 
     const setValuePruner = useCallback(
         (key: ValuePruneType, value: number) => {

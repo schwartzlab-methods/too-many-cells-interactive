@@ -11,8 +11,9 @@ import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
 
 const ControlPanel: React.FC = () => {
-    const { displayContext, setDisplayContext, visibleNodes } =
-        useContext(TreeContext);
+    const { displayContext, setDisplayContext } = useContext(TreeContext);
+
+    const { visibleNodes } = displayContext;
 
     const branchScalingDisabled = useMemo(() => {
         return (

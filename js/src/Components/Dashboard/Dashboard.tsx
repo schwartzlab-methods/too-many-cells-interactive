@@ -1,13 +1,15 @@
 import React, { createContext, useCallback, useEffect, useState } from 'react';
-import { HierarchyNode } from 'd3-hierarchy';
-import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
+import { extent } from 'd3-array';
+import { HierarchyNode, HierarchyPointNode } from 'd3-hierarchy';
+import { scaleLinear, ScaleLinear, scaleOrdinal, ScaleOrdinal } from 'd3-scale';
 import styled, { ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
 import { Column, Row } from '../Layout';
 import { Text, Title } from '../Typography';
 import { getData } from '../../prepareData';
-import { pruneContextIsEmpty } from '../../util';
+import { calculateTreeLayout, pruneContextIsEmpty } from '../../util';
 import Button from '../Button';
+import { interpolateColorScale } from '../../Visualizations/Tree';
 import ControlPanel from './Controls/ControlPanel';
 import TreeComponent from './TreeComponent';
 
@@ -28,7 +30,9 @@ export interface DisplayContext {
     nodeCountsVisible?: boolean;
     pieScale?: ScaleLinear<number, number>;
     piesVisible?: boolean;
+    rootPositionedTree?: Readonly<HierarchyPointNode<TMCNode>>;
     strokeVisible?: boolean;
+    visibleNodes?: Readonly<HierarchyPointNode<TMCNode>>;
     w?: number;
 }
 
@@ -69,8 +73,6 @@ const makeFreshPruneContext = () => ({
 export interface BaseTreeContext {
     displayContext: Readonly<DisplayContext>;
     pruneContext: Readonly<PruneContext[]>;
-    rootPositionedTree?: Readonly<HierarchyNode<TMCNode>>;
-    visibleNodes?: Readonly<HierarchyNode<TMCNode>>;
 }
 
 export interface TreeContext extends BaseTreeContext {
@@ -100,7 +102,7 @@ export const TreeContext = createContext<TreeContext>({
 const Dashboard: React.FC = () => {
     const [data, setData] = useState<HierarchyNode<TMCNode>>();
     const [treeContext, _setTreeContext] = useState<BaseTreeContext>({
-        displayContext: { w: 100000 },
+        displayContext: {},
         pruneContext: [makeFreshPruneContext()],
     });
 
@@ -134,7 +136,48 @@ const Dashboard: React.FC = () => {
     );
 
     useEffect(() => {
-        setData(getData());
+        const data = getData();
+        const w = 1000;
+        const rootPositionedTree = calculateTreeLayout(data, w);
+        const labels = Array.from(
+            new Set(
+                rootPositionedTree
+                    .descendants()
+                    .flatMap(d => Object.keys(d.data.labelCount))
+            )
+        ).filter(Boolean) as string[];
+        const scaleColors = interpolateColorScale(labels);
+
+        setDisplayContext({
+            branchSizeScale: scaleLinear([0.01, 20])
+                .domain(
+                    extent(
+                        rootPositionedTree
+                            .descendants()
+                            .map(d => +(d.value || 0))
+                    ) as [number, number]
+                )
+                .clamp(true),
+            distanceVisible: false,
+            labelScale: scaleOrdinal(scaleColors).domain(labels),
+            nodeCountsVisible: false,
+            nodeIdsVisible: false,
+            pieScale: scaleLinear([5, 20])
+                .domain(
+                    extent(rootPositionedTree.leaves().map(d => d.value!)) as [
+                        number,
+                        number
+                    ]
+                )
+                .clamp(true),
+            piesVisible: true,
+            rootPositionedTree,
+            strokeVisible: false,
+            visibleNodes: rootPositionedTree,
+            w,
+        });
+        //todo: i don't think we need this
+        setData(data);
     }, []);
 
     return (
@@ -200,9 +243,7 @@ const Dashboard: React.FC = () => {
                         ))}
                     </Row>
                     <Row>
-                        <Row basis="50%">
-                            {data && <TreeComponent data={data} />}
-                        </Row>
+                        <Row basis="50%">{data && <TreeComponent />}</Row>
                         <Row basis="50%">
                             <ControlPanel />
                         </Row>
