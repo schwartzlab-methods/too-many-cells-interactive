@@ -1,12 +1,11 @@
 import React, { createContext, useCallback, useState } from 'react';
 import { HierarchyPointNode } from 'd3-hierarchy';
 import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
-import styled, { ThemeProvider } from 'styled-components';
+import { createGlobalStyle, ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
 import { Column, Row } from '../Layout';
-import { Text, Title } from '../Typography';
-import { pruneContextIsEmpty } from '../../util';
-import Button from '../Button';
+import { Main, Title } from '../Typography';
+import PruneHistory from './Controls/PruneHistory';
 import ControlPanel from './Controls/ControlPanel';
 import TreeComponent from './TreeComponent';
 
@@ -18,6 +17,12 @@ const theme = {
         lightGrey: '#d1d9dd',
     },
 };
+
+const GlobalStyle = createGlobalStyle`
+    body {
+        font-family: Arial;
+    }
+`;
 
 export interface DisplayContext {
     branchSizeScale?: ScaleLinear<number, number>;
@@ -62,7 +67,7 @@ export interface PruneContext {
     clickPruneHistory: ClickPruner[];
 }
 
-const makeFreshPruneContext = () => ({
+export const makeFreshPruneContext = () => ({
     valuePruner: {},
     clickPruneHistory: [],
 });
@@ -79,8 +84,8 @@ export interface TreeContext extends BaseTreeContext {
 }
 
 export const TreeContext = createContext<TreeContext>({
-    /* initialize so that typescript doesn't complain about the value possibly being null */
-    displayContext: { w: 2000000 },
+    /* initialize so that typescript doesn't complain about the value  being null */
+    displayContext: {},
     pruneContext: [makeFreshPruneContext()],
     /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
     setDisplayContext: (newContext: DisplayContext) => {
@@ -133,6 +138,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <ThemeProvider theme={theme}>
+            <GlobalStyle />
             <TreeContext.Provider
                 value={{
                     ...treeContext,
@@ -142,63 +148,20 @@ const Dashboard: React.FC = () => {
                 }}
             >
                 <Column>
-                    <Title>TooManyCellsJs</Title>
-                    <Row margin="5px">
-                        <Button
-                            disabled={
-                                treeContext.pruneContext.length === 1 &&
-                                pruneContextIsEmpty(
-                                    treeContext.pruneContext.slice(-1)[0]
-                                )
-                            }
-                            onClick={() =>
-                                setTreeContext({
-                                    pruneContext: [makeFreshPruneContext()],
-                                })
-                            }
-                        >
-                            Reset
-                        </Button>
-                        <Button
-                            disabled={pruneContextIsEmpty(
-                                treeContext.pruneContext.slice(-1)[0]
-                            )}
-                            onClick={() => {
-                                const pruneContext =
-                                    treeContext.pruneContext.slice();
-                                pruneContext.push(makeFreshPruneContext());
-                                setTreeContext({ pruneContext });
-                            }}
-                        >
-                            Apply
-                        </Button>
-                        {treeContext.pruneContext.map((ctx, i) => (
-                            <PruneStep
-                                key={i}
-                                active={
-                                    i === treeContext.pruneContext.length - 1
-                                }
-                                empty={pruneContextIsEmpty(ctx)}
-                                index={i}
-                                pruneContext={ctx}
-                                setActive={() => {
-                                    setTreeContext({
-                                        pruneContext:
-                                            treeContext.pruneContext.slice(
-                                                0,
-                                                i + 1
-                                            ),
-                                    });
-                                }}
-                            />
-                        ))}
-                    </Row>
+                    <Main>TooManyCellsJs</Main>
                     <Row margin="0px">
                         <Row basis="50%">
                             <TreeComponent />
                         </Row>
                         <Row basis="50%">
-                            <ControlPanel />
+                            <Column>
+                                <Row>
+                                    <PruneHistory />
+                                </Row>
+                                <Row>
+                                    <ControlPanel />
+                                </Row>
+                            </Column>
                         </Row>
                     </Row>
                 </Column>
@@ -206,43 +169,5 @@ const Dashboard: React.FC = () => {
         </ThemeProvider>
     );
 };
-
-interface PruneStepProps {
-    active: boolean;
-    empty: boolean;
-    index: number;
-    pruneContext: PruneContext;
-    setActive: () => void;
-}
-
-const PruneStep: React.FC<PruneStepProps> = ({
-    active,
-    empty,
-    index,
-    pruneContext,
-    setActive,
-}) => {
-    return (
-        <PruneStepContainer
-            onClick={() => !empty && setActive()}
-            active={active}
-            empty={empty}
-        >
-            <Text>Prune {index + 1}</Text>
-        </PruneStepContainer>
-    );
-};
-
-const PruneStepContainer = styled.div<{ active: boolean; empty: boolean }>`
-    background-color: ${props => props.theme.palette.primary};
-    border: ${props =>
-        props.active ? `solid 2px ${props.theme.palette.grey}` : 'auto'};
-    cursor: ${props => (props.empty ? 'auto' : 'pointer')};
-    display: flex;
-    align-items: center;
-    padding: 5px;
-    margin: 5px;
-    border-radius: 3px;
-`;
 
 export default Dashboard;

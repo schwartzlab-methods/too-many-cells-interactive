@@ -5,6 +5,11 @@ export const Text = styled.p`
     font-size: 16px;
 `;
 
+export const Main = styled.h2`
+    margin: 5px;
+    font-size: 32px;
+`;
+
 export const Title = styled.h3`
     margin: 5px;
     font-size: 24px;
