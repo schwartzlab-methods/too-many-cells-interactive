@@ -5,9 +5,13 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import { HierarchyNode, tree } from 'd3-hierarchy';
+import { extent } from 'd3-array';
+import { HierarchyNode } from 'd3-hierarchy';
+import { scaleLinear, scaleOrdinal } from 'd3-scale';
 import { TMCNode } from '../../types';
 import { Tree as TreeViz } from '../../Visualizations';
+import { getData } from '../../prepareData';
+import { interpolateColorScale } from '../../Visualizations/Tree';
 import {
     calculateTreeLayout,
     collapseNode,
@@ -29,6 +33,11 @@ import {
     DisplayContext,
 } from './Dashboard';
 
+/**
+ *  Class for passing context between React and D3.
+ *  @method refresh must be used by React (in a useEffect hook) to keep context up to date,
+ *      since Tree chart depends on it for accurate rendering and most values are controlled by React components.
+ */
 export class ContextManager {
     private context!: TreeContext;
     pruneContext!: Readonly<PruneContext[]>;
@@ -65,6 +74,50 @@ const TreeComponent: React.FC = () => {
     const { displayContext, pruneContext, setDisplayContext, setTreeContext } =
         treeContext;
 
+    /* Initialize tree context on first render  */
+    useEffect(() => {
+        const data = getData();
+        const w = 1000;
+        const rootPositionedTree = calculateTreeLayout(data, w);
+        const labels = Array.from(
+            new Set(
+                rootPositionedTree
+                    .descendants()
+                    .flatMap(d => Object.keys(d.data.labelCount))
+            )
+        ).filter(Boolean) as string[];
+        const scaleColors = interpolateColorScale(labels);
+
+        setDisplayContext({
+            branchSizeScale: scaleLinear([0.01, 20])
+                .domain(
+                    extent(
+                        rootPositionedTree
+                            .descendants()
+                            .map(d => +(d.value || 0))
+                    ) as [number, number]
+                )
+                .clamp(true),
+            distanceVisible: false,
+            labelScale: scaleOrdinal(scaleColors).domain(labels),
+            nodeCountsVisible: false,
+            nodeIdsVisible: false,
+            pieScale: scaleLinear([5, 20])
+                .domain(
+                    extent(rootPositionedTree.leaves().map(d => d.value!)) as [
+                        number,
+                        number
+                    ]
+                )
+                .clamp(true),
+            piesVisible: true,
+            rootPositionedTree,
+            strokeVisible: false,
+            visibleNodes: rootPositionedTree,
+            w,
+        });
+    }, []);
+
     useLayoutEffect(() => {
         if (treeContext.displayContext.rootPositionedTree && !Tree) {
             const Manager = new ContextManager(treeContext, setTreeContext);
@@ -79,20 +132,24 @@ const TreeComponent: React.FC = () => {
     }, [treeContext]);
 
     useEffect(() => {
+        /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
         if (Tree) {
-            Tree.ContextManager.refresh(treeContext, setTreeContext);
-            Tree.render();
-        }
-    }, [displayContext]);
-
-    useEffect(() => {
-        if (Tree) {
-            /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
             Tree.ContextManager.refresh(treeContext, setTreeContext);
         }
     }, [treeContext, setTreeContext]);
 
-    /* TODO: these conditionals should be semantic */
+    /* React executes effects in order: this must follow previous so that tree has correct context when renderin */
+    useEffect(() => {
+        if (Tree) {
+            Tree.render();
+        }
+    }, [displayContext]);
+
+    /* 
+        This effect 'watches' prune context, creates new pruned tree, and updates display context, avoiding extra steps
+            whenever possible to increase speed. For this reason, order of conditionals is important. 
+        
+    */
     useEffect(() => {
         if (Tree && previousPruneContext.current !== pruneContext) {
             if (
@@ -101,7 +158,7 @@ const TreeComponent: React.FC = () => {
                 pruneContextIsEmpty(pruneContext[0])
             ) {
                 /* 
-                    if previous exists and current is length 1 and empty, this is a refresh
+                    if previous exists and current is length 1 and empty, this is a total refresh
                 */
                 setDisplayContext({
                     rootPositionedTree: Tree.originalTree,
@@ -112,7 +169,7 @@ const TreeComponent: React.FC = () => {
                 previousPruneContext.current.length < pruneContext.length
             ) {
                 /* 
-                    if latest is longer than previous rerender tree using previous prune context as basis
+                    if latest is longer than previous, this is a new step
                 */
                 setDisplayContext({
                     rootPositionedTree: displayContext.visibleNodes,
@@ -122,9 +179,10 @@ const TreeComponent: React.FC = () => {
                 previousPruneContext.current.length > pruneContext.length
             ) {
                 /* 
-                    if latest is shorter than previous, then this is a revert and we need to rerun all prunes  
-                    for each pruner, we'll first run the value pruner (if any), then the click pruners,
-                        since the former will always be prior to the latter (value pruners will reset click pruners)
+                    If latest is shorter than previous, then this is a revert to an intermediate step 
+                        and we need to rerun all prunes. For each pruner, we'll first run the value pruner 
+                        (if any), then the click pruners, since the former will always be prior to the 
+                        latter (value pruners will reset click pruners).
                 */
                 let i = 0;
                 let _tree = Tree.originalTree.copy() as HierarchyNode<TMCNode>;
@@ -148,14 +206,13 @@ const TreeComponent: React.FC = () => {
                 pruneContextIsEmpty(pruneContext.slice(-1)[0])
             ) {
                 /* 
-                    if previous exists and current is empty (and above is false), this is a refresh,
-                    so just set visible nodes to all nodes
+                    if previous exists and current is empty (and above is false), this is a current-step refresh,
                 */
                 setDisplayContext({
                     visibleNodes: displayContext.rootPositionedTree,
                 });
             } else if (
-                /* execute change to current pruning context */
+                /* this is a change to the present step*/
                 !previousPruneContext.current ||
                 previousPruneContext.current.length === pruneContext.length
             ) {
