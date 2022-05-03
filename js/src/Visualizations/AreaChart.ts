@@ -46,7 +46,7 @@ export default class Histogram {
         this.xLabel = xLabel;
     }
 
-    setBrush = () => {
+    setBrush = (initialValue?: number) => {
         const that = this;
         let startX = 0;
         let selectedIdx: number;
@@ -94,7 +94,7 @@ export default class Histogram {
             .on(
                 'start',
                 ({ selection }: { selection: BrushSelection }) =>
-                    (startX = selection[0] as number)
+                    (startX = selection ? (selection[0] as number) : 0)
             )
             .on('end', () => (startX = 0));
 
@@ -110,12 +110,16 @@ export default class Histogram {
                 that.onBrush(0);
             })
             //reset
-            .call(brush.move, [0, 0]);
+            .call(brush.move, [
+                initialValue
+                    ? this.xScale(initialValue)
+                    : this.xScale.range().slice(-1)[0],
+                this.xScale.range().slice(-1)[0],
+            ]);
     };
 
-    render = () => {
+    render = (initialValue?: number) => {
         const bins = Array.from(this.counts.keys());
-        ``;
 
         this.xScale = scaleLinear([
             0 + this.margin + 12,
@@ -159,7 +163,6 @@ export default class Histogram {
             .data([Array.from(this.counts.entries())])
             .join('path')
             .attr('class', 'area')
-            // note that this is and other number casting is just to keep typescript happy, the key is already a number
             .transition()
             .duration(500)
             .attr('d', d => areaG(d.map(([d, e]) => [+d, e])))
@@ -212,6 +215,6 @@ export default class Histogram {
             .attr('text-anchor', 'end')
             .text('Count');
 
-        this.setBrush();
+        this.setBrush(initialValue);
     };
 }

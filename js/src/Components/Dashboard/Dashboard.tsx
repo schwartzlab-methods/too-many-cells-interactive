@@ -4,7 +4,7 @@ import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
 import { createGlobalStyle, ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
 import { Column, Row } from '../Layout';
-import { Main, Title } from '../Typography';
+import { Main } from '../Typography';
 import PruneHistory from './Controls/PruneHistory';
 import ControlPanel from './Controls/ControlPanel';
 import TreeComponent from './TreeComponent';

@@ -1,4 +1,10 @@
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, {
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react';
 import { median, min, quantile, range, ticks } from 'd3-array';
 import { format } from 'd3-format';
 import { HierarchyNode } from 'd3-hierarchy';
@@ -85,15 +91,17 @@ const TextInputGroup = styled.div`
 `;
 
 const PrunerPanel: React.FC = () => {
-    /* we need to sync local state across these handlers, so we set it here */
-    const [prunerVal, setPrunerVal] = useState<number | string>(0);
-
     const [expanded, setExpanded] = useState<ValuePruneType>();
 
     const {
         displayContext: { rootPositionedTree },
+        pruneContext,
         setPruneContext,
     } = useContext(TreeContext);
+
+    const currentValuePruner = useMemo(() => {
+        return pruneContext.slice(-1)[0].valuePruner;
+    }, [pruneContext]);
 
     const setValuePruner = useCallback(
         (key: ValuePruneType, value: number) => {
@@ -211,16 +219,16 @@ const PrunerPanel: React.FC = () => {
         } else return new Map();
     }, [rootPositionedTree]);
 
+    const getPrunerVal = (key: ValuePruneType) =>
+        key === currentValuePruner.key ? currentValuePruner.value : undefined;
+
     const onExpand = (id: ValuePruneType) => () => {
         setExpanded(expanded === id ? undefined : id);
-        updatePrunerVal(0);
     };
 
     const pruneByContext = (contextKey: ValuePruneType) => (val: number) => {
         return setValuePruner(contextKey, val);
     };
-
-    const updatePrunerVal = (val: number | string) => setPrunerVal(val);
 
     return (
         <PrunerPanelContainer>
@@ -231,11 +239,10 @@ const PrunerPanel: React.FC = () => {
                 madValues={sizeGroupsMad}
                 madSize={sizeMadValue}
                 median={sizeMedian}
-                onChange={updatePrunerVal}
                 onExpand={onExpand('minSize')}
                 onSubmit={pruneByContext('minSize')}
                 plainValues={sizeGroupsPlain}
-                value={prunerVal}
+                value={getPrunerVal('minSize')}
                 xLabel="Size"
             />
             <SmartPruner
@@ -245,11 +252,10 @@ const PrunerPanel: React.FC = () => {
                 madValues={distanceGroupsMad}
                 madSize={distanceMadValue}
                 median={distanceMedian}
-                onChange={updatePrunerVal}
                 onExpand={onExpand('minDistance')}
                 onSubmit={pruneByContext('minDistance')}
                 plainValues={distanceGroupsPlain}
-                value={prunerVal}
+                value={getPrunerVal('minDistance')}
                 xLabel="Distance"
             />
             <SmartPruner
@@ -259,22 +265,20 @@ const PrunerPanel: React.FC = () => {
                 madValues={distanceSearchGroupsMad}
                 madSize={distanceMadValue}
                 median={distanceMedian}
-                onChange={updatePrunerVal}
                 onExpand={onExpand('minDistanceSearch')}
                 onSubmit={pruneByContext('minDistanceSearch')}
                 plainValues={distanceSearchGroupsPlain}
-                value={prunerVal}
+                value={getPrunerVal('minDistanceSearch')}
                 xLabel="Distance (Search)"
             />
             <Pruner
                 expanded={expanded === 'minDepth'}
                 label="Prune by depth"
                 onExpand={onExpand('minDepth')}
-                onChange={updatePrunerVal}
                 onSubmit={pruneByContext('minDepth')}
                 plainValues={depthSearchGroupsPlain}
                 xLabel="Depth"
-                value={prunerVal}
+                value={getPrunerVal('minDepth')}
             />
         </PrunerPanelContainer>
     );
@@ -286,11 +290,10 @@ interface PrunerProps {
     expanded: boolean;
     label: string;
     onExpand: () => void;
-    onChange: (val: number | string) => void;
     onSubmit: (size: number) => void;
     plainValues: Map<number, number>;
     xLabel: string;
-    value: number | string;
+    value?: number;
 }
 
 const Pruner: React.FC<PrunerProps> = ({
@@ -298,11 +301,18 @@ const Pruner: React.FC<PrunerProps> = ({
     label,
     onExpand,
     plainValues,
-    onChange,
     onSubmit,
     value,
     xLabel,
 }) => {
+    const [inputVal, setInputVal] = useState<string>(value ? value + '' : '0');
+
+    useEffect(() => {
+        if (!value && inputVal != '0') {
+            setInputVal('0');
+        }
+    }, [value]);
+
     return (
         <PrunerContainer expanded={expanded}>
             <PrunerLabel expanded={expanded} onClick={onExpand}>
@@ -312,17 +322,22 @@ const Pruner: React.FC<PrunerProps> = ({
                 {expanded && (
                     <>
                         <AreaChartComponent
+                            counts={plainValues}
                             onBrush={v => {
-                                onChange(+format('.3f')(v));
+                                setInputVal(format('.1f')(v));
                                 onSubmit(v);
                             }}
-                            counts={plainValues}
+                            value={value}
                             xLabel={xLabel}
                         />
                         <UpdateBox
-                            onChange={v => onChange(v)}
-                            onSubmit={() => onSubmit(+value)}
-                            value={value}
+                            onChange={v => setInputVal(v + '')}
+                            onSubmit={() => {
+                                if (value) {
+                                    onSubmit(+value);
+                                }
+                            }}
+                            value={inputVal}
                         />
                     </>
                 )}
@@ -340,10 +355,9 @@ interface SmartPrunerProps {
     median: number;
     onExpand: () => void;
     plainValues: Map<number, number>;
-    onChange: (val: number | string) => void;
     onSubmit: (size: number) => void;
     xLabel: string;
-    value: number | string;
+    value?: number;
 }
 
 const SmartPruner: React.FC<SmartPrunerProps> = ({
@@ -354,18 +368,18 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
     median,
     onExpand,
     plainValues,
-    onChange,
     onSubmit,
     xLabel,
     value,
 }) => {
     const [type, setType] = useState<'raw' | 'smart'>('raw');
+    const [inputVal, setInputVal] = useState<string>(value ? value + '' : '0');
 
-    const handleChange = (type: 'raw' | 'smart') => {
-        // reset parent cutoff
-        onChange(0);
-        setType(type);
-    };
+    useEffect(() => {
+        if (!value && inputVal != '0') {
+            setInputVal('0');
+        }
+    }, [value]);
 
     return (
         <PrunerContainer expanded={expanded}>
@@ -380,7 +394,7 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                                 checked={type === 'raw'}
                                 id={`${id}raw`}
                                 name={`${id}types`}
-                                onChange={() => handleChange('raw')}
+                                onChange={() => setType('raw')}
                                 type="radio"
                             />
                             <RadioLabel htmlFor={`${id}raw`}>Plain</RadioLabel>
@@ -388,7 +402,7 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                                 checked={type === 'smart'}
                                 id={`${id}smart`}
                                 name={`${id}types`}
-                                onChange={() => handleChange('smart')}
+                                onChange={() => setType('smart')}
                                 type="radio"
                             />
                             <RadioLabel htmlFor={`${id}smart`}>
@@ -397,28 +411,34 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                         </RadioGroup>
                         {type === 'raw' && (
                             <AreaChartComponent
+                                counts={plainValues}
                                 onBrush={val => {
-                                    onChange(+format('.3f')(val));
+                                    setInputVal(format('.3f')(val));
                                     onSubmit(val);
                                 }}
-                                counts={plainValues}
+                                value={value}
                                 xLabel={xLabel}
                             />
                         )}
                         {type === 'smart' && (
                             <AreaChartComponent
+                                counts={madValues}
                                 onBrush={val => {
-                                    onChange(+format('.3f')(val));
+                                    setInputVal(format('.3f')(val));
                                     onSubmit(median + val * median);
                                 }}
-                                counts={madValues}
+                                value={value}
                                 xLabel={`${xLabel} in MADs from median`}
                             />
                         )}
                         <UpdateBox
-                            onChange={v => onChange(v)}
-                            onSubmit={() => onSubmit(+value)}
-                            value={value}
+                            onChange={v => setInputVal(v + '')}
+                            onSubmit={() => {
+                                if (value) {
+                                    onSubmit(+value);
+                                }
+                            }}
+                            value={inputVal}
                         />
                     </>
                 )}
