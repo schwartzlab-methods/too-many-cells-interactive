@@ -1,6 +1,6 @@
-import { carToRadius, carToTheta, getMAD } from '../util';
 import { pointRadial } from 'd3-shape';
 import { median } from 'd3-array';
+import { carToRadius, carToTheta, getMAD } from '../util';
 
 describe('Test getMad', () => {
     test('It should return the median for a list of numbers with an even length', () => {

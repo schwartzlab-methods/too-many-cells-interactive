@@ -427,7 +427,7 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                                     setInputVal(format('.3f')(val));
                                     onSubmit(median + val * median);
                                 }}
-                                value={value}
+                                value={value ? value / median - 1 : undefined}
                                 xLabel={`${xLabel} in MADs from median`}
                             />
                         )}

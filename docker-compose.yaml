@@ -1,9 +1,9 @@
 version: "3.6"
 services:
-  js:
+  react:
     image: node:latest
     volumes:
-      - ./js:/usr/app
+      - ./react:/usr/app
     working_dir: /usr/app
     ports:
       - 8080:8080

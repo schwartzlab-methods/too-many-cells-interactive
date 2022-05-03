@@ -98,6 +98,7 @@ const PruneStepContainer = styled.div<{ active: boolean; empty: boolean }>`
     background-color: ${props => props.theme.palette.primary};
     border: ${props =>
         props.active ? `solid 2px ${props.theme.palette.grey}` : 'auto'};
+    color: ${props => (props.active ? 'white' : 'inherit')};
     cursor: ${props => (props.empty ? 'auto' : 'pointer')};
     display: flex;
     align-items: center;
