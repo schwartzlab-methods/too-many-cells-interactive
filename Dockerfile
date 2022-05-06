@@ -1,14 +1,27 @@
-FROM node:latest
+FROM node:latest as BUILD
 
 WORKDIR /usr/app
 
-COPY ./react .
+ENV NODE_PORT=4422
+ENV STATIC_DIR=/usr/app/node/static 
 
-RUN yarn install
+COPY --chown=node:node . .
 
-# todo: in 'production' environment, this will build react app and copy assets into static folder
-# there's also no reason to mount the data directory anymore -- back end can just serve it up
+WORKDIR /usr/app/react
 
-ENTRYPOINT ["yarn"]
+# build react app and copy assets into static directo
+RUN yarn install && \
+    yarn run build && \
+    cp -a dist/* /usr/app/node/static/ && \
+    chown -R node:node /usr/app/node/static/
 
-CMD ["run","start-cold"]
+WORKDIR /usr/app/node
+
+# build node app
+RUN yarn install && yarn run build
+
+# todo copy dist and static into new image, leaving modules, etc behind
+
+USER node
+
+ENTRYPOINT ["yarn", "run", "start"]

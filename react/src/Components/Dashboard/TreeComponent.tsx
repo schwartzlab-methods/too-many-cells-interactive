@@ -76,46 +76,48 @@ const TreeComponent: React.FC = () => {
 
     /* Initialize tree context on first render  */
     useEffect(() => {
-        const data = getData();
-        const w = 1000;
-        const rootPositionedTree = calculateTreeLayout(data, w);
-        const labels = Array.from(
-            new Set(
-                rootPositionedTree
-                    .descendants()
-                    .flatMap(d => Object.keys(d.data.labelCount))
-            )
-        ).filter(Boolean) as string[];
-        const scaleColors = interpolateColorScale(labels);
+        const cb = async () => {
+            const data = await getData();
+            const w = 1000;
+            const rootPositionedTree = calculateTreeLayout(data, w);
+            const labels = Array.from(
+                new Set(
+                    rootPositionedTree
+                        .descendants()
+                        .flatMap(d => Object.keys(d.data.labelCount))
+                )
+            ).filter(Boolean) as string[];
+            const scaleColors = interpolateColorScale(labels);
 
-        setDisplayContext({
-            branchSizeScale: scaleLinear([0.01, 20])
-                .domain(
-                    extent(
-                        rootPositionedTree
-                            .descendants()
-                            .map(d => +(d.value || 0))
-                    ) as [number, number]
-                )
-                .clamp(true),
-            distanceVisible: false,
-            labelScale: scaleOrdinal(scaleColors).domain(labels),
-            nodeCountsVisible: false,
-            nodeIdsVisible: false,
-            pieScale: scaleLinear([5, 20])
-                .domain(
-                    extent(rootPositionedTree.leaves().map(d => d.value!)) as [
-                        number,
-                        number
-                    ]
-                )
-                .clamp(true),
-            piesVisible: true,
-            rootPositionedTree,
-            strokeVisible: false,
-            visibleNodes: rootPositionedTree,
-            w,
-        });
+            setDisplayContext({
+                branchSizeScale: scaleLinear([0.01, 20])
+                    .domain(
+                        extent(
+                            rootPositionedTree
+                                .descendants()
+                                .map(d => +(d.value || 0))
+                        ) as [number, number]
+                    )
+                    .clamp(true),
+                distanceVisible: false,
+                labelScale: scaleOrdinal(scaleColors).domain(labels),
+                nodeCountsVisible: false,
+                nodeIdsVisible: false,
+                pieScale: scaleLinear([5, 20])
+                    .domain(
+                        extent(
+                            rootPositionedTree.leaves().map(d => d.value!)
+                        ) as [number, number]
+                    )
+                    .clamp(true),
+                piesVisible: true,
+                rootPositionedTree,
+                strokeVisible: false,
+                visibleNodes: rootPositionedTree,
+                w,
+            });
+        };
+        cb();
     }, []);
 
     useLayoutEffect(() => {

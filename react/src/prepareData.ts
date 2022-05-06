@@ -1,5 +1,3 @@
-import data from './data/cluster_tree.json';
-import labels from './data/labels.csv';
 import { uuid } from 'lodash-uuid';
 import { TMCNode, TMCFlatNode, RoseNode, RoseNodeObj } from './types';
 import { HierarchyNode, stratify } from 'd3-hierarchy';
@@ -21,7 +19,10 @@ export const buildTree = (node: TMCFlatNode[]) => {
  *
  * @returns HierarchyNode<TMCNode> Root tree that can be passed to D3 layout
  */
-export const getData = () => {
+export const getData = async () => {
+    const labels = await (await fetch('/files/labels.csv')).text();
+    const data = await (await fetch('/files/cluster_tree.json')).json();
+
     const flat = flatten(data as RoseNode);
     const tree = buildTree(flat);
     const labelMap: Record<string, string> = {};

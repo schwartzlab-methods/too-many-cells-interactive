@@ -26,7 +26,7 @@ module.exports = {
         extensions: ['.ts', '.tsx', '.js'],
     },
     output: {
-        filename: 'bundle.js',
+        filename: 'webapp.js',
         path: path.resolve(__dirname, 'dist'),
     },
     plugins: [
@@ -37,6 +37,10 @@ module.exports = {
     ],
     devServer: {
         compress: true,
-        port: 8080,
+        port: process.env.APP_PORT,
+        proxy: {
+            '/api': `http://node:${process.env.NODE_PORT}`,
+            '/files': `http://node:${process.env.NODE_PORT}`,
+        },
     },
 };

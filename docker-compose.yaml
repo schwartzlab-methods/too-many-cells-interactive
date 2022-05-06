@@ -6,7 +6,17 @@ services:
       - ./react:/usr/app
     working_dir: /usr/app
     ports:
-      - 8080:8080
+      - ${APP_PORT}:${APP_PORT}
     environment:
       - APP_PORT
+      - NODE_PORT
+    entrypoint: "yarn start"
+  node:
+    image: node:latest
+    volumes:
+      - ./node:/usr/app
+    working_dir: /usr/app
+    environment:
+      - NODE_PORT
+      - STATIC_DIR
     entrypoint: "yarn start"
