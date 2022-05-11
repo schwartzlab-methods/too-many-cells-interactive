@@ -1,6 +1,10 @@
 import React, { useContext } from 'react';
 import styled from 'styled-components';
-import { pruneContextIsEmpty } from '../../../util';
+import {
+    formatDistance,
+    formatInteger,
+    pruneContextIsEmpty,
+} from '../../../util';
 import Button from '../../Button';
 import { Column, Row } from '../../Layout';
 import { Text, Title } from '../../Typography';
@@ -89,19 +93,50 @@ const PruneStep: React.FC<PruneStepProps> = ({
             active={active}
             empty={empty}
         >
-            <Text>Prune {index + 1}</Text>
+            {getPruneHistoryLabel(pruneContext, index)}
         </PruneStepContainer>
     );
 };
 
+const getPruneHistoryLabel = (pruneContext: PruneContext, index: number) => {
+    const { key, value } = pruneContext.valuePruner;
+    const manualPruneCount = pruneContext.clickPruneHistory.length;
+    const labels = [];
+    if (key && value) {
+        const formatter = key.startsWith('minDistance')
+            ? formatDistance
+            : formatInteger;
+        labels.push(`${key}: ${formatter(value)}`);
+    }
+    if (manualPruneCount) {
+        labels.push(
+            `${manualPruneCount} manual prune${
+                manualPruneCount > 1 ? 's' : ''
+            }.`
+        );
+    }
+    if (labels.length) {
+        return (
+            <>
+                {labels.map(l => (
+                    <Text key={l}>{l}</Text>
+                ))}
+            </>
+        );
+    } else {
+        return <Text>{`Prune ${index + 1}`}</Text>;
+    }
+};
+
 const PruneStepContainer = styled.div<{ active: boolean; empty: boolean }>`
-    background-color: ${props => props.theme.palette.primary};
+    background-color: ${props =>
+        props.empty ? props.theme.palette.grey : props.theme.palette.primary};
     border: ${props =>
-        props.active ? `solid 2px ${props.theme.palette.grey}` : 'auto'};
-    color: ${props => (props.active ? 'white' : 'inherit')};
+        props.active ? `solid 3px ${props.theme.palette.secondary}` : 'auto'};
+    color: white;
     cursor: ${props => (props.empty ? 'auto' : 'pointer')};
     display: flex;
-    align-items: center;
+    flex-direction: column;
     padding: 5px;
     margin: 5px;
     border-radius: 3px;

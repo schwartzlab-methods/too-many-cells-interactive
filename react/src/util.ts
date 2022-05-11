@@ -1,4 +1,5 @@
 import { median } from 'd3-array';
+import { format } from 'd3-format';
 import { HierarchyNode, HierarchyPointNode, tree } from 'd3-hierarchy';
 import { PruneContext } from './Components/Dashboard/Dashboard';
 import { buildTree } from './prepareData';
@@ -168,3 +169,6 @@ export const reinstateNode = (
 
 export const pruneContextIsEmpty = (ctx: Readonly<PruneContext>) =>
     !ctx.clickPruneHistory.length && !Object.values(ctx.valuePruner).length;
+
+export const formatDistance = (distance: number) => format('.3f')(distance);
+export const formatInteger = (int: number) => format('.0f')(int);

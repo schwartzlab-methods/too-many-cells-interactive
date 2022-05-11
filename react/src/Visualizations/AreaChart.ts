@@ -166,7 +166,7 @@ export default class Histogram {
             .transition()
             .duration(500)
             .attr('d', d => areaG(d.map(([d, e]) => [+d, e])))
-            .attr('fill', '#3a83c5');
+            .attr('fill', '#009FFD');
 
         const maxTicks = 15;
 

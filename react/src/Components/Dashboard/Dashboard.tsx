@@ -12,9 +12,10 @@ import TreeComponent from './TreeComponent';
 const theme = {
     palette: {
         white: '#ffffff',
-        primary: '#3a83c5',
+        primary: '#009FFD',
         grey: '#5e6365',
         lightGrey: '#d1d9dd',
+        secondary: '#FFA400',
     },
 };
 
