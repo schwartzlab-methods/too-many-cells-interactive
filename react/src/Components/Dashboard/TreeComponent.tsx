@@ -150,6 +150,10 @@ const TreeComponent: React.FC = () => {
     /* 
         This effect 'watches' prune context, creates new pruned tree, and updates display context, avoiding extra steps
             whenever possible to increase speed. For this reason, order of conditionals is important. 
+
+        todo: don't need to save previous, actually --> we can possibly even split up these actions
+            that is, we can have a separate useEffect that watches activeStep and acts accordingly
+            it can save previous step
         
     */
     useEffect(() => {
@@ -184,7 +188,7 @@ const TreeComponent: React.FC = () => {
                     If latest is shorter than previous, then this is a revert to an intermediate step 
                         and we need to rerun all prunes. For each pruner, we'll first run the value pruner 
                         (if any), then the click pruners, since the former will always be prior to the 
-                        latter (value pruners will reset click pruners).
+                        latter (value pruners reset click pruners).
                 */
                 let i = 0;
                 let _tree = Tree.originalTree.copy() as HierarchyNode<TMCNode>;

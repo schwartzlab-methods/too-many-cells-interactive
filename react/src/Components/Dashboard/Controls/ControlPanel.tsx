@@ -23,8 +23,8 @@ const ControlPanel: React.FC = () => {
     }, [displayContext]);
 
     return (
-        <Row>
-            <Column>
+        <>
+            <Column width={'50%'}>
                 <DisplayButtons />
                 <Legend />
                 <SliderGroup>
@@ -63,8 +63,10 @@ const ControlPanel: React.FC = () => {
                     }}
                 />
             </Column>
-            <PrunerPanel />
-        </Row>
+            <Column width="50%">
+                <PrunerPanel />
+            </Column>
+        </>
     );
 };
 

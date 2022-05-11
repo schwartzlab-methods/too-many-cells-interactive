@@ -74,11 +74,13 @@ export const makeFreshPruneContext = () => ({
 });
 
 export interface BaseTreeContext {
+    activePrune: Readonly<number>;
     displayContext: Readonly<DisplayContext>;
     pruneContext: Readonly<PruneContext[]>;
 }
 
 export interface TreeContext extends BaseTreeContext {
+    setActivePrune: (idx: number) => void;
     setDisplayContext: (newContext: DisplayContext) => void;
     setPruneContext: (newContext: Partial<PruneContext>) => void;
     setTreeContext: (newContext: Partial<BaseTreeContext>) => void;
@@ -86,8 +88,14 @@ export interface TreeContext extends BaseTreeContext {
 
 export const TreeContext = createContext<TreeContext>({
     /* initialize so that typescript doesn't complain about the value  being null */
+    activePrune: 0,
     displayContext: {},
     pruneContext: [makeFreshPruneContext()],
+    /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+    setActivePrune: (idx: number) => {
+        throw 'Uninitialized setter!';
+    },
+
     /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
     setDisplayContext: (newContext: DisplayContext) => {
         throw 'Uninitialized setter!';
@@ -104,6 +112,7 @@ export const TreeContext = createContext<TreeContext>({
 
 const Dashboard: React.FC = () => {
     const [treeContext, _setTreeContext] = useState<BaseTreeContext>({
+        activePrune: 1,
         displayContext: {},
         pruneContext: [makeFreshPruneContext()],
     });
@@ -112,6 +121,11 @@ const Dashboard: React.FC = () => {
         (contextSlice: Partial<TreeContext>) =>
             _setTreeContext({ ...treeContext, ...contextSlice }),
         [treeContext, _setTreeContext]
+    );
+
+    const setActivePrune = useCallback(
+        (idx: number) => setTreeContext({ ...treeContext, activePrune: idx }),
+        [treeContext, setTreeContext]
     );
 
     const setDisplayContext = useCallback(
@@ -143,6 +157,7 @@ const Dashboard: React.FC = () => {
             <TreeContext.Provider
                 value={{
                     ...treeContext,
+                    setActivePrune,
                     setDisplayContext,
                     setPruneContext,
                     setTreeContext,
@@ -151,15 +166,15 @@ const Dashboard: React.FC = () => {
                 <Column>
                     <Main>TooManyCellsJs</Main>
                     <Row margin="0px">
-                        <Row basis="50%">
+                        <Row width="50%">
                             <TreeComponent />
                         </Row>
-                        <Row basis="50%">
-                            <Column>
+                        <Row width="50%">
+                            <Column justifyContent="flex-start">
                                 <Row>
                                     <PruneHistory />
                                 </Row>
-                                <Row>
+                                <Row alignItems="flex-start">
                                     <ControlPanel />
                                 </Row>
                             </Column>

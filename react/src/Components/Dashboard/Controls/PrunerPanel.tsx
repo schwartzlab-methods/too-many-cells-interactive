@@ -27,6 +27,7 @@ import {
 import Button from '../../Button';
 import { NumberInput } from '../../Input';
 import { Label } from '../../Typography';
+import { Column, Row } from '../../Layout';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -37,27 +38,12 @@ const PrunerContainer = styled.div<{ expanded: boolean }>`
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
-    max-width: 300px;
     height: ${props => (props.expanded ? '220px' : '25px')};
     + {PrunerContainer} {
         margin-bottom: 10px;
     }
-    transition: 0.25s height cubic-bezier(.73,.32,.34,1.5)
-`;
-
-const PrunerLabelContainer = styled.div`
-    display: flex;
-    flex-direction: columns;
-    justify-content: space-between;
-`;
-
-const PrunerPanelContainer = styled.div`
-    align-self: flex-start;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    justify-content: flex-start;
+    transition: 0.25s height cubic-bezier(.73,.32,.34,1.5);
+    width: 220px;
 `;
 
 const RadioButton = styled.input.attrs({ type: 'radio' })`
@@ -231,7 +217,7 @@ const PrunerPanel: React.FC = () => {
     };
 
     return (
-        <PrunerPanelContainer>
+        <Column>
             <SmartPruner
                 expanded={expanded === 'minSize'}
                 id="minSize"
@@ -280,7 +266,7 @@ const PrunerPanel: React.FC = () => {
                 xLabel="Depth"
                 value={getPrunerVal('minDepth')}
             />
-        </PrunerPanelContainer>
+        </Column>
     );
 };
 
@@ -452,10 +438,10 @@ const PrunerLabel: React.FC<{ expanded: boolean; onClick: () => void }> = ({
     expanded,
     onClick,
 }) => (
-    <PrunerLabelContainer onClick={onClick}>
+    <Row margin="0px" justifyContent="space-between" onClick={onClick}>
         {children}
         {expanded ? <CaretDownIcon /> : <CaretUpIcon />}
-    </PrunerLabelContainer>
+    </Row>
 );
 
 interface UpdateBoxProps {
