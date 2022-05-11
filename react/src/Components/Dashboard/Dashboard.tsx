@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useState } from 'react';
-import { HierarchyPointNode } from 'd3-hierarchy';
+import { HierarchyPointNode, tree } from 'd3-hierarchy';
 import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
 import { createGlobalStyle, ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
@@ -112,7 +112,7 @@ export const TreeContext = createContext<TreeContext>({
 
 const Dashboard: React.FC = () => {
     const [treeContext, _setTreeContext] = useState<BaseTreeContext>({
-        activePrune: 1,
+        activePrune: 0,
         displayContext: {},
         pruneContext: [makeFreshPruneContext()],
     });
@@ -141,11 +141,13 @@ const Dashboard: React.FC = () => {
 
     const setPruneContext = useCallback(
         (contextSlice: Partial<PruneContext>) => {
-            const latest = treeContext.pruneContext.slice(-1)[0];
-            const pruneContext = treeContext.pruneContext.slice(0, -1).concat({
-                ...latest,
+            const activeIdx = treeContext.activePrune;
+            const pruneContext = treeContext.pruneContext.slice();
+            pruneContext.splice(activeIdx, 1, {
+                ...treeContext.pruneContext[activeIdx],
                 ...contextSlice,
             });
+
             setTreeContext({ pruneContext });
         },
         [setTreeContext, treeContext]

@@ -1,4 +1,5 @@
 import React, { useContext } from 'react';
+import { tree } from 'd3-hierarchy';
 import styled from 'styled-components';
 import {
     formatDistance,
@@ -12,7 +13,7 @@ import { makeFreshPruneContext, PruneContext, TreeContext } from '../Dashboard';
 
 const PruneHistory: React.FC = () => {
     const treeContext = useContext(TreeContext);
-    const { setTreeContext } = treeContext;
+    const { activePrune, setActivePrune, setTreeContext } = treeContext;
 
     return (
         <Column>
@@ -28,6 +29,7 @@ const PruneHistory: React.FC = () => {
                         }
                         onClick={() =>
                             setTreeContext({
+                                activePrune: 0,
                                 pruneContext: [makeFreshPruneContext()],
                             })
                         }
@@ -36,13 +38,16 @@ const PruneHistory: React.FC = () => {
                     </Button>
                     <Button
                         disabled={pruneContextIsEmpty(
-                            treeContext.pruneContext.slice(-1)[0]
+                            treeContext.pruneContext[activePrune]
                         )}
                         onClick={() => {
                             const pruneContext =
                                 treeContext.pruneContext.slice();
                             pruneContext.push(makeFreshPruneContext());
-                            setTreeContext({ pruneContext });
+                            setTreeContext({
+                                pruneContext,
+                                activePrune: activePrune + 1,
+                            });
                         }}
                     >
                         Apply
@@ -53,17 +58,12 @@ const PruneHistory: React.FC = () => {
                 {treeContext.pruneContext.map((ctx, i) => (
                     <PruneStep
                         key={i}
-                        active={i === treeContext.pruneContext.length - 1}
+                        active={i === treeContext.activePrune}
                         empty={pruneContextIsEmpty(ctx)}
                         index={i}
                         pruneContext={ctx}
                         setActive={() => {
-                            setTreeContext({
-                                pruneContext: treeContext.pruneContext.slice(
-                                    0,
-                                    i + 1
-                                ),
-                            });
+                            setActivePrune(i);
                         }}
                     />
                 ))}

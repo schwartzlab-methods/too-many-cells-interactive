@@ -6,7 +6,7 @@ import React, {
     useState,
 } from 'react';
 import { extent } from 'd3-array';
-import { HierarchyNode } from 'd3-hierarchy';
+import { HierarchyNode, tree } from 'd3-hierarchy';
 import { scaleLinear, scaleOrdinal } from 'd3-scale';
 import { TMCNode } from '../../types';
 import { Tree as TreeViz } from '../../Visualizations';
@@ -16,6 +16,7 @@ import {
     calculateTreeLayout,
     collapseNode,
     pruneContextIsEmpty,
+    pruneContextsAreEqual,
     pruneTreeByDepth,
     pruneTreeByMinDistance,
     pruneTreeByMinDistanceSearch,
@@ -67,12 +68,17 @@ export class ContextManager {
 const TreeComponent: React.FC = () => {
     const [Tree, setTree] = useState<TreeViz>();
 
-    const previousPruneContext = useRef<Readonly<PruneContext[]>>();
-
     const treeContext = useContext(TreeContext);
 
-    const { displayContext, pruneContext, setDisplayContext, setTreeContext } =
-        treeContext;
+    const {
+        activePrune,
+        displayContext,
+        pruneContext,
+        setDisplayContext,
+        setTreeContext,
+    } = treeContext;
+
+    const previousContext = useRef<Readonly<TreeContext>>(treeContext);
 
     /* Initialize tree context on first render  */
     useEffect(() => {
@@ -120,6 +126,7 @@ const TreeComponent: React.FC = () => {
         cb();
     }, []);
 
+    /* intial render */
     useLayoutEffect(() => {
         if (treeContext.displayContext.rootPositionedTree && !Tree) {
             const Manager = new ContextManager(treeContext, setTreeContext);
@@ -140,7 +147,7 @@ const TreeComponent: React.FC = () => {
         }
     }, [treeContext, setTreeContext]);
 
-    /* React executes effects in order: this must follow previous so that tree has correct context when renderin */
+    /* React executes effects in order: this must follow previous so that tree has correct context when rendering */
     useEffect(() => {
         if (Tree) {
             Tree.render();
@@ -150,49 +157,82 @@ const TreeComponent: React.FC = () => {
     /* 
         This effect 'watches' prune context, creates new pruned tree, and updates display context, avoiding extra steps
             whenever possible to increase speed. For this reason, order of conditionals is important. 
-
-        todo: don't need to save previous, actually --> we can possibly even split up these actions
-            that is, we can have a separate useEffect that watches activeStep and acts accordingly
-            it can save previous step
-        
     */
     useEffect(() => {
-        if (Tree && previousPruneContext.current !== pruneContext) {
+        const { pruneContext: previousPrune, activePrune: previousActive } =
+            previousContext.current;
+
+        if (Tree) {
             if (
-                previousPruneContext.current &&
-                pruneContext.length === 1 &&
-                pruneContextIsEmpty(pruneContext[0])
+                activePrune === 0 &&
+                pruneContextIsEmpty(pruneContext[activePrune])
             ) {
                 /* 
-                    if previous exists and current is length 1 and empty, this is a total refresh
+                    if current idx is 0 and value is empty, this is a total refresh
                 */
                 setDisplayContext({
                     rootPositionedTree: Tree.originalTree,
                     visibleNodes: Tree.originalTree,
                 });
-            } else if (
-                previousPruneContext.current &&
-                previousPruneContext.current.length < pruneContext.length
-            ) {
+            } else if (previousPrune.length < pruneContext.length) {
                 /* 
-                    if latest is longer than previous, this is a new step
+                    if new context is longer than previous context, this is a new step
                 */
                 setDisplayContext({
                     rootPositionedTree: displayContext.visibleNodes,
                 });
             } else if (
-                previousPruneContext.current &&
-                previousPruneContext.current.length > pruneContext.length
+                /* 
+                    if we're making changes to an intermediate step, remove later steps
+                    and force a second invocation of this hook
+                */
+                previousActive === activePrune &&
+                !pruneContextsAreEqual(
+                    previousPrune[activePrune],
+                    pruneContext[activePrune]
+                ) &&
+                pruneContext.length - 1 > activePrune
+            ) {
+                setTreeContext({
+                    pruneContext: treeContext.pruneContext.slice(
+                        0,
+                        activePrune + 1
+                    ),
+                });
+            } else if (
+                pruneContext.length - 1 === activePrune &&
+                !pruneContextsAreEqual(
+                    previousPrune[activePrune],
+                    pruneContext[activePrune]
+                )
+            ) {
+                /* if prune context has changed and we're on the final step, prune the tree */
+                const latestIdx = pruneContext.length - 1;
+                const current = pruneContext[latestIdx];
+
+                const newTree = pruneTree(
+                    displayContext.rootPositionedTree!.copy(),
+                    current,
+                    previousPrune.slice(-1)[0]
+                )!;
+                setDisplayContext({
+                    visibleNodes: calculateTreeLayout(
+                        newTree,
+                        displayContext.w!
+                    ),
+                });
+            } else if (
+                pruneContext.length - 1 > activePrune ||
+                previousActive !== activePrune
             ) {
                 /* 
-                    If latest is shorter than previous, then this is a revert to an intermediate step 
-                        and we need to rerun all prunes. For each pruner, we'll first run the value pruner 
-                        (if any), then the click pruners, since the former will always be prior to the 
-                        latter (value pruners reset click pruners).
+                    If our active prune is not the latest prune, or if we've just advanced to the latest prune, 
+                        then this is a change from one extant step to another and we need to rerun all previous prunes. 
+                        For each pruner, we'll first run the value pruner (if any), then the click pruners. 
                 */
                 let i = 0;
                 let _tree = Tree.originalTree.copy() as HierarchyNode<TMCNode>;
-                while (i < pruneContext.length) {
+                while (i <= activePrune) {
                     _tree = runPrune(pruneContext[i].valuePruner, _tree);
                     _tree = runClickPrunes(
                         pruneContext[i].clickPruneHistory,
@@ -207,43 +247,11 @@ const TreeComponent: React.FC = () => {
                     rootPositionedTree: newTree,
                     visibleNodes: newTree,
                 });
-            } else if (
-                previousPruneContext.current &&
-                pruneContextIsEmpty(pruneContext.slice(-1)[0])
-            ) {
-                /* 
-                    if previous exists and current is empty (and above is false), this is a current-step refresh,
-                */
-                setDisplayContext({
-                    visibleNodes: displayContext.rootPositionedTree,
-                });
-            } else if (
-                /* this is a change to the present step*/
-                !previousPruneContext.current ||
-                previousPruneContext.current.length === pruneContext.length
-            ) {
-                const latestIdx = pruneContext.length - 1;
-                const current = pruneContext[latestIdx];
-                const previous = previousPruneContext.current
-                    ? previousPruneContext.current[latestIdx]
-                    : undefined;
-
-                const newTree = pruneTree(
-                    displayContext.rootPositionedTree!.copy(),
-                    current,
-                    previous
-                )!;
-                setDisplayContext({
-                    visibleNodes: calculateTreeLayout(
-                        newTree,
-                        displayContext.w!
-                    ),
-                });
             }
-
-            previousPruneContext.current = pruneContext;
         }
-    }, [pruneContext]);
+        //note right now that previous value is not reliable component-wide, should be used only in this hook!
+        previousContext.current = treeContext;
+    }, [activePrune, pruneContext]);
 
     const selector = useRef<string>('tree');
 
