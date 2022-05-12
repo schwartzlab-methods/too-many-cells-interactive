@@ -19,8 +19,9 @@ const PruneHistory: React.FC = () => {
             <PruneHistoryContainer>
                 <Row margin="0px">
                     <Title>Pruning History</Title>
-                    <ButtonContainer>
+                    <span>
                         <Button
+                            horizontal
                             disabled={
                                 treeContext.pruneContext.length === 1 &&
                                 pruneContextIsEmpty(
@@ -37,6 +38,7 @@ const PruneHistory: React.FC = () => {
                             Reset
                         </Button>
                         <Button
+                            horizontal
                             onClick={() => {
                                 const pruneContext =
                                     treeContext.pruneContext.slice();
@@ -49,7 +51,7 @@ const PruneHistory: React.FC = () => {
                         >
                             Apply
                         </Button>
-                    </ButtonContainer>
+                    </span>
                 </Row>
                 <StepContainer>
                     {treeContext.pruneContext.map((ctx, i) => (
@@ -142,12 +144,6 @@ const PruneStepContainer = styled.div<{ active: boolean; empty: boolean }>`
     padding: 5px;
     margin: 5px;
     border-radius: 3px;
-`;
-
-const ButtonContainer = styled.div`
-    Button + Button {
-        margin-left: 10px;
-    }
 `;
 
 const PruneHistoryContainer = styled(Column)`

@@ -5,6 +5,10 @@ export const Text = styled.p`
     font-size: 16px;
 `;
 
+export const Bold = styled.span`
+    font-weight: bold;
+`;
+
 export const Main = styled.h2`
     margin: 5px;
     font-size: 32px;

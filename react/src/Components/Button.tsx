@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-export default styled.button<{ active?: boolean }>`
+export default styled.button<{ active?: boolean; horizontal?: boolean }>`
     background-color: ${props =>
         props.active
             ? props.theme.palette.lightGrey
@@ -22,6 +22,9 @@ export default styled.button<{ active?: boolean }>`
             cursor: auto;
             background-color: inherit;
         }
+    }
+    + Button {
+        margin-left: ${props => (props.horizontal ? '5px' : 'inherity')};
     }
     &:disabled {
         color: ${props => props.theme.palette.lightGrey};

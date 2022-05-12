@@ -1,5 +1,5 @@
 import 'd3-transition'; // must be imported before selection
-import { extent, max, min, sum } from 'd3-array';
+import { extent, sum } from 'd3-array';
 import { dispatch } from 'd3-dispatch';
 import { color, rgb } from 'd3-color';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
@@ -471,51 +471,6 @@ class RadialTree {
             .on('end', () => deltaBehavior.on('nodeDelta', null));
     }
 
-    drawNodeCounter = () => {
-        const { visibleNodes } = this.ContextManager.displayContext;
-        const t = this.svg
-            .selectAll<SVGGElement, Record<string, number>>('g.node-counter')
-            .data(
-                [
-                    {
-                        nodes: visibleNodes.descendants().length,
-                        leaves: visibleNodes.leaves().length,
-                        minVal: min(
-                            visibleNodes.descendants().map(d => d.value!)
-                        ),
-                        maxVal: max(
-                            visibleNodes.descendants().map(d => d.value!)
-                        ),
-                    },
-                ],
-                Math.random
-            )
-            .join('g')
-            .attr('class', 'node-counter')
-            .attr(
-                'transform',
-                `translate(${this.ContextManager.displayContext.w / 2 - 150},${
-                    -this.h / 2 + 15
-                })`
-            )
-            .append('text');
-
-        t.append('tspan').text(d => `Node count: ${d.nodes}`);
-
-        t.append('tspan')
-            .attr('dy', 15)
-            .attr('x', 0)
-            .text(d => `Leaf count: ${d.leaves}`);
-        t.append('tspan')
-            .attr('dy', 15)
-            .attr('x', 0)
-            .text(d => `Min val: ${d.minVal}`);
-        t.append('tspan')
-            .attr('dy', 15)
-            .attr('x', 0)
-            .text(d => `Max val: ${d.maxVal}`);
-    };
-
     /* todo: why is add label scale not triggering rerender? why do nodes rerender every time? */
     renderLinks = (
         selection: Selection<
@@ -913,8 +868,6 @@ class RadialTree {
             .duration(this.transitionTime)
             .attr('stroke', 'black')
             .attr('opacity', d => this.distanceScale(d.data.distance || 0));
-
-        this.drawNodeCounter();
     };
 }
 

@@ -38,12 +38,12 @@ const PrunerContainer = styled.div<{ expanded: boolean }>`
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    height: ${props => (props.expanded ? '220px' : '25px')};
+    height: ${props => (props.expanded ? '255px' : '25px')};
     + {PrunerContainer} {
         margin-bottom: 10px;
     }
     transition: 0.25s height cubic-bezier(.73,.32,.34,1.5);
-    width: 220px;
+    width: 320px;
 `;
 
 const RadioButton = styled.input.attrs({ type: 'radio' })`
@@ -438,11 +438,17 @@ const PrunerLabel: React.FC<{ expanded: boolean; onClick: () => void }> = ({
     expanded,
     onClick,
 }) => (
-    <Row margin="0px" justifyContent="space-between" onClick={onClick}>
+    <PrunerLabelContainer onClick={onClick}>
         {children}
         {expanded ? <CaretDownIcon /> : <CaretUpIcon />}
-    </Row>
+    </PrunerLabelContainer>
 );
+
+const PrunerLabelContainer = styled(Row)`
+    margin: 0px;
+    justify-content: space-between;
+    flex-grow: 0;
+`;
 
 interface UpdateBoxProps {
     onChange: (val: number | string) => void;

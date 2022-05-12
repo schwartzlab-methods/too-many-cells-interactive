@@ -181,5 +181,3 @@ export const pruneContextsAreEqual = (
 
 export const formatDistance = (distance: number) => format('.3f')(distance);
 export const formatInteger = (int: number) => format('.0f')(int);
-
-export const downloadSvgAsPng = (node: SVGSVGElement) => {};
