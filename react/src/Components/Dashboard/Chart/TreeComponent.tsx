@@ -6,12 +6,12 @@ import React, {
     useState,
 } from 'react';
 import { extent } from 'd3-array';
-import { HierarchyNode, tree } from 'd3-hierarchy';
+import { HierarchyNode } from 'd3-hierarchy';
 import { scaleLinear, scaleOrdinal } from 'd3-scale';
-import { TMCNode } from '../../types';
-import { Tree as TreeViz } from '../../Visualizations';
-import { getData } from '../../prepareData';
-import { interpolateColorScale } from '../../Visualizations/Tree';
+import { TMCNode } from '../../../types';
+import { Tree as TreeViz } from '../../../Visualizations';
+import { getData } from '../../../prepareData';
+import { interpolateColorScale } from '../../../Visualizations/Tree';
 import {
     calculateTreeLayout,
     collapseNode,
@@ -22,7 +22,7 @@ import {
     pruneTreeByMinDistanceSearch,
     pruneTreeByMinValue,
     setRootNode,
-} from '../../util';
+} from '../../../util';
 import {
     ClickPruner,
     PruneContext,
@@ -32,7 +32,7 @@ import {
     ValuePruneType,
     ClickPruneType,
     DisplayContext,
-} from './Dashboard';
+} from '../Dashboard';
 
 /**
  *  Class for passing context between React and D3.

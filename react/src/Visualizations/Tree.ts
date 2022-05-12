@@ -17,8 +17,8 @@ import { arc, pie, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
 import { calculateTreeLayout, carToRadius, carToTheta, squared } from '../util';
 import { isLinkNode, TMCNode } from '../types';
-import { ClickPruner, DisplayContext } from '../Components/Dashboard/Dashboard';
-import { ContextManager } from '../Components/Dashboard/TreeComponent';
+import { ClickPruner } from '../Components/Dashboard/Dashboard';
+import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
 
 // for debugging
 (window as any).select = select;
@@ -310,7 +310,7 @@ class RadialTree {
         zoomBehavior(this.svg);
 
         /* Append tooltip */
-        select(this.selector)
+        select('body')
             .append('div')
             .attr('class', 'tooltip')
             .style('z-index', 999)
@@ -473,7 +473,7 @@ class RadialTree {
 
     drawNodeCounter = () => {
         const { visibleNodes } = this.ContextManager.displayContext;
-        this.svg
+        const t = this.svg
             .selectAll<SVGGElement, Record<string, number>>('g.node-counter')
             .data(
                 [
@@ -498,18 +498,19 @@ class RadialTree {
                     -this.h / 2 + 15
                 })`
             )
-            .append('text')
-            .append('tspan')
-            .text(d => `Node count: ${d.nodes}`)
-            .append('tspan')
+            .append('text');
+
+        t.append('tspan').text(d => `Node count: ${d.nodes}`);
+
+        t.append('tspan')
             .attr('dy', 15)
             .attr('x', 0)
-            .text(d => `Leaf count: ${d.leaves}`)
-            .append('tspan')
+            .text(d => `Leaf count: ${d.leaves}`);
+        t.append('tspan')
             .attr('dy', 15)
             .attr('x', 0)
-            .text(d => `Min val: ${d.minVal}`)
-            .append('tspan')
+            .text(d => `Min val: ${d.minVal}`);
+        t.append('tspan')
             .attr('dy', 15)
             .attr('x', 0)
             .text(d => `Max val: ${d.maxVal}`);

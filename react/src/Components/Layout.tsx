@@ -27,5 +27,4 @@ export const Row = styled.div<{
     flex-grow: 1;
     justify-content: ${props => props.justifyContent ?? 'flex-start'};
     margin: ${props => props.margin ?? '25px'};
-    padding: 10px;
 `;

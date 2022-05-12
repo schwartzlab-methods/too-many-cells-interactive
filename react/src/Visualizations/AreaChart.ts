@@ -18,7 +18,7 @@ export default class Histogram {
     selector: string;
     svg: Selection<SVGGElement, unknown, any, any>;
     w = 400;
-    h = 200;
+    h = 240;
     margin = 40;
     onBrush: (val: number) => void;
     title?: string;
@@ -190,12 +190,17 @@ export default class Histogram {
             )
             .selection()
             .style('font-size', 8)
-            .append('g')
-            .append('text')
+            .selectAll('g.x-label')
+            .data([this.xLabel])
+            .join('g')
+            .attr('class', 'x-label')
             .attr('transform', `translate(${this.w / 2}, 30)`)
+            .selectAll('text')
+            .data(d => [d])
+            .join('text')
+            .text(d => d)
             .attr('fill', 'black')
             .attr('text-anchor', 'middle')
-            .text(this.xLabel)
             .style('font-size', 12);
 
         this.svg
@@ -208,12 +213,17 @@ export default class Histogram {
             .duration(500)
             .call(axisRight(this.yScale))
             .selection()
-            .append('g')
-            .append('text')
+            .selectAll('g.y-label')
+            .data(['Count'])
+            .join('g')
+            .attr('class', 'y-label')
+            .selectAll('text')
+            .data(d => [d])
+            .join('text')
             .attr('transform', `translate(-12, ${this.h / 2}), rotate(90)`)
             .attr('fill', 'black')
             .attr('text-anchor', 'end')
-            .text('Count');
+            .text(d => d);
 
         this.setBrush(initialValue);
     };

@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { Text } from '../Typography';
-import { AreaChart } from '../../Visualizations';
+import { Text } from '../../Typography';
+import { AreaChart } from '../../../Visualizations';
 
 interface AreaChartComponentProps {
     counts: Map<number, number>;

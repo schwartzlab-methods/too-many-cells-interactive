@@ -1,6 +1,7 @@
 import { median } from 'd3-array';
 import { format } from 'd3-format';
 import { HierarchyNode, HierarchyPointNode, tree } from 'd3-hierarchy';
+import { select } from 'd3-selection';
 import { PruneContext } from './Components/Dashboard/Dashboard';
 import { buildTree } from './prepareData';
 import { TMCNode } from './types';
@@ -180,3 +181,5 @@ export const pruneContextsAreEqual = (
 
 export const formatDistance = (distance: number) => format('.3f')(distance);
 export const formatInteger = (int: number) => format('.0f')(int);
+
+export const downloadSvgAsPng = (node: SVGSVGElement) => {};

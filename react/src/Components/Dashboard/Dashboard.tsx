@@ -1,13 +1,14 @@
 import React, { createContext, useCallback, useState } from 'react';
-import { HierarchyPointNode, tree } from 'd3-hierarchy';
+import { HierarchyPointNode } from 'd3-hierarchy';
 import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
 import { createGlobalStyle, ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
 import { Column, Row } from '../Layout';
 import { Main } from '../Typography';
-import PruneHistory from './Controls/PruneHistory';
-import ControlPanel from './Controls/ControlPanel';
-import TreeComponent from './TreeComponent';
+import TreeControls from './Chart/TreeControls';
+import PruneHistory from './DisplayControls/PruneHistory';
+import ControlPanel from './DisplayControls/ControlPanel';
+import TreeComponent from './Chart/TreeComponent';
 
 const theme = {
     palette: {
@@ -167,16 +168,19 @@ const Dashboard: React.FC = () => {
             >
                 <Column>
                     <Main>TooManyCellsJs</Main>
-                    <Row margin="0px">
+                    <Row alignItems="flex-start" margin="0px">
                         <Row width="50%">
-                            <TreeComponent />
+                            <Column>
+                                <TreeControls />
+                                <TreeComponent />
+                            </Column>
                         </Row>
                         <Row width="50%">
                             <Column justifyContent="flex-start">
-                                <Row>
+                                <Row margin="0px">
                                     <PruneHistory />
                                 </Row>
-                                <Row alignItems="flex-start">
+                                <Row margin="0px" alignItems="flex-start">
                                     <ControlPanel />
                                 </Row>
                             </Column>
