@@ -143,31 +143,6 @@ export const calculateTreeLayout = (nodes: HierarchyNode<TMCNode>, w: number) =>
         .size([2 * Math.PI, (w / 2) * 0.9])
         .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
 
-/**
- * Add a node's children to the tree and recalculate layout
- */
-export const reinstateNode = (
-    originalTree: HierarchyPointNode<TMCNode>,
-    prunedTree: HierarchyPointNode<TMCNode>,
-    nodeId: string,
-    width: number
-) => {
-    const node = originalTree.find(n => n.data.id === nodeId);
-
-    if (!node) {
-        throw 'Node not found!';
-    }
-
-    const newNodes = prunedTree
-        .descendants()
-        .map(d => d.data)
-        .concat(
-            (node.children || []).flatMap(c => c.descendants().map(d => d.data))
-        );
-
-    return calculateTreeLayout(buildTree(newNodes), width);
-};
-
 export const pruneContextIsEmpty = (ctx: Readonly<PruneContext>) =>
     !ctx.clickPruneHistory.length && !Object.values(ctx.valuePruner).length;
 
@@ -176,6 +151,12 @@ export const pruneContextsAreEqual = (
     ctx2: Readonly<PruneContext>
 ) =>
     ctx1.clickPruneHistory.length === ctx2.clickPruneHistory.length &&
+    valuePrunersAreEqual(ctx1, ctx2);
+
+export const valuePrunersAreEqual = (
+    ctx1: Readonly<PruneContext>,
+    ctx2: Readonly<PruneContext>
+) =>
     ctx1.valuePruner.key === ctx2.valuePruner.key &&
     ctx1.valuePruner.value === ctx2.valuePruner.value;
 

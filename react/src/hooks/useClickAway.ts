@@ -1,12 +1,12 @@
 //https://github.com/streamich/react-use/blob/master/src/useClickAway.ts
 
-import { RefObject, useEffect, useRef } from 'react';
+import { RefObject, useEffect, useMemo, useRef } from 'react';
 
 const useClickAway = <E extends Event = Event>(
     ref: RefObject<HTMLElement | null>,
     onClickAway: (event: E) => void
 ) => {
-    const events = ['mousedown', 'touchstart'];
+    const events = useMemo(() => ['mousedown', 'touchstart'], []);
     const savedCallback = useRef(onClickAway);
     useEffect(() => {
         savedCallback.current = onClickAway;

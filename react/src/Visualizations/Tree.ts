@@ -15,7 +15,7 @@ import { schemeSet1 } from 'd3-scale-chromatic';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
-import { calculateTreeLayout, carToRadius, carToTheta, squared } from '../util';
+import { carToRadius, carToTheta, squared } from '../util';
 import { isLinkNode, TMCNode } from '../types';
 import { ClickPruner } from '../Components/Dashboard/Dashboard';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
@@ -250,7 +250,6 @@ class RadialTree {
     >;
     nodes?: Selection<SVGGElement, HierarchyPointNode<TMCNode>, any, any>;
     nodeContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
-    originalTree: HierarchyPointNode<TMCNode>;
     selector: string;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
     transitionTime = 250;
@@ -265,11 +264,6 @@ class RadialTree {
         this.legendSelector = legendSelector;
 
         this.ContextManager = ContextManager;
-
-        this.originalTree = calculateTreeLayout(
-            this.ContextManager.displayContext.rootPositionedTree.copy(),
-            this.ContextManager.displayContext.w
-        );
 
         this.svg = select(this.selector)
             .append('svg')
@@ -816,24 +810,21 @@ class RadialTree {
             .style('visibility', piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {
                 if (event.shiftKey) {
-                    const collapsed = that.ContextManager.pruneContext
-                        .slice(-1)[0]
-                        .clickPruneHistory.find(
+                    const collapsed =
+                        that.ContextManager.activePruneStep.clickPruneHistory.find(
                             p =>
                                 p.key === 'setCollapsedNode' &&
                                 p.value === d.data.id
                         );
                     if (collapsed) {
                         const clickPruneHistory =
-                            that.ContextManager.pruneContext
-                                .slice(-1)[0]
-                                ?.clickPruneHistory.filter(
-                                    h =>
-                                        !(
-                                            h.key === 'setCollapsedNode' &&
-                                            h.value === d.data.id
-                                        )
-                                );
+                            that.ContextManager.activePruneStep?.clickPruneHistory.filter(
+                                h =>
+                                    !(
+                                        h.key === 'setCollapsedNode' &&
+                                        h.value === d.data.id
+                                    )
+                            );
                         that.ContextManager.setPruneContext({
                             clickPruneHistory,
                         });

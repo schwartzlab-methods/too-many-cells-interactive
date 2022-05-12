@@ -12,7 +12,50 @@ import { makeFreshPruneContext, PruneContext, TreeContext } from '../Dashboard';
 
 const PruneHistory: React.FC = () => {
     const treeContext = useContext(TreeContext);
-    const { activePrune, setActivePrune, setTreeContext } = treeContext;
+    const {
+        activePrune,
+        displayContext,
+        pruneContext,
+        setActivePrune,
+        setTreeContext,
+    } = treeContext;
+
+    /**
+     * Apply current step by pushing in new context and setting it active
+     */
+    const applyPrune = () => {
+        const _pruneContext = pruneContext.slice();
+        _pruneContext.push(makeFreshPruneContext());
+        setTreeContext({
+            pruneContext: _pruneContext,
+            activePrune: activePrune + 1,
+        });
+    };
+
+    /**
+     * Apply button is only enabled if we are on the latest step and that step is not empty
+     */
+    const getApplyButtonDisabled = () =>
+        pruneContextIsEmpty(pruneContext[activePrune]) ||
+        activePrune !== pruneContext.length - 1;
+
+    /**
+     * Disable reset button if there is only one step and it is empty
+     */
+    const getResetButtonDisabled = () =>
+        pruneContext.length === 1 &&
+        pruneContextIsEmpty(pruneContext.slice(-1)[0]);
+
+    const resetPruneHistory = () =>
+        setTreeContext({
+            activePrune: 0,
+            pruneContext: [makeFreshPruneContext()],
+            displayContext: {
+                ...displayContext,
+                visibleNodes: displayContext.originalTree,
+                rootPositionedTree: displayContext.originalTree,
+            },
+        });
 
     return (
         <Column>
@@ -22,39 +65,22 @@ const PruneHistory: React.FC = () => {
                     <span>
                         <Button
                             horizontal
-                            disabled={
-                                treeContext.pruneContext.length === 1 &&
-                                pruneContextIsEmpty(
-                                    treeContext.pruneContext.slice(-1)[0]
-                                )
-                            }
-                            onClick={() =>
-                                setTreeContext({
-                                    activePrune: 0,
-                                    pruneContext: [makeFreshPruneContext()],
-                                })
-                            }
+                            disabled={getResetButtonDisabled()}
+                            onClick={() => resetPruneHistory()}
                         >
                             Reset
                         </Button>
                         <Button
                             horizontal
-                            onClick={() => {
-                                const pruneContext =
-                                    treeContext.pruneContext.slice();
-                                pruneContext.push(makeFreshPruneContext());
-                                setTreeContext({
-                                    pruneContext,
-                                    activePrune: activePrune + 1,
-                                });
-                            }}
+                            onClick={() => applyPrune()}
+                            disabled={getApplyButtonDisabled()}
                         >
                             Apply
                         </Button>
                     </span>
                 </Row>
                 <StepContainer>
-                    {treeContext.pruneContext.map((ctx, i) => (
+                    {pruneContext.map((ctx, i) => (
                         <PruneStep
                             key={i}
                             active={i === treeContext.activePrune}

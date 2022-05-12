@@ -15,7 +15,6 @@ import { interpolateColorScale } from '../../../Visualizations/Tree';
 import {
     calculateTreeLayout,
     collapseNode,
-    pruneContextIsEmpty,
     pruneContextsAreEqual,
     pruneTreeByDepth,
     pruneTreeByMinDistance,
@@ -40,6 +39,7 @@ import {
  *      since Tree chart depends on it for accurate rendering and most values are controlled by React components.
  */
 export class ContextManager {
+    activePruneStep!: PruneContext;
     private context!: TreeContext;
     pruneContext!: Readonly<PruneContext[]>;
     displayContext!: Readonly<Required<DisplayContext>>;
@@ -58,6 +58,7 @@ export class ContextManager {
     ) => {
         this.context = context;
         this.pruneContext = this.context.pruneContext;
+        this.activePruneStep = this.pruneContext[this.context.activePrune];
         this.displayContext = this.context
             .displayContext as Required<DisplayContext>;
         this.setContext = setContext;
@@ -86,6 +87,8 @@ const TreeComponent: React.FC = () => {
             const data = await getData();
             const w = 1000;
             const rootPositionedTree = calculateTreeLayout(data, w);
+            const originalTree = calculateTreeLayout(data, w);
+            const visibleNodes = calculateTreeLayout(data, w);
             const labels = Array.from(
                 new Set(
                     rootPositionedTree
@@ -109,6 +112,7 @@ const TreeComponent: React.FC = () => {
                 labelScale: scaleOrdinal(scaleColors).domain(labels),
                 nodeCountsVisible: false,
                 nodeIdsVisible: false,
+                originalTree,
                 pieScale: scaleLinear([5, 20])
                     .domain(
                         extent(
@@ -119,7 +123,7 @@ const TreeComponent: React.FC = () => {
                 piesVisible: true,
                 rootPositionedTree,
                 strokeVisible: false,
-                visibleNodes: rootPositionedTree,
+                visibleNodes,
                 w,
             });
         };
@@ -157,47 +161,21 @@ const TreeComponent: React.FC = () => {
     /* 
         This effect 'watches' prune context, creates new pruned tree, and updates display context, avoiding extra steps
             whenever possible to increase speed. For this reason, order of conditionals is important. 
+
+        Note that this should never call setContext, its job is to translate PruneContext to DisplayContext!
+    
     */
     useEffect(() => {
         const { pruneContext: previousPrune, activePrune: previousActive } =
             previousContext.current;
 
         if (Tree) {
-            if (
-                activePrune === 0 &&
-                pruneContextIsEmpty(pruneContext[activePrune])
-            ) {
-                /* 
-                    if current idx is 0 and value is empty, this is a total refresh
-                */
-                setDisplayContext({
-                    rootPositionedTree: Tree.originalTree,
-                    visibleNodes: Tree.originalTree,
-                });
-            } else if (previousPrune.length < pruneContext.length) {
+            if (previousPrune.length < pruneContext.length) {
                 /* 
                     if new context is longer than previous context, this is a new step
                 */
                 setDisplayContext({
                     rootPositionedTree: displayContext.visibleNodes,
-                });
-            } else if (
-                /* 
-                    if we're making changes to an intermediate step, remove later steps
-                    and force a second invocation of this hook
-                */
-                previousActive === activePrune &&
-                !pruneContextsAreEqual(
-                    previousPrune[activePrune],
-                    pruneContext[activePrune]
-                ) &&
-                pruneContext.length - 1 > activePrune
-            ) {
-                setTreeContext({
-                    pruneContext: treeContext.pruneContext.slice(
-                        0,
-                        activePrune + 1
-                    ),
                 });
             } else if (
                 pruneContext.length - 1 === activePrune &&
@@ -206,15 +184,22 @@ const TreeComponent: React.FC = () => {
                     pruneContext[activePrune]
                 )
             ) {
-                /* if prune context has changed and we're on the final step, prune the tree */
-                const latestIdx = pruneContext.length - 1;
-                const current = pruneContext[latestIdx];
+                /* 
+                    If prune context has changed and we're on the most recent step, prune the tree. 
+                    Because click history can change in both directions, we need to rerun from root every time.
+                    It's possible to optimize this to skip the redundant prunes.
+                */
 
-                const newTree = pruneTree(
-                    displayContext.rootPositionedTree!.copy(),
-                    current,
-                    previousPrune.slice(-1)[0]
-                )!;
+                let newTree = runPrune(
+                    pruneContext[activePrune].valuePruner,
+                    displayContext.rootPositionedTree!
+                );
+
+                newTree = runClickPrunes(
+                    pruneContext[activePrune].clickPruneHistory,
+                    newTree
+                );
+
                 setDisplayContext({
                     visibleNodes: calculateTreeLayout(
                         newTree,
@@ -230,22 +215,42 @@ const TreeComponent: React.FC = () => {
                         then this is a change from one extant step to another and we need to rerun all previous prunes. 
                         For each pruner, we'll first run the value pruner (if any), then the click pruners. 
                 */
+                let _rootPositionedTree =
+                    displayContext.originalTree!.copy() as HierarchyNode<TMCNode>;
+                let _visibleNodes =
+                    displayContext.originalTree!.copy() as HierarchyNode<TMCNode>;
+
                 let i = 0;
-                let _tree = Tree.originalTree.copy() as HierarchyNode<TMCNode>;
                 while (i <= activePrune) {
-                    _tree = runPrune(pruneContext[i].valuePruner, _tree);
-                    _tree = runClickPrunes(
+                    /* the rootPositionedNode for this step will actually be the tree from the previous step's prune */
+                    if (activePrune > 0 && i === activePrune - 1) {
+                        _rootPositionedTree = _visibleNodes.copy();
+                    }
+
+                    _visibleNodes = runPrune(
+                        pruneContext[i].valuePruner,
+                        _visibleNodes
+                    );
+
+                    _visibleNodes = runClickPrunes(
                         pruneContext[i].clickPruneHistory,
-                        _tree
+                        _visibleNodes
                     );
                     i++;
                 }
 
-                const newTree = calculateTreeLayout(_tree, displayContext.w!);
+                const visibleNodes = calculateTreeLayout(
+                    _visibleNodes,
+                    displayContext.w!
+                );
+                const rootPositionedTree = calculateTreeLayout(
+                    _rootPositionedTree,
+                    displayContext.w!
+                );
 
                 setDisplayContext({
-                    rootPositionedTree: newTree,
-                    visibleNodes: newTree,
+                    rootPositionedTree,
+                    visibleNodes,
                 });
             }
         }
@@ -259,21 +264,6 @@ const TreeComponent: React.FC = () => {
 };
 
 export default TreeComponent;
-
-const pruneTree = (
-    tree: HierarchyNode<TMCNode>,
-    pruneContext: PruneContext,
-    previousContext: PruneContext | undefined
-): HierarchyNode<TMCNode> | undefined => {
-    if (
-        (pruneContext.clickPruneHistory?.length || 0) !==
-        (previousContext?.clickPruneHistory?.length || 0)
-    ) {
-        return runClickPrunes(pruneContext.clickPruneHistory, tree);
-    } else {
-        return runPrune(pruneContext.valuePruner, tree);
-    }
-};
 
 const runClickPrunes = (
     clickPruneHistory: ClickPruner[],

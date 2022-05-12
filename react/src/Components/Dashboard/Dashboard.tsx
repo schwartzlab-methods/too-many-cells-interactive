@@ -32,6 +32,7 @@ export interface DisplayContext {
     labelScale?: ScaleOrdinal<string, string>;
     nodeIdsVisible?: boolean;
     nodeCountsVisible?: boolean;
+    originalTree?: Readonly<HierarchyPointNode<TMCNode>>;
     pieScale?: ScaleLinear<number, number>;
     piesVisible?: boolean;
     rootPositionedTree?: Readonly<HierarchyPointNode<TMCNode>>;
@@ -140,14 +141,22 @@ const Dashboard: React.FC = () => {
         [setTreeContext, treeContext]
     );
 
+    /* note that we will wipe out any subsequent prune contexts here, since a prune
+        change forks prune history */
     const setPruneContext = useCallback(
         (contextSlice: Partial<PruneContext>) => {
             const activeIdx = treeContext.activePrune;
-            const pruneContext = treeContext.pruneContext.slice();
-            pruneContext.splice(activeIdx, 1, {
-                ...treeContext.pruneContext[activeIdx],
+            const latest = treeContext.pruneContext[activeIdx];
+            const pruneContext = treeContext.pruneContext.slice(
+                0,
+                activeIdx + 1
+            );
+            const updated = {
+                ...latest,
                 ...contextSlice,
-            });
+            };
+
+            pruneContext[activeIdx] = updated;
 
             setTreeContext({ pruneContext });
         },

@@ -96,6 +96,7 @@ const PrunerPanel: React.FC = () => {
                     key,
                     value,
                 },
+                clickPruneHistory: [],
             });
         },
         [setPruneContext]
