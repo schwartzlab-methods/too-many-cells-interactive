@@ -1,10 +1,10 @@
 import React, { useContext, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
-import useClickAway from './../../../hooks/useClickAway';
+import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
-import { TreeContext } from './../Dashboard';
-import { Column } from './../../Layout';
+import { TreeContext } from '../Dashboard';
+import { Column } from '../../Layout';
 import { Input } from '../../Input';
 
 const Legend: React.FC = () => {

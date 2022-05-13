@@ -6,6 +6,7 @@ import Checkbox from '../../Checkbox';
 import { Column, Row } from '../../Layout';
 import { TreeContext } from '../Dashboard';
 import { Label } from '../../Typography';
+import FeatureSearch from '../FeatureSearch/FeatureSearch';
 import DisplayButtons from './DisplayButtons';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
@@ -65,6 +66,7 @@ const ControlPanel: React.FC = () => {
             </Column>
             <Column width="50%">
                 <PrunerPanel />
+                <FeatureSearch />
             </Column>
         </>
     );

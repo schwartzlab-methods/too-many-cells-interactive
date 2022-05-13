@@ -111,6 +111,7 @@ const TreeComponent: React.FC = () => {
                 distanceVisible: false,
                 labelScale: scaleOrdinal(scaleColors).domain(labels),
                 nodeCountsVisible: false,
+                opacityScale: scaleLinear([0, 1]).domain([0, 1]),
                 nodeIdsVisible: false,
                 originalTree,
                 pieScale: scaleLinear([5, 20])
@@ -159,10 +160,8 @@ const TreeComponent: React.FC = () => {
     }, [displayContext]);
 
     /* 
-        This effect 'watches' prune context, creates new pruned tree, and updates display context, avoiding extra steps
-            whenever possible to increase speed. For this reason, order of conditionals is important. 
-
-        Note that this should never call setContext, its job is to translate PruneContext to DisplayContext!
+        This effect 'watches' prune context, creates new pruned tree, and updates display context. 
+        Note that this should never call setContext itself, its job is to translate PruneContext to DisplayContext.
     
     */
     useEffect(() => {
@@ -222,11 +221,6 @@ const TreeComponent: React.FC = () => {
 
                 let i = 0;
                 while (i <= activePrune) {
-                    /* the rootPositionedNode for this step will actually be the tree from the previous step's prune */
-                    if (activePrune > 0 && i === activePrune - 1) {
-                        _rootPositionedTree = _visibleNodes.copy();
-                    }
-
                     _visibleNodes = runPrune(
                         pruneContext[i].valuePruner,
                         _visibleNodes
@@ -236,6 +230,10 @@ const TreeComponent: React.FC = () => {
                         pruneContext[i].clickPruneHistory,
                         _visibleNodes
                     );
+                    /* the rootPositionedNode for this step will actually be the tree from the previous step's prune */
+                    if (activePrune > 0 && i === activePrune - 1) {
+                        _rootPositionedTree = _visibleNodes.copy();
+                    }
                     i++;
                 }
 

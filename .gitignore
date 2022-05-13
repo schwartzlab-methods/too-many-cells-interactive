@@ -3,3 +3,4 @@ data
 .yarn-error.log
 node/static/files/*
 !node/static/files/.gitkeep
+.env

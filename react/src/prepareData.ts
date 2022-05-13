@@ -1,6 +1,7 @@
 import { uuid } from 'lodash-uuid';
-import { TMCNode, TMCFlatNode, RoseNode, RoseNodeObj } from './types';
 import { HierarchyNode, stratify } from 'd3-hierarchy';
+import { TMCNode, TMCFlatNode, RoseNode, RoseNodeObj } from './types';
+import { merge } from './util';
 
 export const buildTree = (node: TMCFlatNode[]) => {
     return (stratify<TMCFlatNode>()(node) as HierarchyNode<TMCNode>)
@@ -34,19 +35,22 @@ export const getData = async () => {
         labelMap[k] = v;
     });
 
+    /* compute the values for leaf nodes, merge children for non-leaves */
     return tree
         .eachAfter(n => {
-            n.data.labelCount = n
-                .descendants()
-                .reduce<Record<string, number>>((acc, curr) => {
-                    if (curr.data.items) {
-                        curr.data.items.forEach(item => {
-                            acc[labelMap[item._barcode.unCell]] =
-                                (acc[labelMap[item._barcode.unCell]] || 0) + 1;
-                        });
-                    }
-                    return acc;
-                }, {});
+            n.data.labelCount = n.data.items
+                ? n.data.items.reduce<Record<string, number>>(
+                      (acc, curr) => ({
+                          ...acc,
+                          [labelMap[curr._barcode.unCell]]:
+                              (acc[labelMap[curr._barcode.unCell]] || 0) + 1,
+                      }),
+                      {}
+                  )
+                : n.children!.reduce<Record<string, number>>(
+                      (acc, cur) => merge(acc, cur.data.labelCount),
+                      {}
+                  );
         })
         .eachBefore((n, i) => {
             n.data.nodeId = i;

@@ -125,6 +125,17 @@ const drawScaledTrapezoid = (
     return [...base1Coords, ...base2Coords];
 };
 
+/* For distance markers */
+const arcPath = arc()({
+    innerRadius: 20,
+    outerRadius: 20,
+    startAngle: 0,
+    endAngle: Math.PI * 2,
+});
+
+const getPie = (data: [string, number][]) =>
+    pie<[string, number]>().value(d => d[1])(data);
+
 type BlendArg = { color: string; weight: number };
 
 const blendWeighted = (colors: BlendArg[]) => {
@@ -143,28 +154,15 @@ const blendWeighted = (colors: BlendArg[]) => {
     return rgb(r / weightSum, g / weightSum, b / weightSum);
 };
 
-/* For distance markers */
-const arcPath = arc()({
-    innerRadius: 20,
-    outerRadius: 20,
-    startAngle: 0,
-    endAngle: Math.PI * 2,
-});
-
-const getPie = (data: [string, number][]) =>
-    pie<[string, number]>().value(d => d[1])(data);
-
 const getBlendArgs = (
     labelCounts: Record<string, number>,
     labelScale: ScaleOrdinal<string, string>
 ) => {
     const ret: { color: string; weight: number }[] = [];
     for (const label in labelCounts) {
-        const colorsWithWeights = {} as {
-            color: string;
-            weight: number;
-        };
-        colorsWithWeights.color = labelScale(label);
+        const colorsWithWeights = {} as BlendArg;
+        //hex
+        colorsWithWeights.color = labelScale(label).toString();
         colorsWithWeights.weight = labelCounts[label];
         ret.push(colorsWithWeights);
     }
@@ -173,10 +171,14 @@ const getBlendArgs = (
 
 const getBlendedColor = (
     labelCounts: Record<string, number>,
-    labelScale: ScaleOrdinal<string, string>
+    labelScale: ScaleOrdinal<string, string>,
+    opacity = 1
 ) => {
     const weightedColors = getBlendArgs(labelCounts, labelScale);
-    return blendWeighted(weightedColors).toString();
+    //rgb
+    const color = blendWeighted(weightedColors);
+    color.opacity = opacity;
+    return color.toString();
 };
 
 /**
@@ -496,7 +498,10 @@ class RadialTree {
             .attr('stop-color', d =>
                 getBlendedColor(
                     d.source.data.labelCount,
-                    this.ContextManager.displayContext.labelScale
+                    this.ContextManager.displayContext.labelScale,
+                    this.ContextManager.displayContext.opacityScale(
+                        d.source.data.featureCount || 1
+                    )
                 )
             );
 
@@ -506,7 +511,10 @@ class RadialTree {
             .attr('stop-color', d =>
                 getBlendedColor(
                     d.target.data.labelCount,
-                    this.ContextManager.displayContext.labelScale
+                    this.ContextManager.displayContext.labelScale,
+                    this.ContextManager.displayContext.opacityScale(
+                        d.target.data.featureCount || 1
+                    )
                 )
             );
 
@@ -634,6 +642,7 @@ class RadialTree {
             labelScale,
             nodeCountsVisible,
             nodeIdsVisible,
+            opacityScale,
             pieScale,
             piesVisible,
             strokeVisible,
@@ -743,7 +752,11 @@ class RadialTree {
             .attr('stroke', strokeVisible ? 'black' : 'none')
             .attr('fill', d =>
                 d.children
-                    ? getBlendedColor(d.data.labelCount, labelScale)
+                    ? getBlendedColor(
+                          d.data.labelCount,
+                          labelScale,
+                          opacityScale(d.data.featureCount || 1)
+                      )
                     : null
             )
             .attr('r', d => (d.children ? branchSizeScale(d.value || 0) : 0));
@@ -788,7 +801,14 @@ class RadialTree {
                     .selectAll('path')
                     .attr('class', 'pie')
                     .data(
-                        getPie(Object.entries(outer.data.labelCount)),
+                        [
+                            {
+                                pie: getPie(
+                                    Object.entries(outer.data.labelCount)
+                                ),
+                                featureCount: outer.data.featureCount,
+                            },
+                        ],
                         () => `${outer.data.nodeId}-${outer.children}`
                     )
                     .join('path')
@@ -800,12 +820,16 @@ class RadialTree {
                             ? arc()({
                                   innerRadius: 0,
                                   outerRadius: pieScale(outer.value!),
-                                  ...d,
+                                  ...d.pie[0],
                               })
                             : null
                     )
 
-                    .attr('fill', d => labelScale(d.data[0]));
+                    .attr('fill', d => {
+                        const color = rgb(labelScale(d.pie[0].data[0]));
+                        color.opacity = opacityScale(d.featureCount || 1);
+                        return color.toString();
+                    });
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {

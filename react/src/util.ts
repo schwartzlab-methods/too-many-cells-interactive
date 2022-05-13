@@ -162,3 +162,15 @@ export const valuePrunersAreEqual = (
 
 export const formatDistance = (distance: number) => format('.3f')(distance);
 export const formatInteger = (int: number) => format('.0f')(int);
+
+export const merge = (
+    obj1: Record<string, number>,
+    obj2: Record<string, number>
+) =>
+    [...new Set([...Object.keys(obj1), ...Object.keys(obj2)])].reduce(
+        (acc, k) => ({
+            ...acc,
+            [k]: (obj1[k] || 0) + (obj2[k] || 0),
+        }),
+        {} as Record<string, number>
+    );
