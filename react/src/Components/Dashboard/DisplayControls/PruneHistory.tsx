@@ -61,7 +61,7 @@ const PruneHistory: React.FC = () => {
         <Column>
             <PruneHistoryContainer>
                 <Row margin="0px">
-                    <Title>Pruning History</Title>
+                    <HistoryTitle>Pruning History</HistoryTitle>
                     <span>
                         <Button
                             horizontal
@@ -105,6 +105,10 @@ const StepContainer = styled(Row)`
     border-radius: 5px;
     padding: 5px;
 }`;
+
+const HistoryTitle = styled(Title)`
+    margin: 5px;
+`;
 
 interface PruneStepProps {
     active: boolean;

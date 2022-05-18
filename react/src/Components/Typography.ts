@@ -15,7 +15,6 @@ export const Main = styled.h2`
 `;
 
 export const Title = styled.h3`
-    margin: 5px;
     font-size: 24px;
 `;
 
