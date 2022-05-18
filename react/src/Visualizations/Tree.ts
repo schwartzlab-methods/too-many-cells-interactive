@@ -510,8 +510,9 @@ class RadialTree {
                 getBlendedColor(
                     d.source.data.labelCount,
                     this.ContextManager.displayContext.labelScale,
+                    /* note we use the target opacity b/c opacity should not blend */
                     this.ContextManager.displayContext.opacityScale(
-                        d.source.data.featureCount || 1
+                        d.target.data.featureCount || 1
                     )
                 )
             );
