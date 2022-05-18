@@ -238,6 +238,7 @@ const deltaBehavior = dispatch('nodeDelta', 'linkDelta');
 
 class RadialTree {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
+    colorScale: (featureCount: number, label: string) => string;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
     ContextManager: ContextManager;
     distanceScale: ScaleLinear<number, number>;
@@ -266,6 +267,16 @@ class RadialTree {
         this.legendSelector = legendSelector;
 
         this.ContextManager = ContextManager;
+
+        this.colorScale = (featureCount: number, label: string) => {
+            const labelColor =
+                this.ContextManager.displayContext.labelScale(label);
+            const opacity =
+                this.ContextManager.displayContext.opacityScale(featureCount);
+            const _rgb = rgb(labelColor);
+            _rgb.opacity = opacity;
+            return _rgb.toString();
+        };
 
         this.svg = select(this.selector)
             .append('svg')
@@ -801,14 +812,12 @@ class RadialTree {
                     .selectAll('path')
                     .attr('class', 'pie')
                     .data(
-                        [
-                            {
-                                pie: getPie(
-                                    Object.entries(outer.data.labelCount)
-                                ),
+                        getPie(Object.entries(outer.data.labelCount)).map(
+                            pie => ({
+                                pie,
                                 featureCount: outer.data.featureCount,
-                            },
-                        ],
+                            })
+                        ),
                         () => `${outer.data.nodeId}-${outer.children}`
                     )
                     .join('path')
@@ -820,16 +829,14 @@ class RadialTree {
                             ? arc()({
                                   innerRadius: 0,
                                   outerRadius: pieScale(outer.value!),
-                                  ...d.pie[0],
+                                  ...d.pie,
                               })
                             : null
                     )
 
-                    .attr('fill', d => {
-                        const color = rgb(labelScale(d.pie[0].data[0]));
-                        color.opacity = opacityScale(d.featureCount || 1);
-                        return color.toString();
-                    });
+                    .attr('fill', d =>
+                        that.colorScale(d.featureCount || 1, d.pie.data[0])
+                    );
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {

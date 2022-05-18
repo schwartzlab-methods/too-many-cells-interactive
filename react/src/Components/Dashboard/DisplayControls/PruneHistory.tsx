@@ -72,7 +72,7 @@ const PruneHistory: React.FC = () => {
                         </Button>
                         <Button
                             horizontal
-                            onClick={() => applyPrune()}
+                            onClick={applyPrune}
                             disabled={getApplyButtonDisabled()}
                         >
                             Apply

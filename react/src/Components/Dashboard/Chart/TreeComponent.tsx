@@ -171,47 +171,14 @@ const TreeComponent: React.FC = () => {
         if (Tree) {
             if (previousPrune.length < pruneContext.length) {
                 /* 
-                    if new context is longer than previous context, this is a new step
+                    if new context is longer than previous context, this is a new step.
                 */
                 setDisplayContext({
                     rootPositionedTree: displayContext.visibleNodes,
                 });
-            } else if (
-                pruneContext.length - 1 === activePrune &&
-                !pruneContextsAreEqual(
-                    previousPrune[activePrune],
-                    pruneContext[activePrune]
-                )
-            ) {
+            } else if (previousActive !== activePrune) {
                 /* 
-                    If prune context has changed and we're on the most recent step, prune the tree. 
-                    Because click history can change in both directions, we need to rerun from root every time.
-                    It's possible to optimize this to skip the redundant prunes.
-                */
-
-                let newTree = runPrune(
-                    pruneContext[activePrune].valuePruner,
-                    displayContext.rootPositionedTree!
-                );
-
-                newTree = runClickPrunes(
-                    pruneContext[activePrune].clickPruneHistory,
-                    newTree
-                );
-
-                setDisplayContext({
-                    visibleNodes: calculateTreeLayout(
-                        newTree,
-                        displayContext.w!
-                    ),
-                });
-            } else if (
-                pruneContext.length - 1 > activePrune ||
-                previousActive !== activePrune
-            ) {
-                /* 
-                    If our active prune is not the latest prune, or if we've just advanced to the latest prune, 
-                        then this is a change from one extant step to another and we need to rerun all previous prunes. 
+                     When changing from one existing step to another we need to rerun all previous prunes. 
                         For each pruner, we'll first run the value pruner (if any), then the click pruners. 
                 */
                 let _rootPositionedTree =
@@ -249,6 +216,34 @@ const TreeComponent: React.FC = () => {
                 setDisplayContext({
                     rootPositionedTree,
                     visibleNodes,
+                });
+            } else if (
+                !pruneContextsAreEqual(
+                    previousPrune[activePrune],
+                    pruneContext[activePrune]
+                )
+            ) {
+                /* 
+                    If we haven't changed or added steps and prune context has changed, prune the tree. 
+                    Because click history can change in both directions, we need to rerun from root every time.
+                    It's possible to optimize this to skip the redundant prunes.
+                */
+
+                let newTree = runPrune(
+                    pruneContext[activePrune].valuePruner,
+                    displayContext.rootPositionedTree!
+                );
+
+                newTree = runClickPrunes(
+                    pruneContext[activePrune].clickPruneHistory,
+                    newTree
+                );
+
+                setDisplayContext({
+                    visibleNodes: calculateTreeLayout(
+                        newTree,
+                        displayContext.w!
+                    ),
                 });
             }
         }
