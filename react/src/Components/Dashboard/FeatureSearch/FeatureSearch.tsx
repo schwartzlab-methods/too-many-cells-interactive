@@ -1,6 +1,5 @@
 import React, {
     MutableRefObject,
-    RefObject,
     useContext,
     useEffect,
     useRef,
@@ -9,20 +8,21 @@ import React, {
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
-import { merge } from '../../../util';
 import { TreeContext } from '../../Dashboard/Dashboard';
 import { Input } from '../../Input';
 import { Column } from '../../Layout';
+import Modal from '../../Modal';
 
 const FeatureSearch: React.FC = () => {
     const [features, setFeatures] = useState<string[]>([]);
+    const [loading, setLoading] = useState(false);
     const {
         displayContext: { opacityScale, visibleNodes },
         setDisplayContext,
     } = useContext(TreeContext);
 
     const getFeature = async (feature: string) => {
-        console.log('fetching');
+        setLoading(true);
         const features = await fetchFeatures(feature);
         const featureMap: Record<string, number> = {};
 
@@ -45,7 +45,7 @@ const FeatureSearch: React.FC = () => {
 
         setDisplayContext({ visibleNodes, opacityScale });
 
-        console.log('parsed');
+        setLoading(false);
     };
 
     useEffect(() => {
@@ -54,7 +54,12 @@ const FeatureSearch: React.FC = () => {
         });
     }, []);
 
-    return <Autocomplete options={features} onSelect={getFeature} />;
+    return (
+        <>
+            <Autocomplete options={features} onSelect={getFeature} />
+            <Modal open={loading} message="Loading..." />
+        </>
+    );
 };
 
 interface AutocompleteProps {
