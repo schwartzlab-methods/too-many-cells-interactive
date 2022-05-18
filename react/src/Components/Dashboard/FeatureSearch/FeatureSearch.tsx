@@ -1,4 +1,3 @@
-import { scaleLinear } from 'd3-scale';
 import React, {
     ForwardedRef,
     forwardRef,
@@ -11,9 +10,11 @@ import React, {
     useRef,
     useState,
 } from 'react';
+import { scaleLinear } from 'd3-scale';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
+import { levenshtein } from '../../../util';
 import Button from '../../Button';
 import { TreeContext } from '../../Dashboard/Dashboard';
 import { Input } from '../../Input';
@@ -116,11 +117,18 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
 
     useEffect(() => {
         setChoices(
-            options.filter(o => o.startsWith(search.toLowerCase())).slice(0, 10)
+            options
+                .map(o => ({
+                    word: o,
+                    distance: levenshtein(
+                        o.toLowerCase(),
+                        search.toLowerCase()
+                    ),
+                }))
+                .sort((a, b) => (a.distance < b.distance ? -1 : 1))
+                .map(d => d.word)
+                .slice(0, 10)
         );
-        if (search && !choicesVisible) {
-            setChoicesVisible(true);
-        }
         setSelectedIdx(-1);
     }, [search, options]);
 
@@ -200,7 +208,7 @@ interface AutocompleteInputProps extends InputHTMLAttributes<any> {
 const AutocompleteInput: React.FC<AutocompleteInputProps> = forwardRef(
     (props: AutocompleteInputProps, ref: ForwardedRef<HTMLInputElement>) => {
         const { handleKeyPress, ...rest } = props;
-        return <Input {...rest} ref={ref} onKeyUp={handleKeyPress} />;
+        return <Input {...rest} ref={ref} onKeyDownCapture={handleKeyPress} />;
     }
 );
 
