@@ -76,10 +76,50 @@ const FeatureSearch: React.FC = () => {
                 options={features}
                 onSelect={getFeature}
             />
+            <Row margin="5px 0px" alignItems="center">
+                {!!opacityScale && opacityScale.domain()[1] > 1 && (
+                    <>
+                        <ScaleItem>{opacityScale.domain()[0]}</ScaleItem>
+                        <ScaleItem>
+                            <svg
+                                width="100%"
+                                height="25px"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 10 1"
+                            >
+                                <defs>
+                                    <linearGradient id="scaleGradient">
+                                        <stop
+                                            offset="5%"
+                                            stopColor="apofrgba(0,0,0,0)"
+                                        />
+                                        <stop
+                                            offset="95%"
+                                            stopColor="rgba(0,0,0,1)"
+                                        />
+                                    </linearGradient>
+                                </defs>
+                                <rect
+                                    fill="url('#scaleGradient')"
+                                    width={10}
+                                    height={1}
+                                />
+                            </svg>
+                        </ScaleItem>
+                        <ScaleItem>
+                            {Number(opacityScale.domain()[1]).toLocaleString()}
+                        </ScaleItem>
+                    </>
+                )}
+            </Row>
             <Modal open={loading} message="Loading..." />
         </Column>
     );
 };
+
+const ScaleItem = styled.div`
+    margin: 0px 5px;
+`;
 
 const SearchTitle = styled(Title)`
     margin: 0px;
