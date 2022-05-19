@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 
 interface IconProps {
+    pointer?: boolean;
     fill?: string;
     onClick?: () => void;
     size?: string;
@@ -10,6 +11,7 @@ interface IconProps {
 }
 
 const Icon = styled.svg<IconProps>`
+    cursor: ${props => (props.pointer ? 'pointer' : 'inherit')};
     fill: ${props => props.fill ?? props.theme.palette.grey};
     stroke: ${props => props.stroke ?? props.theme.palette.grey};
     stroke-width: ${props => props.strokeWidth ?? '3px'};
@@ -37,6 +39,13 @@ export const CaretUpIcon: React.FC<IconProps> = props => (
 export const CaretDownIcon: React.FC<IconProps> = props => (
     <Icon {...props} viewBox="0 0 1030 638">
         <path d="M1017 68L541 626q-11 12-26 12t-26-12L13 68Q-3 49 6 24.5T39 0h952q24 0 33 24.5t-7 43.5z" />
+    </Icon>
+);
+
+export const CloseIcon: React.FC<IconProps> = props => (
+    <Icon {...props} viewBox="0 0 50 50" strokeLinecap="round">
+        <line x1="0" y1="0" x2="50" y2="50" />
+        <line x1="50" y1="0" x2="0" y2="50" />
     </Icon>
 );
 

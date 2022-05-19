@@ -16,7 +16,7 @@ export type RoseNode = [RoseNodeObj, RoseNode[][]] | [][];
 export interface TMCFlatNode {
     distance: number | null;
     id: string;
-    featureCount?: number;
+    featureCount: Record<string, number>;
     items: RoseNodeItem[] | null;
     labelCount?: Record<string, number>;
     nodeId?: number;

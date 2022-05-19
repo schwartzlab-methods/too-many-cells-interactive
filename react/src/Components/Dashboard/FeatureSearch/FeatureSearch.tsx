@@ -10,17 +10,25 @@ import React, {
     useRef,
     useState,
 } from 'react';
+import { HierarchyPointNode } from 'd3-hierarchy';
 import { scaleLinear } from 'd3-scale';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
-import { levenshtein } from '../../../util';
+import {
+    getAverageFeatureCount,
+    getEntries,
+    getObjectIsEmpty,
+    levenshtein,
+} from '../../../util';
 import Button from '../../Button';
 import { TreeContext } from '../../Dashboard/Dashboard';
 import { Input } from '../../Input';
 import { Column, Row } from '../../Layout';
 import Modal from '../../Modal';
 import { Caption, Title } from '../../Typography';
+import { CloseIcon } from '../../Icons';
+import { TMCNode } from '../../../types';
 
 const FeatureSearch: React.FC = () => {
     const [features, setFeatures] = useState<string[]>([]);
@@ -31,8 +39,25 @@ const FeatureSearch: React.FC = () => {
     } = useContext(TreeContext);
 
     const resetOverlay = useCallback(() => {
-        setDisplayContext({ opacityScale: scaleLinear([0, 1]).domain([0, 1]) });
+        setDisplayContext({
+            opacityScale: scaleLinear([0, 1]).domain([0, 1]),
+            visibleNodes: visibleNodes?.each(n => (n.data.featureCount = {})),
+        });
     }, [setDisplayContext]);
+
+    const removeFeature = (featureName: string) => {
+        visibleNodes?.each(n => delete n.data.featureCount[featureName]);
+        updateOpacityScale(visibleNodes!);
+    };
+
+    const updateOpacityScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
+        opacityScale?.domain([
+            0,
+            getAverageFeatureCount(visibleNodes.data.featureCount),
+        ]);
+
+        setDisplayContext({ visibleNodes, opacityScale });
+    };
 
     const getFeature = async (feature: string) => {
         setLoading(true);
@@ -42,21 +67,26 @@ const FeatureSearch: React.FC = () => {
         features.forEach(f => (featureMap[f.id] = f.value));
 
         visibleNodes?.eachAfter(n => {
-            n.data.featureCount = n.data.items
-                ? n.data.items.reduce<number>(
-                      (acc, curr) =>
-                          acc + featureMap[curr._barcode.unCell] || 0,
-                      0
-                  )
-                : n.children!.reduce<number>(
-                      (acc, curr) => acc + curr.data.featureCount!,
-                      0
-                  );
+            n.data.featureCount = {
+                ...n.data.featureCount,
+                [feature]: n.data.items
+                    ? // if leaf, reduce all items
+                      n.data.items.reduce<number>(
+                          (acc, curr) =>
+                              acc + featureMap[curr._barcode.unCell] || 0,
+                          0
+                      )
+                    : // otherwise just combine children
+                      n.children!.reduce<number>(
+                          (acc, curr) => acc + curr.data.featureCount[feature],
+                          0
+                      ),
+            };
         });
 
-        opacityScale?.domain([0, visibleNodes!.data.featureCount!]);
+        updateOpacityScale(visibleNodes!);
 
-        setDisplayContext({ visibleNodes, opacityScale });
+        // root will always have highest counts
 
         setLoading(false);
     };
@@ -70,48 +100,70 @@ const FeatureSearch: React.FC = () => {
     return (
         <Column>
             <SearchTitle>Feature Search</SearchTitle>
-            <Caption>Type a feature name into the box to search</Caption>
+            <Caption>Search for a feature by identifier</Caption>
             <Autocomplete
                 resetOverlay={resetOverlay}
                 options={features}
                 onSelect={getFeature}
             />
             <Row margin="5px 0px" alignItems="center">
-                {!!opacityScale && opacityScale.domain()[1] > 1 && (
-                    <>
-                        <ScaleItem>{opacityScale.domain()[0]}</ScaleItem>
-                        <ScaleItem>
-                            <svg
-                                width="100%"
-                                height="25px"
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 10 1"
-                            >
-                                <defs>
-                                    <linearGradient id="scaleGradient">
-                                        <stop
-                                            offset="5%"
-                                            stopColor="apofrgba(0,0,0,0)"
-                                        />
-                                        <stop
-                                            offset="95%"
-                                            stopColor="rgba(0,0,0,1)"
-                                        />
-                                    </linearGradient>
-                                </defs>
-                                <rect
-                                    fill="url('#scaleGradient')"
-                                    width={10}
-                                    height={1}
-                                />
-                            </svg>
-                        </ScaleItem>
-                        <ScaleItem>
-                            {Number(opacityScale.domain()[1]).toLocaleString()}
-                        </ScaleItem>
-                    </>
-                )}
+                {!!opacityScale &&
+                    !getObjectIsEmpty(visibleNodes!.data.featureCount) && (
+                        <>
+                            <ScaleItem>{opacityScale.domain()[0]}</ScaleItem>
+                            <ScaleItem>
+                                <svg
+                                    width="100%"
+                                    height="25px"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 10 1"
+                                >
+                                    <defs>
+                                        <linearGradient id="scaleGradient">
+                                            <stop
+                                                offset="5%"
+                                                stopColor="rgba(0,0,0,0)"
+                                            />
+                                            <stop
+                                                offset="95%"
+                                                stopColor="rgba(0,0,0,1)"
+                                            />
+                                        </linearGradient>
+                                    </defs>
+                                    <rect
+                                        fill="url('#scaleGradient')"
+                                        width={10}
+                                        height={1}
+                                    />
+                                </svg>
+                            </ScaleItem>
+                            <ScaleItem>
+                                {Number(
+                                    opacityScale.domain()[1]
+                                ).toLocaleString()}
+                            </ScaleItem>
+                        </>
+                    )}
             </Row>
+
+            {!!visibleNodes &&
+                !getObjectIsEmpty(visibleNodes.data.featureCount) && (
+                    <FeatureListContainer>
+                        <FeatureListLabel>Selected Features</FeatureListLabel>
+                        <FeatureList>
+                            {getEntries(visibleNodes.data.featureCount).map(
+                                ([k, v]) => (
+                                    <FeaturePill
+                                        count={v.toLocaleString()}
+                                        key={k}
+                                        name={k}
+                                        removeFeature={removeFeature}
+                                    />
+                                )
+                            )}
+                        </FeatureList>
+                    </FeatureListContainer>
+                )}
             <Modal open={loading} message="Loading..." />
         </Column>
     );
@@ -123,6 +175,61 @@ const ScaleItem = styled.div`
 
 const SearchTitle = styled(Title)`
     margin: 0px;
+`;
+
+const FeatureListContainer = styled(Column)`
+    position: relative;
+    margin: 0px 0px;
+`;
+
+const FeatureList = styled(Row)`
+    border: thin black solid;
+    border-radius: 3px;
+    flex-wrap: wrap;
+    padding: 8px;
+    margin: 5px 0px;
+`;
+
+const FeatureListLabel = styled(Caption)`
+    background-color: white;
+    position: absolute;
+`;
+
+interface FeaturePillProps {
+    count: string;
+    name: string;
+    removeFeature: (featureName: string) => void;
+}
+
+const FeaturePill: React.FC<FeaturePillProps> = ({
+    removeFeature,
+    name,
+    count,
+}) => (
+    <FeaturePillContainer>
+        {name}: {count}
+        <RemoveFeatureIcon
+            onClick={removeFeature.bind(null, name)}
+            strokeWidth={10}
+            pointer
+            stroke="white"
+            size="7px"
+        />
+    </FeaturePillContainer>
+);
+
+const RemoveFeatureIcon = styled(CloseIcon)`
+    padding: 3px;
+`;
+
+const FeaturePillContainer = styled.span`
+    align-items: flex-start;
+    background-color: ${props => props.theme.palette.primary};
+    border-radius: 7px;
+    color: white;
+    display: flex;
+    margin: 3px;
+    padding: 4px;
 `;
 
 interface AutocompleteProps {
@@ -225,7 +332,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
                                 onClick={() => {
                                     setChoicesVisible(false);
                                     onSelect(c);
-                                    setSearch(c);
+                                    resetInputs();
                                 }}
                                 selected={selectedIdx === i}
                                 key={c}
@@ -279,6 +386,7 @@ const Choice = styled.span<{ selected: boolean }>`
     &:hover {
         background-color: ${props => props.theme.palette.secondary};
     }
+    z-index: 10;
 `;
 
 export default FeatureSearch;

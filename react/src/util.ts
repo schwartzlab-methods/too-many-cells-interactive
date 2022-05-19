@@ -1,10 +1,12 @@
-import { median } from 'd3-array';
+import { median, sum } from 'd3-array';
 import { format } from 'd3-format';
-import { HierarchyNode, HierarchyPointNode, tree } from 'd3-hierarchy';
-import { select } from 'd3-selection';
+import { HierarchyNode, tree } from 'd3-hierarchy';
 import { PruneContext } from './Components/Dashboard/Dashboard';
-import { buildTree } from './prepareData';
 import { TMCNode } from './types';
+
+/* typescript-friendly */
+export const getEntries = <T>(obj: T) =>
+    Object.entries(obj) as [keyof T, T[keyof T]][];
 
 /**
  * Calculate the distance from the origin, used to get radius value for polar coordinates
@@ -144,7 +146,11 @@ export const calculateTreeLayout = (nodes: HierarchyNode<TMCNode>, w: number) =>
         .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
 
 export const pruneContextIsEmpty = (ctx: Readonly<PruneContext>) =>
-    !ctx.clickPruneHistory.length && !Object.values(ctx.valuePruner).length;
+    getObjectIsEmpty(ctx.clickPruneHistory) &&
+    getObjectIsEmpty(ctx.valuePruner);
+
+export const getObjectIsEmpty = (obj: Record<any, any>) =>
+    !Object.keys(obj).length;
 
 export const pruneContextsAreEqual = (
     ctx1: Readonly<PruneContext>,
@@ -163,6 +169,7 @@ export const valuePrunersAreEqual = (
 export const formatDistance = (distance: number) => format('.3f')(distance);
 export const formatInteger = (int: number) => format('.0f')(int);
 
+/* merge two dictionaries by summing corresponding values */
 export const merge = (
     obj1: Record<string, number>,
     obj2: Record<string, number>
@@ -175,8 +182,12 @@ export const merge = (
         {} as Record<string, number>
     );
 
+export const getAverageFeatureCount = (featureCount: Record<string, number>) =>
+    (sum(Object.values(featureCount)) || 1) /
+        Object.keys(featureCount).length || 1;
+
 // taken from here: https://gist.github.com/keesey/e09d0af833476385b9ee13b6d26a2b84
-export function levenshtein(a: string, b: string): number {
+export const levenshtein = (a: string, b: string): number => {
     const an = a ? a.length : 0;
     const bn = b ? b.length : 0;
     if (an === 0) {
@@ -185,7 +196,7 @@ export function levenshtein(a: string, b: string): number {
     if (bn === 0) {
         return an;
     }
-    const matrix = new Array<number[]>(bn + 1);
+    const matrix = new Array(bn + 1);
     for (let i = 0; i <= bn; ++i) {
         const row = (matrix[i] = new Array<number>(an + 1));
         row[0] = i;
@@ -209,4 +220,4 @@ export function levenshtein(a: string, b: string): number {
         }
     }
     return matrix[bn][an];
-}
+};

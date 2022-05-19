@@ -75,10 +75,11 @@ const flatten = (
     node.items = meta?._item ?? null;
     node.distance = meta?._distance ?? null;
     node.significance = meta?._significance ?? null;
+    node.featureCount = {};
     nodes.push(node);
-    for (let item of data) {
+    for (const item of data) {
         if (Array.isArray(item)) {
-            for (let i of item) {
+            for (const i of item) {
                 flatten(i as RoseNode, nodes, node.id);
             }
         }

@@ -15,7 +15,12 @@ import { schemeSet1 } from 'd3-scale-chromatic';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
-import { carToRadius, carToTheta, squared } from '../util';
+import {
+    carToRadius,
+    carToTheta,
+    getAverageFeatureCount,
+    squared,
+} from '../util';
 import { isLinkNode, TMCNode } from '../types';
 import { ClickPruner } from '../Components/Dashboard/Dashboard';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
@@ -238,7 +243,7 @@ const deltaBehavior = dispatch('nodeDelta', 'linkDelta');
 
 class RadialTree {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
-    colorScale: (featureCount: number, label: string) => string;
+    colorScale: (featureCount: Record<string, number>, label: string) => string;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
     ContextManager: ContextManager;
     distanceScale: ScaleLinear<number, number>;
@@ -268,11 +273,15 @@ class RadialTree {
 
         this.ContextManager = ContextManager;
 
-        this.colorScale = (featureCount: number, label: string) => {
+        this.colorScale = (
+            featureCount: Record<string, number>,
+            label: string
+        ) => {
             const labelColor =
                 this.ContextManager.displayContext.labelScale(label);
+            const expressionAvg = getAverageFeatureCount(featureCount);
             const opacity =
-                this.ContextManager.displayContext.opacityScale(featureCount);
+                this.ContextManager.displayContext.opacityScale(expressionAvg);
             const _rgb = rgb(labelColor);
             _rgb.opacity = opacity;
             return _rgb.toString();
@@ -512,7 +521,7 @@ class RadialTree {
                     this.ContextManager.displayContext.labelScale,
                     /* note we use the target opacity b/c opacity should not blend */
                     this.ContextManager.displayContext.opacityScale(
-                        d.target.data.featureCount || 1
+                        getAverageFeatureCount(d.target.data.featureCount)
                     )
                 )
             );
@@ -525,7 +534,7 @@ class RadialTree {
                     d.target.data.labelCount,
                     this.ContextManager.displayContext.labelScale,
                     this.ContextManager.displayContext.opacityScale(
-                        d.target.data.featureCount || 1
+                        getAverageFeatureCount(d.target.data.featureCount)
                     )
                 )
             );
@@ -767,7 +776,9 @@ class RadialTree {
                     ? getBlendedColor(
                           d.data.labelCount,
                           labelScale,
-                          opacityScale(d.data.featureCount || 1)
+                          opacityScale(
+                              getAverageFeatureCount(d.data.featureCount)
+                          )
                       )
                     : null
             )
@@ -836,7 +847,7 @@ class RadialTree {
                     )
 
                     .attr('fill', d =>
-                        that.colorScale(d.featureCount || 1, d.pie.data[0])
+                        that.colorScale(d.featureCount, d.pie.data[0])
                     );
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')
