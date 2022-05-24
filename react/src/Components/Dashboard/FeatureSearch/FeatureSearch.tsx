@@ -7,6 +7,7 @@ import React, {
     useCallback,
     useContext,
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from 'react';
@@ -60,35 +61,36 @@ const FeatureSearch: React.FC = () => {
     };
 
     const getFeature = async (feature: string) => {
-        setLoading(true);
-        const features = await fetchFeatures(feature);
-        const featureMap: Record<string, number> = {};
+        if (visibleNodes) {
+            setLoading(true);
+            const features = await fetchFeatures(feature);
+            const featureMap: Record<string, number> = {};
 
-        features.forEach(f => (featureMap[f.id] = f.value));
+            features.forEach(f => (featureMap[f.id] = f.value));
 
-        visibleNodes?.eachAfter(n => {
-            n.data.featureCount = {
-                ...n.data.featureCount,
-                [feature]: n.data.items
-                    ? // if leaf, reduce all items
-                      n.data.items.reduce<number>(
-                          (acc, curr) =>
-                              acc + featureMap[curr._barcode.unCell] || 0,
-                          0
-                      )
-                    : // otherwise just combine children
-                      n.children!.reduce<number>(
-                          (acc, curr) => acc + curr.data.featureCount[feature],
-                          0
-                      ),
-            };
-        });
+            visibleNodes.eachAfter(n => {
+                n.data.featureCount = {
+                    ...n.data.featureCount,
+                    [feature]: n.data.items
+                        ? // if leaf, reduce all items
+                          n.data.items.reduce<number>(
+                              (acc, curr) =>
+                                  acc + featureMap[curr._barcode.unCell] || 0,
+                              0
+                          )
+                        : // otherwise just combine children
+                          n.children!.reduce<number>(
+                              (acc, curr) =>
+                                  acc + curr.data.featureCount[feature],
+                              0
+                          ),
+                };
+            });
 
-        updateOpacityScale(visibleNodes!);
+            updateOpacityScale(visibleNodes);
 
-        // root will always have highest counts
-
-        setLoading(false);
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -245,8 +247,11 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
 }) => {
     const [choices, setChoices] = useState<string[]>([]);
     const [choicesVisible, setChoicesVisible] = useState(false);
+    const [minVisibleIdx, setMinVisibleIdx] = useState(0);
     const [search, setSearch] = useState('');
-    const [selectedIdx, setSelectedIdx] = useState<number>(-1);
+    const [selectedIdx, setSelectedIdx] = useState<number>(0);
+
+    const maxVisible = useMemo(() => 10, []);
 
     const parentWidth = useRef<string>('0px');
     const inputRef =
@@ -255,6 +260,25 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
         useRef<HTMLDivElement>() as MutableRefObject<HTMLDivElement>;
 
     useClickAway(containerRef, () => setChoicesVisible(false));
+
+    /* Adjust the visible choices */
+    useEffect(() => {
+        if (choices.length) {
+            if (selectedIdx - maxVisible === minVisibleIdx) {
+                if (selectedIdx === options.length) {
+                    setMinVisibleIdx(0);
+                } else {
+                    setMinVisibleIdx(minVisibleIdx + 1);
+                }
+            } else if (selectedIdx < minVisibleIdx) {
+                if (selectedIdx === 0) {
+                    setMinVisibleIdx(0);
+                } else {
+                    setMinVisibleIdx(minVisibleIdx - 1);
+                }
+            }
+        }
+    }, [selectedIdx]);
 
     useEffect(() => {
         if (inputRef.current) {
@@ -274,15 +298,16 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
                 }))
                 .sort((a, b) => (a.distance < b.distance ? -1 : 1))
                 .map(d => d.word)
-                .slice(0, 10)
         );
-        setSelectedIdx(-1);
-    }, [search, options]);
+        setSelectedIdx(0);
+    }, [options, search]);
 
     const resetInputs = () => {
         setChoices([]);
         setSearch('');
         setChoicesVisible(false);
+        setMinVisibleIdx(0);
+        setSelectedIdx(0);
     };
 
     const _resetOverlay = () => {
@@ -290,29 +315,30 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
         resetInputs();
     };
 
+    const select = (choice: string) => {
+        onSelect(choice);
+        resetInputs();
+    };
+
     const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-        switch (e.code) {
-            case 'ArrowUp':
-                setSelectedIdx(
-                    selectedIdx <= 0 ? choices.length - 1 : selectedIdx - 1
-                );
-                break;
-            case 'ArrowDown':
-                setSelectedIdx((selectedIdx + 1) % choices.length);
-                break;
-
-            case 'Escape':
-                resetInputs();
-                break;
-
-            case 'Enter':
-                if (selectedIdx > -1) {
-                    setSearch(choices[selectedIdx]);
-                    onSelect(choices[selectedIdx]);
-                    setChoicesVisible(false);
-                }
-                break;
+        if (e.code === 'ArrowUp') {
+            const nextIdx = selectedIdx === 0 ? 0 : selectedIdx - 1;
+            return setSelectedIdx(nextIdx);
+        } else if (e.code === 'ArrowDown') {
+            const nextIdx = (selectedIdx + 1) % options.length;
+            return setSelectedIdx(nextIdx);
+        } else if (e.code === 'Escape') {
+            resetInputs();
+        } else if (e.code === 'Enter') {
+            if (selectedIdx > -1) {
+                select(choices[selectedIdx]);
+            }
         }
+    };
+
+    const getIsSelected = (idx: number) => {
+        const isSelected = minVisibleIdx + idx === selectedIdx;
+        return isSelected;
     };
 
     return (
@@ -322,24 +348,22 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
                     ref={inputRef}
                     handleKeyPress={handleKeyPress}
                     onChange={e => setSearch(e.currentTarget.value)}
-                    onFocus={() => setChoicesVisible(true)}
+                    onClick={() => setChoicesVisible(true)}
                     value={search}
                 />
                 <AutocompleteChoicesContainer _width={parentWidth.current}>
                     {choicesVisible &&
-                        choices.map((c, i) => (
-                            <Choice
-                                onClick={() => {
-                                    setChoicesVisible(false);
-                                    onSelect(c);
-                                    resetInputs();
-                                }}
-                                selected={selectedIdx === i}
-                                key={c}
-                            >
-                                {c}
-                            </Choice>
-                        ))}
+                        choices
+                            .slice(minVisibleIdx, minVisibleIdx + maxVisible)
+                            .map((c, i) => (
+                                <Choice
+                                    onClick={() => select(c)}
+                                    selected={getIsSelected(i)}
+                                    key={c}
+                                >
+                                    {c}
+                                </Choice>
+                            ))}
                 </AutocompleteChoicesContainer>
             </AutocompleteContainer>
             <Button onClick={_resetOverlay}>Reset</Button>
