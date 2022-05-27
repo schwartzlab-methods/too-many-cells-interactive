@@ -1,4 +1,4 @@
-import { median, sum } from 'd3-array';
+import { max, median, sum } from 'd3-array';
 import { format } from 'd3-format';
 import { HierarchyNode, tree } from 'd3-hierarchy';
 import { PruneContext } from './Components/Dashboard/Dashboard';
@@ -182,9 +182,18 @@ export const merge = (
         {} as Record<string, number>
     );
 
-export const getAverageFeatureCount = (featureCount: Record<string, number>) =>
-    (sum(Object.values(featureCount)) || 1) /
-        Object.keys(featureCount).length || 1;
+/* find the node with the highest average feature count ration, it will be a leaf */
+export const getMaxAverageFeatureCount = (tree: HierarchyNode<TMCNode>) =>
+    max(tree.leaves().map(l => getAverageFeatureCount(l)));
+
+/* compute average cell feature count ratio for a single node */
+export const getAverageFeatureCount = (node: HierarchyNode<TMCNode>) => {
+    const featureCount = sum(Object.values(node.data.featureCount));
+    const cellCount = sum(
+        node.descendants().map(n => (n.data.items || []).length)
+    );
+    return featureCount / cellCount;
+};
 
 // taken from here: https://gist.github.com/keesey/e09d0af833476385b9ee13b6d26a2b84
 export const levenshtein = (a: string, b: string): number => {

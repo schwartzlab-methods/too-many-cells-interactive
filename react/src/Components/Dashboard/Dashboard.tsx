@@ -30,7 +30,7 @@ export interface DisplayContext {
     branchSizeScale?: ScaleLinear<number, number>;
     distanceVisible?: boolean;
     labelScale?: ScaleOrdinal<string, string>;
-    opacityScale?: ScaleLinear<number, number>;
+    opacityScale?: (featureCount: number) => number;
     nodeIdsVisible?: boolean;
     nodeCountsVisible?: boolean;
     originalTree?: Readonly<HierarchyPointNode<TMCNode>>;

@@ -21,12 +21,8 @@ app.use('/api/features', async (req, res) => {
 });
 
 app.use('/api/features-set', async (req, res) => {
-    //searching all docs by regex is slow, so we can just return all unique values
-    //and store in FE, i don't think it's that heavy
-    //but if they are we can just write them to another table
+    //searching all docs by regex is slow, so we can just return all unique values up front
     const allGenes = await Feature.distinct('feature');
-
-    //const r = await Feature.find({ feature }).exec();
     res.json(allGenes);
 });
 

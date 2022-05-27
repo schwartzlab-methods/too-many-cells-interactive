@@ -12,15 +12,16 @@ import React, {
     useState,
 } from 'react';
 import { HierarchyPointNode } from 'd3-hierarchy';
-import { scaleLinear } from 'd3-scale';
+import { ScaleLinear, scaleLinear } from 'd3-scale';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
 import {
-    getAverageFeatureCount,
     getEntries,
+    getMaxAverageFeatureCount,
     getObjectIsEmpty,
     levenshtein,
+    merge,
 } from '../../../util';
 import Button from '../../Button';
 import { TreeContext } from '../../Dashboard/Dashboard';
@@ -39,9 +40,19 @@ const FeatureSearch: React.FC = () => {
         setDisplayContext,
     } = useContext(TreeContext);
 
+    const featureTotals = visibleNodes
+        ? visibleNodes
+              .leaves()
+              .map(l => l.data.featureCount)
+              .reduce<Record<string, number>>(
+                  (acc, curr) => merge(acc, curr),
+                  {}
+              )
+        : {};
+
     const resetOverlay = useCallback(() => {
         setDisplayContext({
-            opacityScale: scaleLinear([0, 1]).domain([0, 1]),
+            opacityScale: scaleLinear([0, 0]).domain([0, 0]),
             visibleNodes: visibleNodes?.each(n => (n.data.featureCount = {})),
         });
     }, [setDisplayContext]);
@@ -52,10 +63,16 @@ const FeatureSearch: React.FC = () => {
     };
 
     const updateOpacityScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
-        opacityScale?.domain([
-            0,
-            getAverageFeatureCount(visibleNodes.data.featureCount),
-        ]);
+        const maxFeatureCount = getMaxAverageFeatureCount(visibleNodes) || 0;
+
+        const opacityScale = maxFeatureCount
+            ? (featureCount: number) =>
+                  featureCount === 0
+                      ? 0.01
+                      : scaleLinear()
+                            .range([0.1, 1])
+                            .domain([0, maxFeatureCount])(featureCount)
+            : () => 1;
 
         setDisplayContext({ visibleNodes, opacityScale });
     };
@@ -78,7 +95,7 @@ const FeatureSearch: React.FC = () => {
                                   acc + featureMap[curr._barcode.unCell] || 0,
                               0
                           )
-                        : // otherwise just combine children
+                        : // otherwise just combine children and divide by child count
                           n.children!.reduce<number>(
                               (acc, curr) =>
                                   acc + curr.data.featureCount[feature],
@@ -110,9 +127,19 @@ const FeatureSearch: React.FC = () => {
             />
             <Row margin="5px 0px" alignItems="center">
                 {!!opacityScale &&
-                    !getObjectIsEmpty(visibleNodes!.data.featureCount) && (
+                    !getObjectIsEmpty(visibleNodes!.data.featureCount) &&
+                    !!(opacityScale as ScaleLinear<number, number>) && (
                         <>
-                            <ScaleItem>{opacityScale.domain()[0]}</ScaleItem>
+                            <ScaleItem>
+                                {
+                                    (
+                                        opacityScale as ScaleLinear<
+                                            number,
+                                            number
+                                        >
+                                    ).domain()[0]
+                                }
+                            </ScaleItem>
                             <ScaleItem>
                                 <svg
                                     width="100%"
@@ -141,7 +168,12 @@ const FeatureSearch: React.FC = () => {
                             </ScaleItem>
                             <ScaleItem>
                                 {Number(
-                                    opacityScale.domain()[1]
+                                    (
+                                        opacityScale as ScaleLinear<
+                                            number,
+                                            number
+                                        >
+                                    ).domain()[1]
                                 ).toLocaleString()}
                             </ScaleItem>
                         </>
@@ -153,16 +185,14 @@ const FeatureSearch: React.FC = () => {
                     <FeatureListContainer>
                         <FeatureListLabel>Selected Features</FeatureListLabel>
                         <FeatureList>
-                            {getEntries(visibleNodes.data.featureCount).map(
-                                ([k, v]) => (
-                                    <FeaturePill
-                                        count={v.toLocaleString()}
-                                        key={k}
-                                        name={k}
-                                        removeFeature={removeFeature}
-                                    />
-                                )
-                            )}
+                            {getEntries(featureTotals).map(([k, v]) => (
+                                <FeaturePill
+                                    count={v.toLocaleString()}
+                                    key={k}
+                                    name={k}
+                                    removeFeature={removeFeature}
+                                />
+                            ))}
                         </FeatureList>
                     </FeatureListContainer>
                 )}
@@ -347,7 +377,10 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
                 <AutocompleteInput
                     ref={inputRef}
                     handleKeyPress={handleKeyPress}
-                    onChange={e => setSearch(e.currentTarget.value)}
+                    onChange={e => {
+                        setSearch(e.currentTarget.value);
+                        setChoicesVisible(true);
+                    }}
                     onClick={() => setChoicesVisible(true)}
                     value={search}
                 />
