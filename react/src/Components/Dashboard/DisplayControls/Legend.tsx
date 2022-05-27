@@ -12,25 +12,25 @@ const Legend: React.FC = () => {
 
     return (
         <Column>
-            {displayContext.labelScale &&
-                displayContext.labelScale
+            {displayContext.colorScale &&
+                displayContext.colorScale
                     .domain()
                     .sort((a, b) => (a < b ? -1 : 1))
                     .map(d => (
                         <LegendItem
                             key={d}
                             label={d}
-                            color={displayContext.labelScale!(d)}
+                            color={displayContext.colorScale!(d)}
                             updateColor={(color: string) => {
-                                const currColor = displayContext.labelScale!(d);
+                                const currColor = displayContext.colorScale!(d);
                                 const newRange = displayContext
-                                    .labelScale!.range()
+                                    .colorScale!.range()
                                     .map(r => (currColor === r ? color : r));
 
-                                displayContext.labelScale?.range(newRange);
+                                displayContext.colorScale?.range(newRange);
 
                                 setDisplayContext({
-                                    labelScale: displayContext.labelScale,
+                                    colorScale: displayContext.colorScale,
                                 });
                             }}
                         />

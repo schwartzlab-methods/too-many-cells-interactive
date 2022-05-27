@@ -19,6 +19,7 @@ import {
     carToRadius,
     carToTheta,
     getAverageFeatureCount,
+    getEntries,
     squared,
 } from '../util';
 import { isLinkNode, TMCNode } from '../types';
@@ -29,6 +30,35 @@ import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
 (window as any).select = select;
 
 type Point = [number, number];
+
+const getColor = (
+    scale: ScaleOrdinal<string, string>,
+    node: HierarchyPointNode<TMCNode>
+) => {
+    const colorSource = getColorScaleIsFeature(scale)
+        ? node.data.featureCount
+        : node.data.labelCount;
+
+    return getBlendedColor2(colorSource, scale).toString();
+};
+
+const getBlendedColor2 = (
+    counts: Record<string, number>,
+    scale: ScaleOrdinal<string, string>
+) => {
+    const weightedColors = getEntries(counts).map<BlendArg>(([k, v]) => ({
+        weight: v,
+        color: scale(k),
+    }));
+    //rgb
+    const color = blendWeighted(weightedColors);
+    return color.toString();
+};
+
+/* ducktype our color scales */
+const getColorScaleIsFeature = (scale: ScaleOrdinal<string, string>) =>
+    scale.domain().some(d => d.includes('high')) &&
+    scale.domain().some(d => d.includes('low'));
 
 /**
  *
@@ -159,33 +189,6 @@ const blendWeighted = (colors: BlendArg[]) => {
     return rgb(r / weightSum, g / weightSum, b / weightSum);
 };
 
-const getBlendArgs = (
-    labelCounts: Record<string, number>,
-    labelScale: ScaleOrdinal<string, string>
-) => {
-    const ret: { color: string; weight: number }[] = [];
-    for (const label in labelCounts) {
-        const colorsWithWeights = {} as BlendArg;
-        //hex
-        colorsWithWeights.color = labelScale(label).toString();
-        colorsWithWeights.weight = labelCounts[label];
-        ret.push(colorsWithWeights);
-    }
-    return ret;
-};
-
-const getBlendedColor = (
-    labelCounts: Record<string, number>,
-    labelScale: ScaleOrdinal<string, string>,
-    opacity = 1
-) => {
-    const weightedColors = getBlendArgs(labelCounts, labelScale);
-    //rgb
-    const color = blendWeighted(weightedColors);
-    color.opacity = opacity;
-    return color.toString();
-};
-
 /**
  * If label count is greater than count of colors in scale,
  *  return a new scale with the extra colors evenly interpolated
@@ -243,7 +246,6 @@ const deltaBehavior = dispatch('nodeDelta', 'linkDelta');
 
 class RadialTree {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
-    colorScale: (featureCount: Record<string, number>, label: string) => string;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
     ContextManager: ContextManager;
     distanceScale: ScaleLinear<number, number>;
@@ -272,20 +274,6 @@ class RadialTree {
         this.legendSelector = legendSelector;
 
         this.ContextManager = ContextManager;
-
-        this.colorScale = (
-            featureCount: Record<string, number>,
-            label: string
-        ) => {
-            const labelColor =
-                this.ContextManager.displayContext.labelScale(label);
-            const expressionAvg = getAverageFeatureCount(featureCount);
-            const opacity =
-                this.ContextManager.displayContext.opacityScale(expressionAvg);
-            const _rgb = rgb(labelColor);
-            _rgb.opacity = opacity;
-            return _rgb.toString();
-        };
 
         this.svg = select(this.selector)
             .append('svg')
@@ -501,7 +489,7 @@ class RadialTree {
             .data(
                 this.ContextManager.displayContext.visibleNodes.links(),
                 // (d: HierarchyPointLink<TMCNode>) =>
-                //     `${makeLinkId(d)}-${this.labelScale.range().join(' ')}`
+                //     `${makeLinkId(d)}-${this.colorScale.range().join(' ')}`
                 () => Math.random()
             )
             .join('linearGradient')
@@ -516,13 +504,9 @@ class RadialTree {
             .append('stop')
             .attr('offset', '40%')
             .attr('stop-color', d =>
-                getBlendedColor(
-                    d.source.data.labelCount,
-                    this.ContextManager.displayContext.labelScale,
-                    /* note we use the target opacity b/c opacity should not blend */
-                    this.ContextManager.displayContext.opacityScale(
-                        getAverageFeatureCount(d.target.data.featureCount)
-                    )
+                getColor(
+                    this.ContextManager.displayContext.colorScale,
+                    d.source
                 )
             );
 
@@ -530,12 +514,9 @@ class RadialTree {
             .append('stop')
             .attr('offset', '85%')
             .attr('stop-color', d =>
-                getBlendedColor(
-                    d.target.data.labelCount,
-                    this.ContextManager.displayContext.labelScale,
-                    this.ContextManager.displayContext.opacityScale(
-                        getAverageFeatureCount(d.target.data.featureCount)
-                    )
+                getColor(
+                    this.ContextManager.displayContext.colorScale,
+                    d.target
                 )
             );
 
@@ -660,10 +641,9 @@ class RadialTree {
         const {
             branchSizeScale,
             distanceVisible,
-            labelScale,
+            colorScale,
             nodeCountsVisible,
             nodeIdsVisible,
-            opacityScale,
             pieScale,
             piesVisible,
             strokeVisible,
@@ -771,17 +751,7 @@ class RadialTree {
             .join('circle')
             .attr('class', 'node')
             .attr('stroke', strokeVisible ? 'black' : 'none')
-            .attr('fill', d =>
-                d.children
-                    ? getBlendedColor(
-                          d.data.labelCount,
-                          labelScale,
-                          opacityScale(
-                              getAverageFeatureCount(d.data.featureCount)
-                          )
-                      )
-                    : null
-            )
+            .attr('fill', d => (d.children ? getColor(colorScale, d) : null))
             .attr('r', d => (d.children ? branchSizeScale(d.value || 0) : 0));
 
         /* append node ids */
@@ -824,12 +794,17 @@ class RadialTree {
                     .selectAll('path')
                     .attr('class', 'pie')
                     .data(
-                        getPie(Object.entries(outer.data.labelCount)).map(
-                            pie => ({
-                                pie,
-                                featureCount: outer.data.featureCount,
-                            })
-                        ),
+                        getPie(
+                            Object.entries(
+                                outer.data[
+                                    getColorScaleIsFeature(colorScale)
+                                        ? 'featureCount'
+                                        : 'labelCount'
+                                ]
+                            )
+                        ).map(counts => ({
+                            counts,
+                        })),
                         () => `${outer.data.nodeId}-${outer.children}`
                     )
                     .join('path')
@@ -841,14 +816,12 @@ class RadialTree {
                             ? arc()({
                                   innerRadius: 0,
                                   outerRadius: pieScale(outer.value!),
-                                  ...d.pie,
+                                  ...d.counts,
                               })
                             : null
                     )
 
-                    .attr('fill', d =>
-                        that.colorScale(d.featureCount, d.pie.data[0])
-                    );
+                    .attr('fill', d => colorScale(d.counts.data[0]));
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {

@@ -15,14 +15,18 @@ services:
       - tmc-network
   node:
     image: node:latest
+    build: ./
     volumes:
       - ./node:/usr/app
     working_dir: /usr/app
+    depends_on:
+      - mongo
     environment:
       - NODE_PORT
       - STATIC_DIR
       - MONGO_CONNECTION_STRING
-    entrypoint: "yarn start"
+      - MONGO_DB
+    # entrypoint: yarn start
     networks:
       - tmc-network
   mongo:
@@ -34,9 +38,6 @@ services:
       - MONGO_DB
       - MONGO_INITDB_ROOT_PASSWORD
       - MONGO_INITDB_ROOT_USERNAME
-      - MONGO_PORT
-    ports:
-      - ${MONGO_PORT}:27017
     networks:
       - tmc-network
 

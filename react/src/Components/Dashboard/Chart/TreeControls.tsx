@@ -9,7 +9,7 @@ import { Column, Row } from '../../Layout';
 import { TreeContext } from '../Dashboard';
 import { Bold, Text } from '../../Typography';
 
-const getSvgSrc = (labelScale: ScaleOrdinal<string, string>) => {
+const getSvgSrc = (colorScale: ScaleOrdinal<string, string>) => {
     const svg = select('svg');
 
     const [w, h] = svg
@@ -23,7 +23,7 @@ const getSvgSrc = (labelScale: ScaleOrdinal<string, string>) => {
         .attr('transform', `translate(${w / 2 - 150}, ${h / 2})`)
         .attr('class', 'legend')
         .selectAll('g.item')
-        .data(labelScale.domain())
+        .data(colorScale.domain())
         .join('g')
         .each(function (_, i) {
             const g = select<SVGGElement | BaseType, string>(this)
@@ -34,7 +34,7 @@ const getSvgSrc = (labelScale: ScaleOrdinal<string, string>) => {
                 .text(d => d)
                 .attr('r', 4)
                 .attr('cy', -6)
-                .attr('fill', d => labelScale(d));
+                .attr('fill', d => colorScale(d));
 
             g.append('text')
                 .text(d => d)
@@ -53,12 +53,12 @@ const getSvgSrc = (labelScale: ScaleOrdinal<string, string>) => {
 
 const removeLegend = () => select('svg').select('g.legend').remove();
 
-const downloadPng = (labelScale: ScaleOrdinal<string, string>) => {
+const downloadPng = (colorScale: ScaleOrdinal<string, string>) => {
     try {
         const w = (select('svg').node() as Element).clientWidth;
         const h = (select('svg').node() as Element).clientHeight;
 
-        const src = getSvgSrc(labelScale);
+        const src = getSvgSrc(colorScale);
 
         const canvas = document.createElement('canvas')!;
         const context = canvas.getContext('2d')!;
@@ -81,9 +81,9 @@ const downloadPng = (labelScale: ScaleOrdinal<string, string>) => {
     }
 };
 
-const downloadSvg = (labelScale: ScaleOrdinal<string, string>) => {
+const downloadSvg = (colorScale: ScaleOrdinal<string, string>) => {
     try {
-        const svgSrc = getSvgSrc(labelScale);
+        const svgSrc = getSvgSrc(colorScale);
         saveAs(svgSrc);
     } finally {
         removeLegend();
@@ -92,15 +92,15 @@ const downloadSvg = (labelScale: ScaleOrdinal<string, string>) => {
 
 const TreeControls: React.FC = () => {
     const {
-        displayContext: { labelScale },
+        displayContext: { colorScale },
     } = useContext(TreeContext);
     return (
         <Column>
             <Row margin="5px">
-                <Button horizontal onClick={() => downloadSvg(labelScale!)}>
+                <Button horizontal onClick={() => downloadSvg(colorScale!)}>
                     Download SVG
                 </Button>
-                <Button horizontal onClick={() => downloadPng(labelScale!)}>
+                <Button horizontal onClick={() => downloadPng(colorScale!)}>
                     Download PNG
                 </Button>
             </Row>

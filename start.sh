@@ -12,11 +12,11 @@ PORT=8080
 
 while [ ! -z "$1" ]; do
     if [[ "$1" == '--data-dir' ]]; then 
-        shift
         DATA_DIR=$1
-    elif [[ "$1" == '--port' ]]; then
         shift
+    elif [[ "$1" == '--port' ]]; then
         PORT=$1
+        shift
     else
         shift
     fi
