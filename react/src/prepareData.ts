@@ -49,9 +49,9 @@ export const getData = async () => {
                       (acc, curr) => ({
                           ...acc,
                           [labelMap[curr._barcode.unCell]]: {
-                              count:
-                                  (acc[labelMap[curr._barcode.unCell]]?.count ||
-                                      0) + 1,
+                              quantity:
+                                  (acc[labelMap[curr._barcode.unCell]]
+                                      ?.quantity || 0) + 1,
                               scaleKey: labelMap[curr._barcode.unCell],
                           },
                       }),

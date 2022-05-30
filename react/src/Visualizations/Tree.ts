@@ -15,13 +15,7 @@ import { schemeSet1 } from 'd3-scale-chromatic';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
-import {
-    carToRadius,
-    carToTheta,
-    getAverageFeatureCount,
-    getEntries,
-    squared,
-} from '../util';
+import { carToRadius, carToTheta, squared } from '../util';
 import { AttributeMap, AttributeMapValue, isLinkNode, TMCNode } from '../types';
 import { ClickPruner } from '../Components/Dashboard/Dashboard';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
@@ -47,7 +41,9 @@ const getBlendedColor = (
     scale: ScaleOrdinal<string, string>
 ) => {
     const weightedColors = Object.values(counts).map<BlendArg>(v => ({
-        weight: v.count,
+        //it's possible for weight to be zero, in which case we'll get black, so well set at one
+        //this is mainly for enrichment
+        weight: v.quantity || 1,
         color: scale(v.scaleKey),
     }));
     //rgb
@@ -169,7 +165,7 @@ const arcPath = arc()({
 });
 
 const getPie = (data: [string, AttributeMapValue][]) =>
-    pie<[string, AttributeMapValue]>().value(d => d[1].count)(data);
+    pie<[string, AttributeMapValue]>().value(d => d[1].quantity || 1)(data);
 
 type BlendArg = { color: string; weight: number };
 
@@ -220,16 +216,18 @@ export const interpolateColorScale = (domain: string[]) => {
 const showToolTip = (data: TMCNode, e: MouseEvent) => {
     selectAll('.tooltip')
         .html(function () {
-            const total = sum(Object.values(data.labelCount).map(v => v.count));
+            const total = sum(
+                Object.values(data.labelCount).map(v => v.quantity)
+            );
             const f = format('.1%');
 
             return `${Object.values(data.labelCount)
-                .sort((a, b) => (a.count < b.count ? 1 : -1))
+                .sort((a, b) => (a.quantity < b.quantity ? 1 : -1))
                 .reduce(
                     (acc, v) =>
-                        `${acc}<strong>${v.scaleKey}</strong>: ${v} (${f(
-                            v.count / total
-                        )})<br/>`,
+                        `${acc}<strong>${v.scaleKey}</strong>: ${
+                            v.quantity
+                        } (${f(v.quantity / total)})<br/>`,
                     ''
                 )}<hr/><strong>Distance</strong>: ${data.distance}`;
         })
@@ -821,7 +819,10 @@ class RadialTree {
                             : null
                     )
 
-                    .attr('fill', d => colorScale(d.counts.data[0]));
+                    .attr('fill', d => {
+                        console.log(d.counts.data[1]);
+                        return colorScale(d.counts.data[1].scaleKey);
+                    });
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {

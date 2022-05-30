@@ -14,7 +14,7 @@ export interface RoseNodeObj {
 export type RoseNode = [RoseNodeObj, RoseNode[][]] | [][];
 
 export interface AttributeMapValue {
-    count: number;
+    quantity: number;
     scaleKey: string;
 }
 

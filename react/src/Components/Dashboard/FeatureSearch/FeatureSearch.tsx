@@ -11,19 +11,13 @@ import React, {
     useRef,
     useState,
 } from 'react';
+import { quantile } from 'd3-array';
 import { HierarchyPointNode } from 'd3-hierarchy';
-import { ScaleLinear, scaleLinear, ScaleOrdinal } from 'd3-scale';
+import { ScaleOrdinal, scaleOrdinal } from 'd3-scale';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
-import {
-    getEntries,
-    getMaxAverageFeatureCount,
-    getObjectIsEmpty,
-    levenshtein,
-    merge,
-    mergeAttributeMaps,
-} from '../../../util';
+import { getEntries, getObjectIsEmpty, levenshtein } from '../../../util';
 import Button from '../../Button';
 import { TreeContext } from '../../Dashboard/Dashboard';
 import { Input } from '../../Input';
@@ -31,7 +25,22 @@ import { Column, Row } from '../../Layout';
 import Modal from '../../Modal';
 import { Caption, Title } from '../../Typography';
 import { CloseIcon } from '../../Icons';
-import { AttributeMapValue, TMCNode } from '../../../types';
+import { TMCNode } from '../../../types';
+import { interpolateColorScale } from '../../../Visualizations/Tree';
+
+const getLeafFeatureAverage = (
+    node: HierarchyPointNode<TMCNode>,
+    featureMap: Record<string, number>
+) => {
+    const cellCount = node.value!;
+
+    const totalFeatures = node.data.items!.reduce<number>(
+        (acc, curr) => (acc || 0) + featureMap[curr._barcode.unCell] || 0,
+        0
+    );
+
+    return totalFeatures / cellCount;
+};
 
 const FeatureSearch: React.FC = () => {
     const [features, setFeatures] = useState<string[]>([]);
@@ -52,22 +61,35 @@ const FeatureSearch: React.FC = () => {
 
     const removeFeature = (featureName: string) => {
         visibleNodes?.each(n => delete n.data.featureCount[featureName]);
+        delete featureCounts[featureName];
+        setFeatureCounts(featureCounts);
         updateColorScale(visibleNodes!);
     };
 
     const updateColorScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
-        const maxFeatureCount = getMaxAverageFeatureCount(visibleNodes) || 0;
+        //if we removed last feature, reset to regular color scale
 
-        const colorScale = maxFeatureCount
-            ? (featureCount: number) =>
-                  featureCount === 0
-                      ? 0.01
-                      : scaleLinear()
-                            .range([0.1, 1])
-                            .domain([0, maxFeatureCount])(featureCount)
-            : () => 1;
+        const colorProp = Object.values(visibleNodes.data.featureCount).length
+            ? 'featureCount'
+            : 'labelCount';
 
-        //setDisplayContext({ visibleNodes, colorScale });
+        const domain = [
+            ...new Set(
+                visibleNodes
+                    .descendants()
+                    .flatMap(v =>
+                        Object.values(v.data[colorProp]).flatMap(
+                            v => v.scaleKey
+                        )
+                    )
+            ),
+        ].sort((a, b) => (a < b ? -1 : 1));
+
+        const colorScale = scaleOrdinal(interpolateColorScale(domain)).domain(
+            domain
+        );
+
+        setDisplayContext({ visibleNodes, colorScale });
     };
 
     const getFeature = async (feature: string) => {
@@ -82,34 +104,43 @@ const FeatureSearch: React.FC = () => {
                 count += f.value;
             });
 
+            const range = [] as number[];
+
             setFeatureCounts({ ...featureCounts, [feature]: count });
+
+            visibleNodes.eachAfter(n => {
+                const quantity = n.data.items
+                    ? getLeafFeatureAverage(n, featureMap)
+                    : n.children!.reduce(
+                          (acc, curr) =>
+                              acc + curr.data.featureCount[feature].quantity,
+                          0
+                      ) /
+                      (n.descendants().length - 1);
+
+                range.push(quantity);
+                n.data.featureCount = {
+                    ...n.data.featureCount,
+                    [feature]: {
+                        quantity,
+                        scaleKey: '',
+                    },
+                };
+            });
+
+            const median = quantile(range, 0.5);
 
             visibleNodes.eachAfter(n => {
                 n.data.featureCount = {
                     ...n.data.featureCount,
-                    [feature]: n.data.items
-                        ? // if leaf, reduce all items
-                          n.data.items.reduce<AttributeMapValue>(
-                              (acc, curr) => ({
-                                  count:
-                                      (acc.count || 0) +
-                                          featureMap[curr._barcode.unCell] || 0,
-                                  //todo: calculate hi/lo here
-                                  scaleKey: feature,
-                              }),
-                              {} as AttributeMapValue
-                          )
-                        : // otherwise just combine children
-                          n.children!.reduce<AttributeMapValue>(
-                              (acc, curr) => ({
-                                  count:
-                                      acc.count +
-                                      curr.data.featureCount[feature].count,
-                                  scaleKey:
-                                      curr.data.featureCount[feature].scaleKey,
-                              }),
-                              { count: 0, scaleKey: feature }
-                          ),
+                    [feature]: {
+                        quantity: n.data.featureCount[feature].quantity,
+                        scaleKey: `${feature}-${
+                            n.data.featureCount[feature].quantity > median!
+                                ? 'high'
+                                : 'low'
+                        }`,
+                    },
                 };
             });
 

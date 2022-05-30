@@ -170,19 +170,6 @@ export const formatDistance = (distance: number) => format('.3f')(distance);
 export const formatInteger = (int: number) => format('.0f')(int);
 
 /* merge two dictionaries by summing corresponding values */
-export const merge = (
-    obj1: Record<string, number>,
-    obj2: Record<string, number>
-) =>
-    [...new Set([...Object.keys(obj1), ...Object.keys(obj2)])].reduce(
-        (acc, k) => ({
-            ...acc,
-            [k]: (obj1[k] || 0) + (obj2[k] || 0),
-        }),
-        {} as Record<string, number>
-    );
-
-/* merge two dictionaries by summing corresponding values */
 export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
     [
         ...new Set([...Object.keys(obj1), ...Object.keys(obj2)]),
@@ -190,21 +177,17 @@ export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
         (acc, k) => ({
             ...acc,
             [k]: {
-                count: (obj1[k]?.count || 0) + (obj2[k]?.count || 0),
+                quantity: (obj1[k]?.quantity || 0) + (obj2[k]?.quantity || 0),
                 scaleKey: obj1[k]?.scaleKey || obj2[k].scaleKey,
             },
         }),
         {}
     );
 
-/* find the node with the highest average feature count ration, it will be a leaf */
-export const getMaxAverageFeatureCount = (tree: HierarchyNode<TMCNode>) =>
-    max(tree.leaves().map(l => getAverageFeatureCount(l)));
-
 /* compute cell-with-a-feature average for a single node */
 export const getAverageFeatureCount = (node: HierarchyNode<TMCNode>) => {
     const featureCount = sum(
-        Object.values(node.data.featureCount).map(v => v.count)
+        Object.values(node.data.featureCount).map(v => v.quantity)
     );
     const cellCount = sum(
         node.descendants().map(n => (n.data.items || []).length)
