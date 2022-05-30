@@ -13,19 +13,26 @@ export interface RoseNodeObj {
 
 export type RoseNode = [RoseNodeObj, RoseNode[][]] | [][];
 
+export interface AttributeMapValue {
+    count: number;
+    scaleKey: string;
+}
+
+export type AttributeMap = Record<string, AttributeMapValue>;
+
 export interface TMCFlatNode {
     distance: number | null;
     id: string;
-    featureCount: Record<string, number>;
+    featureCount: AttributeMap;
     items: RoseNodeItem[] | null;
-    labelCount?: Record<string, number>;
+    labelCount?: AttributeMap;
     nodeId?: number;
     parentId: string | undefined;
     significance: number | null;
 }
 
 export interface TMCNode extends TMCFlatNode {
-    labelCount: Record<string, number>;
+    labelCount: AttributeMap;
     nodeId: number;
 }
 

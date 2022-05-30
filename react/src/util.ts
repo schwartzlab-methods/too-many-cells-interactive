@@ -2,7 +2,7 @@ import { max, median, sum } from 'd3-array';
 import { format } from 'd3-format';
 import { HierarchyNode, tree } from 'd3-hierarchy';
 import { PruneContext } from './Components/Dashboard/Dashboard';
-import { TMCNode } from './types';
+import { AttributeMap, TMCNode } from './types';
 
 /* typescript-friendly */
 export const getEntries = <T>(obj: T) =>
@@ -182,13 +182,30 @@ export const merge = (
         {} as Record<string, number>
     );
 
+/* merge two dictionaries by summing corresponding values */
+export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
+    [
+        ...new Set([...Object.keys(obj1), ...Object.keys(obj2)]),
+    ].reduce<AttributeMap>(
+        (acc, k) => ({
+            ...acc,
+            [k]: {
+                count: (obj1[k]?.count || 0) + (obj2[k]?.count || 0),
+                scaleKey: obj1[k]?.scaleKey || obj2[k].scaleKey,
+            },
+        }),
+        {}
+    );
+
 /* find the node with the highest average feature count ration, it will be a leaf */
 export const getMaxAverageFeatureCount = (tree: HierarchyNode<TMCNode>) =>
     max(tree.leaves().map(l => getAverageFeatureCount(l)));
 
-/* compute average cell feature count ratio for a single node */
+/* compute cell-with-a-feature average for a single node */
 export const getAverageFeatureCount = (node: HierarchyNode<TMCNode>) => {
-    const featureCount = sum(Object.values(node.data.featureCount));
+    const featureCount = sum(
+        Object.values(node.data.featureCount).map(v => v.count)
+    );
     const cellCount = sum(
         node.descendants().map(n => (n.data.items || []).length)
     );

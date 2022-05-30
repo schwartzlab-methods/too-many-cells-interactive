@@ -22,7 +22,7 @@ import {
     getEntries,
     squared,
 } from '../util';
-import { isLinkNode, TMCNode } from '../types';
+import { AttributeMap, AttributeMapValue, isLinkNode, TMCNode } from '../types';
 import { ClickPruner } from '../Components/Dashboard/Dashboard';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
 
@@ -39,16 +39,16 @@ const getColor = (
         ? node.data.featureCount
         : node.data.labelCount;
 
-    return getBlendedColor2(colorSource, scale).toString();
+    return getBlendedColor(colorSource, scale).toString();
 };
 
-const getBlendedColor2 = (
-    counts: Record<string, number>,
+const getBlendedColor = (
+    counts: AttributeMap,
     scale: ScaleOrdinal<string, string>
 ) => {
-    const weightedColors = getEntries(counts).map<BlendArg>(([k, v]) => ({
-        weight: v,
-        color: scale(k),
+    const weightedColors = Object.values(counts).map<BlendArg>(v => ({
+        weight: v.count,
+        color: scale(v.scaleKey),
     }));
     //rgb
     const color = blendWeighted(weightedColors);
@@ -168,8 +168,8 @@ const arcPath = arc()({
     endAngle: Math.PI * 2,
 });
 
-const getPie = (data: [string, number][]) =>
-    pie<[string, number]>().value(d => d[1])(data);
+const getPie = (data: [string, AttributeMapValue][]) =>
+    pie<[string, AttributeMapValue]>().value(d => d[1].count)(data);
 
 type BlendArg = { color: string; weight: number };
 
@@ -190,20 +190,20 @@ const blendWeighted = (colors: BlendArg[]) => {
 };
 
 /**
- * If label count is greater than count of colors in scale,
+ * If domain count is greater than count of colors in scale,
  *  return a new scale with the extra colors evenly interpolated
  *
- * @param labels
+ * @param domain
  * @returns string[]
  */
-export const interpolateColorScale = (labels: string[]) => {
-    if (labels.length <= schemeSet1.length) {
+export const interpolateColorScale = (domain: string[]) => {
+    if (domain.length <= schemeSet1.length) {
         return schemeSet1;
     }
 
-    const step = (schemeSet1.length - 1) / labels.length;
+    const step = (schemeSet1.length - 1) / domain.length;
 
-    return Array(labels.length)
+    return Array(domain.length)
         .fill(null)
         .map((_, i) => {
             const base = Math.floor(i * step);
@@ -220,15 +220,15 @@ export const interpolateColorScale = (labels: string[]) => {
 const showToolTip = (data: TMCNode, e: MouseEvent) => {
     selectAll('.tooltip')
         .html(function () {
-            const total = sum(Object.values(data.labelCount));
+            const total = sum(Object.values(data.labelCount).map(v => v.count));
             const f = format('.1%');
 
-            return `${Object.entries(data.labelCount)
-                .sort(([_, v1], [__, v2]) => (v1 < v2 ? 1 : -1))
+            return `${Object.values(data.labelCount)
+                .sort((a, b) => (a.count < b.count ? 1 : -1))
                 .reduce(
-                    (acc, [k, v]) =>
-                        `${acc}<strong>${k}</strong>: ${v} (${f(
-                            v / total
+                    (acc, v) =>
+                        `${acc}<strong>${v.scaleKey}</strong>: ${v} (${f(
+                            v.count / total
                         )})<br/>`,
                     ''
                 )}<hr/><strong>Distance</strong>: ${data.distance}`;

@@ -12,7 +12,7 @@ import React, {
     useState,
 } from 'react';
 import { HierarchyPointNode } from 'd3-hierarchy';
-import { ScaleLinear, scaleLinear } from 'd3-scale';
+import { ScaleLinear, scaleLinear, ScaleOrdinal } from 'd3-scale';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
@@ -22,6 +22,7 @@ import {
     getObjectIsEmpty,
     levenshtein,
     merge,
+    mergeAttributeMaps,
 } from '../../../util';
 import Button from '../../Button';
 import { TreeContext } from '../../Dashboard/Dashboard';
@@ -30,42 +31,34 @@ import { Column, Row } from '../../Layout';
 import Modal from '../../Modal';
 import { Caption, Title } from '../../Typography';
 import { CloseIcon } from '../../Icons';
-import { TMCNode } from '../../../types';
+import { AttributeMapValue, TMCNode } from '../../../types';
 
 const FeatureSearch: React.FC = () => {
     const [features, setFeatures] = useState<string[]>([]);
+    const [featureCounts, setFeatureCounts] = useState<Record<string, number>>(
+        {}
+    );
     const [loading, setLoading] = useState(false);
     const {
-        displayContext: { opacityScale, visibleNodes },
+        displayContext: { colorScale, visibleNodes },
         setDisplayContext,
     } = useContext(TreeContext);
 
-    const featureTotals = visibleNodes
-        ? visibleNodes
-              .leaves()
-              .map(l => l.data.featureCount)
-              .reduce<Record<string, number>>(
-                  (acc, curr) => merge(acc, curr),
-                  {}
-              )
-        : {};
-
     const resetOverlay = useCallback(() => {
         setDisplayContext({
-            opacityScale: scaleLinear([0, 0]).domain([0, 0]),
             visibleNodes: visibleNodes?.each(n => (n.data.featureCount = {})),
         });
     }, [setDisplayContext]);
 
     const removeFeature = (featureName: string) => {
         visibleNodes?.each(n => delete n.data.featureCount[featureName]);
-        updateOpacityScale(visibleNodes!);
+        updateColorScale(visibleNodes!);
     };
 
-    const updateOpacityScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
+    const updateColorScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
         const maxFeatureCount = getMaxAverageFeatureCount(visibleNodes) || 0;
 
-        const opacityScale = maxFeatureCount
+        const colorScale = maxFeatureCount
             ? (featureCount: number) =>
                   featureCount === 0
                       ? 0.01
@@ -74,7 +67,7 @@ const FeatureSearch: React.FC = () => {
                             .domain([0, maxFeatureCount])(featureCount)
             : () => 1;
 
-        setDisplayContext({ visibleNodes, opacityScale });
+        //setDisplayContext({ visibleNodes, colorScale });
     };
 
     const getFeature = async (feature: string) => {
@@ -82,29 +75,45 @@ const FeatureSearch: React.FC = () => {
             setLoading(true);
             const features = await fetchFeatures(feature);
             const featureMap: Record<string, number> = {};
+            let count = 0;
 
-            features.forEach(f => (featureMap[f.id] = f.value));
+            features.forEach(f => {
+                featureMap[f.id] = f.value;
+                count += f.value;
+            });
+
+            setFeatureCounts({ ...featureCounts, [feature]: count });
 
             visibleNodes.eachAfter(n => {
                 n.data.featureCount = {
                     ...n.data.featureCount,
                     [feature]: n.data.items
                         ? // if leaf, reduce all items
-                          n.data.items.reduce<number>(
-                              (acc, curr) =>
-                                  acc + featureMap[curr._barcode.unCell] || 0,
-                              0
+                          n.data.items.reduce<AttributeMapValue>(
+                              (acc, curr) => ({
+                                  count:
+                                      (acc.count || 0) +
+                                          featureMap[curr._barcode.unCell] || 0,
+                                  //todo: calculate hi/lo here
+                                  scaleKey: feature,
+                              }),
+                              {} as AttributeMapValue
                           )
-                        : // otherwise just combine children and divide by child count
-                          n.children!.reduce<number>(
-                              (acc, curr) =>
-                                  acc + curr.data.featureCount[feature],
-                              0
+                        : // otherwise just combine children
+                          n.children!.reduce<AttributeMapValue>(
+                              (acc, curr) => ({
+                                  count:
+                                      acc.count +
+                                      curr.data.featureCount[feature].count,
+                                  scaleKey:
+                                      curr.data.featureCount[feature].scaleKey,
+                              }),
+                              { count: 0, scaleKey: feature }
                           ),
                 };
             });
 
-            updateOpacityScale(visibleNodes);
+            updateColorScale(visibleNodes);
 
             setLoading(false);
         }
@@ -125,67 +134,13 @@ const FeatureSearch: React.FC = () => {
                 options={features}
                 onSelect={getFeature}
             />
-            <Row margin="5px 0px" alignItems="center">
-                {!!opacityScale &&
-                    !getObjectIsEmpty(visibleNodes!.data.featureCount) &&
-                    !!(opacityScale as ScaleLinear<number, number>) && (
-                        <>
-                            <ScaleItem>
-                                {
-                                    (
-                                        opacityScale as ScaleLinear<
-                                            number,
-                                            number
-                                        >
-                                    ).domain()[0]
-                                }
-                            </ScaleItem>
-                            <ScaleItem>
-                                <svg
-                                    width="100%"
-                                    height="25px"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 10 1"
-                                >
-                                    <defs>
-                                        <linearGradient id="scaleGradient">
-                                            <stop
-                                                offset="5%"
-                                                stopColor="rgba(0,0,0,0)"
-                                            />
-                                            <stop
-                                                offset="95%"
-                                                stopColor="rgba(0,0,0,1)"
-                                            />
-                                        </linearGradient>
-                                    </defs>
-                                    <rect
-                                        fill="url('#scaleGradient')"
-                                        width={10}
-                                        height={1}
-                                    />
-                                </svg>
-                            </ScaleItem>
-                            <ScaleItem>
-                                {Number(
-                                    (
-                                        opacityScale as ScaleLinear<
-                                            number,
-                                            number
-                                        >
-                                    ).domain()[1]
-                                ).toLocaleString()}
-                            </ScaleItem>
-                        </>
-                    )}
-            </Row>
 
             {!!visibleNodes &&
                 !getObjectIsEmpty(visibleNodes.data.featureCount) && (
                     <FeatureListContainer>
                         <FeatureListLabel>Selected Features</FeatureListLabel>
                         <FeatureList>
-                            {getEntries(featureTotals).map(([k, v]) => (
+                            {getEntries(featureCounts).map(([k, v]) => (
                                 <FeaturePill
                                     count={v.toLocaleString()}
                                     key={k}
@@ -200,10 +155,6 @@ const FeatureSearch: React.FC = () => {
         </Column>
     );
 };
-
-const ScaleItem = styled.div`
-    margin: 0px 5px;
-`;
 
 const SearchTitle = styled(Title)`
     margin: 0px;

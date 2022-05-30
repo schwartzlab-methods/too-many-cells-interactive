@@ -111,7 +111,6 @@ const TreeComponent: React.FC = () => {
                 distanceVisible: false,
                 colorScale: scaleOrdinal(scaleColors).domain(labels),
                 nodeCountsVisible: false,
-                opacityScale: () => 1,
                 nodeIdsVisible: false,
                 originalTree,
                 pieScale: scaleLinear([5, 20])

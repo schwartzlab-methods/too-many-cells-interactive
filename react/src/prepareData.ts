@@ -1,7 +1,13 @@
 import { uuid } from 'lodash-uuid';
 import { HierarchyNode, stratify } from 'd3-hierarchy';
-import { TMCNode, TMCFlatNode, RoseNode, RoseNodeObj } from './types';
-import { merge } from './util';
+import {
+    TMCNode,
+    TMCFlatNode,
+    RoseNode,
+    RoseNodeObj,
+    AttributeMap,
+} from './types';
+import { mergeAttributeMaps } from './util';
 
 export const buildTree = (node: TMCFlatNode[]) => {
     return (stratify<TMCFlatNode>()(node) as HierarchyNode<TMCNode>)
@@ -39,16 +45,21 @@ export const getData = async () => {
     return tree
         .eachAfter(n => {
             n.data.labelCount = n.data.items
-                ? n.data.items.reduce<Record<string, number>>(
+                ? n.data.items.reduce<AttributeMap>(
                       (acc, curr) => ({
                           ...acc,
-                          [labelMap[curr._barcode.unCell]]:
-                              (acc[labelMap[curr._barcode.unCell]] || 0) + 1,
+                          [labelMap[curr._barcode.unCell]]: {
+                              count:
+                                  (acc[labelMap[curr._barcode.unCell]]?.count ||
+                                      0) + 1,
+                              scaleKey: labelMap[curr._barcode.unCell],
+                          },
                       }),
                       {}
                   )
-                : n.children!.reduce<Record<string, number>>(
-                      (acc, cur) => merge(acc, cur.data.labelCount),
+                : n.children!.reduce<AttributeMap>(
+                      (acc, cur) =>
+                          mergeAttributeMaps(acc, cur.data.labelCount),
                       {}
                   );
         })
