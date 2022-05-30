@@ -29,7 +29,7 @@ const GlobalStyle = createGlobalStyle`
 export interface DisplayContext {
     branchSizeScale?: ScaleLinear<number, number>;
     distanceVisible?: boolean;
-    labelScale?: ScaleOrdinal<string, string>;
+    colorScale?: ScaleOrdinal<string, string>;
     opacityScale?: (featureCount: number) => number;
     nodeIdsVisible?: boolean;
     nodeCountsVisible?: boolean;
