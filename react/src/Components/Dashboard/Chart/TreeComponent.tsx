@@ -7,12 +7,12 @@ import React, {
 } from 'react';
 import { extent } from 'd3-array';
 import { HierarchyNode } from 'd3-hierarchy';
-import { scaleLinear, scaleOrdinal } from 'd3-scale';
+import { scaleLinear } from 'd3-scale';
 import { TMCNode } from '../../../types';
 import { Tree as TreeViz } from '../../../Visualizations';
 import { getData } from '../../../prepareData';
-import { interpolateColorScale } from '../../../Visualizations/Tree';
 import {
+    buildColorScale,
     calculateTreeLayout,
     collapseNode,
     pruneContextsAreEqual,
@@ -89,14 +89,6 @@ const TreeComponent: React.FC = () => {
             const rootPositionedTree = calculateTreeLayout(data, w);
             const originalTree = calculateTreeLayout(data, w);
             const visibleNodes = calculateTreeLayout(data, w);
-            const labels = Array.from(
-                new Set(
-                    rootPositionedTree
-                        .descendants()
-                        .flatMap(d => Object.keys(d.data.labelCount))
-                )
-            ).filter(Boolean) as string[];
-            const scaleColors = interpolateColorScale(labels);
 
             setDisplayContext({
                 branchSizeScale: scaleLinear([0.01, 20])
@@ -108,8 +100,9 @@ const TreeComponent: React.FC = () => {
                         ) as [number, number]
                     )
                     .clamp(true),
+                colorScale: buildColorScale('labelCount', visibleNodes),
+                colorScaleKey: 'labelCount',
                 distanceVisible: false,
-                colorScale: scaleOrdinal(scaleColors).domain(labels),
                 nodeCountsVisible: false,
                 nodeIdsVisible: false,
                 originalTree,

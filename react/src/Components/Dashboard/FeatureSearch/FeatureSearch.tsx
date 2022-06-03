@@ -13,11 +13,15 @@ import React, {
 } from 'react';
 import { quantile } from 'd3-array';
 import { HierarchyPointNode } from 'd3-hierarchy';
-import { ScaleOrdinal, scaleOrdinal } from 'd3-scale';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
-import { getEntries, getObjectIsEmpty, levenshtein } from '../../../util';
+import {
+    buildColorScale,
+    getEntries,
+    getObjectIsEmpty,
+    levenshtein,
+} from '../../../util';
 import Button from '../../Button';
 import { TreeContext } from '../../Dashboard/Dashboard';
 import { Input } from '../../Input';
@@ -26,7 +30,6 @@ import Modal from '../../Modal';
 import { Caption, Title } from '../../Typography';
 import { CloseIcon } from '../../Icons';
 import { TMCNode } from '../../../types';
-import { interpolateColorScale } from '../../../Visualizations/Tree';
 
 const getLeafFeatureAverage = (
     node: HierarchyPointNode<TMCNode>,
@@ -49,7 +52,7 @@ const FeatureSearch: React.FC = () => {
     );
     const [loading, setLoading] = useState(false);
     const {
-        displayContext: { colorScale, visibleNodes },
+        displayContext: { visibleNodes },
         setDisplayContext,
     } = useContext(TreeContext);
 
@@ -69,27 +72,14 @@ const FeatureSearch: React.FC = () => {
     const updateColorScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
         //if we removed last feature, reset to regular color scale
 
-        const colorProp = Object.values(visibleNodes.data.featureCount).length
+        const colorScaleKey = Object.values(visibleNodes.data.featureCount)
+            .length
             ? 'featureCount'
             : 'labelCount';
 
-        const domain = [
-            ...new Set(
-                visibleNodes
-                    .descendants()
-                    .flatMap(v =>
-                        Object.values(v.data[colorProp]).flatMap(
-                            v => v.scaleKey
-                        )
-                    )
-            ),
-        ].sort((a, b) => (a < b ? -1 : 1));
+        const colorScale = buildColorScale(colorScaleKey, visibleNodes);
 
-        const colorScale = scaleOrdinal(interpolateColorScale(domain)).domain(
-            domain
-        );
-
-        setDisplayContext({ visibleNodes, colorScale });
+        setDisplayContext({ visibleNodes, colorScale, colorScaleKey });
     };
 
     const getFeature = async (feature: string) => {

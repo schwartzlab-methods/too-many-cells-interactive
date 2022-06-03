@@ -7,6 +7,8 @@ import { Column, Row } from '../../Layout';
 import { TreeContext } from '../Dashboard';
 import { Label } from '../../Typography';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
+import { buildColorScale } from '../../../util';
+import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import DisplayButtons from './DisplayButtons';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
@@ -14,7 +16,7 @@ import Legend from './Legend';
 const ControlPanel: React.FC = () => {
     const { displayContext, setDisplayContext } = useContext(TreeContext);
 
-    const { visibleNodes } = displayContext;
+    const { visibleNodes, colorScaleKey } = displayContext;
 
     const branchScalingDisabled = useMemo(() => {
         return (
@@ -23,11 +25,55 @@ const ControlPanel: React.FC = () => {
         );
     }, [displayContext]);
 
+    const featureScaleAvailable = useMemo(() => {
+        return !!Object.keys(visibleNodes?.data.featureCount || {}).length;
+    }, [visibleNodes?.data.featureCount]);
+
     return (
         <>
             <Column width={'50%'}>
                 <DisplayButtons />
                 <Legend />
+                {featureScaleAvailable && (
+                    <RadioGroup>
+                        <RadioButton
+                            checked={colorScaleKey === 'featureCount'}
+                            id="featureCount"
+                            name="featureCount"
+                            onChange={() =>
+                                setDisplayContext({
+                                    colorScaleKey: 'featureCount',
+                                    colorScale: buildColorScale(
+                                        'featureCount',
+                                        visibleNodes!
+                                    ),
+                                })
+                            }
+                            type="radio"
+                        />
+                        <RadioLabel htmlFor="featureCount">
+                            Show Features
+                        </RadioLabel>
+                        <RadioButton
+                            checked={colorScaleKey === 'labelCount'}
+                            id="labelCount"
+                            name="labelCount"
+                            onChange={() =>
+                                setDisplayContext({
+                                    colorScaleKey: 'labelCount',
+                                    colorScale: buildColorScale(
+                                        'labelCount',
+                                        visibleNodes!
+                                    ),
+                                })
+                            }
+                            type="radio"
+                        />
+                        <RadioLabel htmlFor="labelCount">
+                            Show Tissue Types
+                        </RadioLabel>
+                    </RadioGroup>
+                )}
                 <SliderGroup>
                     <Slider
                         label="Adjust Max Width"

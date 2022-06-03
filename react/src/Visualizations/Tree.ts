@@ -1,7 +1,7 @@
 import 'd3-transition'; // must be imported before selection
 import { extent, sum } from 'd3-array';
 import { dispatch } from 'd3-dispatch';
-import { color, rgb } from 'd3-color';
+import { rgb } from 'd3-color';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import { format } from 'd3-format';
 import {
@@ -9,13 +9,17 @@ import {
     HierarchyPointLink,
     HierarchyPointNode,
 } from 'd3-hierarchy';
-import { interpolate } from 'd3-interpolate';
 import { ScaleLinear, scaleLinear, ScaleOrdinal } from 'd3-scale';
-import { schemeSet1 } from 'd3-scale-chromatic';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
-import { carToRadius, carToTheta, squared } from '../util';
+import {
+    carToRadius,
+    carToTheta,
+    formatDistance,
+    getEntries,
+    squared,
+} from '../util';
 import { AttributeMap, AttributeMapValue, isLinkNode, TMCNode } from '../types';
 import { ClickPruner } from '../Components/Dashboard/Dashboard';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
@@ -27,11 +31,10 @@ type Point = [number, number];
 
 const getColor = (
     scale: ScaleOrdinal<string, string>,
+    colorScaleKey: 'featureCount' | 'labelCount',
     node: HierarchyPointNode<TMCNode>
 ) => {
-    const colorSource = getColorScaleIsFeature(scale)
-        ? node.data.featureCount
-        : node.data.labelCount;
+    const colorSource = node.data[colorScaleKey];
 
     return getBlendedColor(colorSource, scale).toString();
 };
@@ -50,11 +53,6 @@ const getBlendedColor = (
     const color = blendWeighted(weightedColors);
     return color.toString();
 };
-
-/* ducktype our color scales */
-const getColorScaleIsFeature = (scale: ScaleOrdinal<string, string>) =>
-    scale.domain().some(d => d.includes('high')) &&
-    scale.domain().some(d => d.includes('low'));
 
 /**
  *
@@ -185,55 +183,76 @@ const blendWeighted = (colors: BlendArg[]) => {
     return rgb(r / weightSum, g / weightSum, b / weightSum);
 };
 
-/**
- * If domain count is greater than count of colors in scale,
- *  return a new scale with the extra colors evenly interpolated
- *
- * @param domain
- * @returns string[]
- */
-export const interpolateColorScale = (domain: string[]) => {
-    if (domain.length <= schemeSet1.length) {
-        return schemeSet1;
+const showToolTip = (data: TMCNode, e: MouseEvent) => {
+    const cellCount = sum(Object.values(data.labelCount).map(v => v.quantity));
+    const f = format('.1%');
+
+    const container = select('.tooltip')
+        .style('left', `${e.pageX + 15}px`)
+        .style('top', `${e.pageY - 15}px`)
+        .style('visibility', 'visible');
+
+    const inner = container.select('.inner');
+
+    const tissueContainer = inner.select('div.tissue ul');
+
+    tissueContainer
+        .selectAll('li.item')
+        .data(
+            getEntries(data.labelCount).sort((a, b) =>
+                a[1].quantity < b[1].quantity ? 1 : -1
+            ),
+            Math.random
+        )
+        .join('li')
+        .attr('class', 'item')
+        .each(function (d) {
+            const s = select(this).append('span');
+            const strong = s.append('strong');
+            strong.html(`${d[1].scaleKey}: `);
+            const val = s.append('span');
+            val.html(f(d[1].quantity / cellCount));
+        });
+
+    if (Object.keys(data.featureCount).length) {
+        tissueContainer.style('border-right', 'thin white solid');
+    } else {
+        tissueContainer.style('border-right', 'none');
     }
 
-    const step = (schemeSet1.length - 1) / domain.length;
+    const featuresContainer = inner.select('div.features ul');
 
-    return Array(domain.length)
-        .fill(null)
-        .map((_, i) => {
-            const base = Math.floor(i * step);
-            const next = base + 1;
-            const k = i * step - base;
-            const interpolated = interpolate(
-                schemeSet1[base],
-                schemeSet1[next]
-            )(k);
-            return color(interpolated)!.formatHex();
+    featuresContainer
+        .selectAll('li.item')
+        .data(
+            getEntries(data.featureCount).sort((a, b) =>
+                a[1].quantity < b[1].quantity ? 1 : -1
+            ),
+            Math.random
+        )
+        .join('li')
+        .attr('class', 'item')
+        .each(function (d) {
+            const s = select(this).append('span');
+            const strong = s.append('strong');
+            strong.html(`${d[1].scaleKey}: `);
+            const val = s.append('span');
+            val.html(formatDistance(d[1].quantity));
         });
-};
 
-const showToolTip = (data: TMCNode, e: MouseEvent) => {
-    selectAll('.tooltip')
-        .html(function () {
-            const total = sum(
-                Object.values(data.labelCount).map(v => v.quantity)
-            );
-            const f = format('.1%');
+    container.selectAll('hr').data([1]).join('hr');
 
-            return `${Object.values(data.labelCount)
-                .sort((a, b) => (a.quantity < b.quantity ? 1 : -1))
-                .reduce(
-                    (acc, v) =>
-                        `${acc}<strong>${v.scaleKey}</strong>: ${
-                            v.quantity
-                        } (${f(v.quantity / total)})<br/>`,
-                    ''
-                )}<hr/><strong>Distance</strong>: ${data.distance}`;
-        })
-        .style('visibility', 'visible')
-        .style('left', `${e.pageX + 15}px`)
-        .style('top', `${e.pageY - 15}px`);
+    container
+        .selectAll('div.distance')
+        .data([data.distance])
+        .join('div')
+        .attr('class', 'distance')
+        .html(
+            d =>
+                `<strong>Distance:&nbsp;</strong> ${
+                    d ? formatDistance(d) : 'null'
+                }`
+        );
 };
 
 const makeLinkId = (link: HierarchyPointLink<TMCNode>) =>
@@ -312,7 +331,7 @@ class RadialTree {
         zoomBehavior(this.svg);
 
         /* Append tooltip */
-        select('body')
+        const tt = select('body')
             .append('div')
             .attr('class', 'tooltip')
             .style('z-index', 999)
@@ -321,6 +340,27 @@ class RadialTree {
             .style('font-size', '10px')
             .style('color', 'white')
             .style('border-radius', '5px')
+            .style('padding', '5px');
+
+        const innerContainer = tt
+            .append('div')
+            .attr('class', 'inner')
+            .style('display', 'flex');
+
+        innerContainer
+            .append('div')
+            .attr('class', 'tissue')
+            .append('ul')
+            .style('list-style-type', 'none')
+            .style('margin', '0px')
+            .style('padding', '5px');
+
+        innerContainer
+            .append('div')
+            .attr('class', 'features')
+            .append('ul')
+            .style('list-style-type', 'none')
+            .style('margin', '0px')
             .style('padding', '5px');
 
         this.branchDragBehavior = drag<SVGPolygonElement, any>()
@@ -504,6 +544,7 @@ class RadialTree {
             .attr('stop-color', d =>
                 getColor(
                     this.ContextManager.displayContext.colorScale,
+                    this.ContextManager.displayContext.colorScaleKey,
                     d.source
                 )
             );
@@ -514,6 +555,7 @@ class RadialTree {
             .attr('stop-color', d =>
                 getColor(
                     this.ContextManager.displayContext.colorScale,
+                    this.ContextManager.displayContext.colorScaleKey,
                     d.target
                 )
             );
@@ -640,6 +682,7 @@ class RadialTree {
             branchSizeScale,
             distanceVisible,
             colorScale,
+            colorScaleKey,
             nodeCountsVisible,
             nodeIdsVisible,
             pieScale,
@@ -749,7 +792,9 @@ class RadialTree {
             .join('circle')
             .attr('class', 'node')
             .attr('stroke', strokeVisible ? 'black' : 'none')
-            .attr('fill', d => (d.children ? getColor(colorScale, d) : null))
+            .attr('fill', d =>
+                d.children ? getColor(colorScale, colorScaleKey, d) : null
+            )
             .attr('r', d => (d.children ? branchSizeScale(d.value || 0) : 0));
 
         /* append node ids */
@@ -792,17 +837,11 @@ class RadialTree {
                     .selectAll('path')
                     .attr('class', 'pie')
                     .data(
-                        getPie(
-                            Object.entries(
-                                outer.data[
-                                    getColorScaleIsFeature(colorScale)
-                                        ? 'featureCount'
-                                        : 'labelCount'
-                                ]
-                            )
-                        ).map(counts => ({
-                            counts,
-                        })),
+                        getPie(Object.entries(outer.data[colorScaleKey])).map(
+                            counts => ({
+                                counts,
+                            })
+                        ),
                         () => `${outer.data.nodeId}-${outer.children}`
                     )
                     .join('path')
@@ -820,7 +859,6 @@ class RadialTree {
                     )
 
                     .attr('fill', d => {
-                        console.log(d.counts.data[1]);
                         return colorScale(d.counts.data[1].scaleKey);
                     });
             })

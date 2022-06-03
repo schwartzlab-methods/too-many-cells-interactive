@@ -1,6 +1,10 @@
-import { max, median, sum } from 'd3-array';
+import { median } from 'd3-array';
+import { color } from 'd3-color';
 import { format } from 'd3-format';
-import { HierarchyNode, tree } from 'd3-hierarchy';
+import { HierarchyNode, HierarchyPointNode, tree } from 'd3-hierarchy';
+import { interpolate } from 'd3-interpolate';
+import { scaleOrdinal } from 'd3-scale';
+import { schemeSet1 } from 'd3-scale-chromatic';
 import { PruneContext } from './Components/Dashboard/Dashboard';
 import { AttributeMap, TMCNode } from './types';
 
@@ -184,15 +188,51 @@ export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
         {}
     );
 
-/* compute cell-with-a-feature average for a single node */
-export const getAverageFeatureCount = (node: HierarchyNode<TMCNode>) => {
-    const featureCount = sum(
-        Object.values(node.data.featureCount).map(v => v.quantity)
-    );
-    const cellCount = sum(
-        node.descendants().map(n => (n.data.items || []).length)
-    );
-    return featureCount / cellCount;
+/**
+ * If domain count is greater than count of colors in scale,
+ *  return a new scale with the extra colors evenly interpolated
+ *
+ * @param domain
+ * @returns string[]
+ */
+export const interpolateColorScale = (domain: string[]) => {
+    if (domain.length <= schemeSet1.length) {
+        return schemeSet1;
+    }
+
+    const step = (schemeSet1.length - 1) / domain.length;
+
+    return Array(domain.length)
+        .fill(null)
+        .map((_, i) => {
+            const base = Math.floor(i * step);
+            const next = base + 1;
+            const k = i * step - base;
+            const interpolated = interpolate(
+                schemeSet1[base],
+                schemeSet1[next]
+            )(k);
+            return color(interpolated)!.formatHex();
+        });
+};
+
+export const buildColorScale = (
+    colorScaleKey: 'featureCount' | 'labelCount',
+    nodes: HierarchyPointNode<TMCNode>
+) => {
+    const domain = [
+        ...new Set(
+            nodes
+                .descendants()
+                .flatMap(v =>
+                    Object.values(v.data[colorScaleKey]).flatMap(
+                        v => v.scaleKey
+                    )
+                )
+        ),
+    ].sort((a, b) => (a < b ? -1 : 1));
+
+    return scaleOrdinal(interpolateColorScale(domain)).domain(domain);
 };
 
 // taken from here: https://gist.github.com/keesey/e09d0af833476385b9ee13b6d26a2b84

@@ -26,7 +26,7 @@ import {
 //https://github.com/styled-components/styled-components/issues/1449
 import Button from '../../Button';
 import { NumberInput } from '../../Input';
-import { Label } from '../../Typography';
+import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import { Column, Row } from '../../Layout';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
@@ -44,25 +44,6 @@ const PrunerContainer = styled.div<{ expanded: boolean }>`
     }
     transition: 0.25s height cubic-bezier(.73,.32,.34,1.5);
     width: 320px;
-`;
-
-const RadioButton = styled.input.attrs({ type: 'radio' })`
-    margin: 0px;
-    margin-right: 3px;
-`;
-const RadioGroup = styled.div`
-    align-items: center;
-    display: flex;
-    margin-top: 5px;
-`;
-
-const RadioLabel = styled(Label)`
-    margin-left: 3px;
-    cursor: pointer;
-    font-size: 12px;
-    + input[type='radio'] {
-        margin-left: 3px;
-    }
 `;
 
 const SubmitButton = styled(Button)`
