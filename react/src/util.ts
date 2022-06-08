@@ -190,14 +190,14 @@ export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
 
 /**
  * If domain count is greater than count of colors in scale,
- *  return a new scale with the extra colors evenly interpolated
+ *  return a new scale with the extra colors evenly distributed
  *
  * @param domain
  * @returns string[]
  */
 export const interpolateColorScale = (domain: string[]) => {
     if (domain.length <= schemeSet1.length) {
-        return schemeSet1;
+        return schemeSet1.slice() as string[];
     }
 
     const step = (schemeSet1.length - 1) / domain.length;
@@ -232,7 +232,18 @@ export const buildColorScale = (
         ),
     ].sort((a, b) => (a < b ? -1 : 1));
 
-    return scaleOrdinal(interpolateColorScale(domain)).domain(domain);
+    const range = interpolateColorScale(domain);
+
+    /* intervene here to ensure that low-only scale is grey */
+
+    if (colorScaleKey === 'featureCount') {
+        const allLowIdx = domain.findIndex(item => !item.includes('high'));
+        if (allLowIdx) {
+            range[allLowIdx] = '#D3D3D3';
+        }
+    }
+
+    return scaleOrdinal(range).domain(domain);
 };
 
 // taken from here: https://gist.github.com/keesey/e09d0af833476385b9ee13b6d26a2b84
