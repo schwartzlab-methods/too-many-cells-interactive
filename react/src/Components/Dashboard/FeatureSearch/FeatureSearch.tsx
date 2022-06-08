@@ -11,7 +11,7 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import { quantile } from 'd3-array';
+import { quantile, sum } from 'd3-array';
 import { HierarchyPointNode } from 'd3-hierarchy';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
@@ -29,21 +29,7 @@ import { Column, Row } from '../../Layout';
 import Modal from '../../Modal';
 import { Caption, Title } from '../../Typography';
 import { CloseIcon } from '../../Icons';
-import { TMCNode } from '../../../types';
-
-const getLeafFeatureAverage = (
-    node: HierarchyPointNode<TMCNode>,
-    featureMap: Record<string, number>
-) => {
-    const cellCount = node.value!;
-
-    const totalFeatures = node.data.items!.reduce<number>(
-        (acc, curr) => (acc || 0) + featureMap[curr._barcode.unCell] || 0,
-        0
-    );
-
-    return totalFeatures / cellCount;
-};
+import { AttributeMap, TMCNode } from '../../../types';
 
 const FeatureSearch: React.FC = () => {
     const [features, setFeatures] = useState<string[]>([]);
@@ -63,7 +49,30 @@ const FeatureSearch: React.FC = () => {
     }, [setDisplayContext]);
 
     const removeFeature = (featureName: string) => {
-        visibleNodes?.each(n => delete n.data.featureCount[featureName]);
+        /* 
+            first, remove the feature from all cells, then simply recalculate 
+            this means breaking out a function that takes only the node(s) as its arg
+        */
+
+        /* visibleNodes?.each(
+            n =>
+                (n.data.featureCount = Object.fromEntries(
+                    getEntries(n.data.featureCount).filter(
+                        ([k, v]) =>
+                            !k.includes(`high-${feature}`) ||
+                            k.includes(`low-${feature}`)
+                    )
+                ))
+        ); */
+
+        /* so the generic steps are:
+            1. add counts to cells
+            2. calculate hilo
+                - this involves calculating medians if cutoffs are not provided
+                - (which they will be in the furture, but not now)
+        
+        */
+
         delete featureCounts[featureName];
         setFeatureCounts(featureCounts);
         updateColorScale(visibleNodes!);
@@ -89,49 +98,101 @@ const FeatureSearch: React.FC = () => {
             const featureMap: Record<string, number> = {};
             let count = 0;
 
+            //create map of features to avoid inner loops
             features.forEach(f => {
                 featureMap[f.id] = f.value;
                 count += f.value;
             });
 
-            const range = [] as number[];
-
+            //for GUI display
             setFeatureCounts({ ...featureCounts, [feature]: count });
 
+            //median of current feature
+            const featureMedian =
+                quantile(
+                    features.map(f => f.value),
+                    0.5
+                ) || 0;
+
+            //medians of extant features
+            const medianMap = visibleNodes
+                .leaves()
+                .flatMap(l =>
+                    (l.data.items || []).map(
+                        item => item._barcode._featureCounts
+                    )
+                )
+                .filter(item => item !== undefined)
+                .reduce<Record<string, number[]>>((acc, curr) => {
+                    for (const prop in curr) {
+                        if (!acc[prop]) {
+                            acc[prop] = [curr[prop]!];
+                        } else {
+                            acc[prop].push(curr[prop]!);
+                        }
+                    }
+                    return acc;
+                }, {});
+
+            //medians of all features
+            const medians = {
+                [feature]: featureMedian,
+                ...getEntries(medianMap).reduce<Record<string, number>>(
+                    (acc, [k, v]) => ({
+                        ...acc,
+                        [k]: quantile(v, 0.5) || 0,
+                    }),
+                    {}
+                ),
+            };
+
+            // map results to nodes
             visibleNodes.eachAfter(n => {
-                const quantity = n.data.items
-                    ? getLeafFeatureAverage(n, featureMap)
-                    : n.children!.reduce(
-                          (acc, curr) =>
-                              acc + curr.data.featureCount[feature].quantity,
-                          0
-                      ) /
-                      (n.descendants().length - 1);
+                // our featureCounts, for the scale to read
+                const hilo = {} as AttributeMap;
+                //if these are leaves, store and calculate base values
+                if (n.data.items) {
+                    n.data.items = n.data.items.map(cell => {
+                        //add the new feature to cell-level raw feature counts
+                        const fcounts = cell._barcode._featureCounts || {};
+                        fcounts[feature] =
+                            featureMap[cell._barcode.unCell] || 0;
+                        cell._barcode._featureCounts = fcounts;
+                        //calculate hi/lo key for scale
+                        const key = getEntries(
+                            cell._barcode._featureCounts
+                        ).reduce(
+                            (acc, [k, v]) =>
+                                `${acc ? acc + '-' : ''}${
+                                    v && v > medians[k] ? 'high' : 'low'
+                                }-${k}`,
+                            ''
+                        );
+                        //keep running total of hilos to avoid second loop
+                        hilo[key] = hilo[key]
+                            ? { ...hilo[key], quantity: hilo[key].quantity + 1 }
+                            : { scaleKey: key, quantity: 1 };
 
-                range.push(quantity);
-                n.data.featureCount = {
-                    ...n.data.featureCount,
-                    [feature]: {
-                        quantity,
-                        scaleKey: '',
-                    },
-                };
-            });
-
-            const median = quantile(range, 0.5);
-
-            visibleNodes.eachAfter(n => {
-                n.data.featureCount = {
-                    ...n.data.featureCount,
-                    [feature]: {
-                        quantity: n.data.featureCount[feature].quantity,
-                        scaleKey: `${feature}-${
-                            n.data.featureCount[feature].quantity > median!
-                                ? 'high'
-                                : 'low'
-                        }`,
-                    },
-                };
+                        return cell;
+                    });
+                } else {
+                    //if node is not a leaf, sum feature counts in leaves and divide by leaf count for
+                    //average expression per node
+                    n.leaves()
+                        .map(node => node.data.featureCount)
+                        .filter(Boolean)
+                        .forEach(count => {
+                            for (const featurekey in count) {
+                                if (!hilo[featurekey]) {
+                                    hilo[featurekey] = count[featurekey];
+                                } else {
+                                    hilo[featurekey].quantity +=
+                                        count[featurekey].quantity;
+                                }
+                            }
+                        });
+                }
+                n.data.featureCount = hilo;
             });
 
             updateColorScale(visibleNodes);

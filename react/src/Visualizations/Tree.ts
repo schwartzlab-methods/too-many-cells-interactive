@@ -186,6 +186,7 @@ const blendWeighted = (colors: BlendArg[]) => {
 const showToolTip = (data: TMCNode, e: MouseEvent) => {
     const cellCount = sum(Object.values(data.labelCount).map(v => v.quantity));
     const f = format('.1%');
+    const ff = format('.5');
 
     const container = select('.tooltip')
         .style('left', `${e.pageX + 15}px`)
@@ -237,7 +238,7 @@ const showToolTip = (data: TMCNode, e: MouseEvent) => {
             const strong = s.append('strong');
             strong.html(`${d[1].scaleKey}: `);
             const val = s.append('span');
-            val.html(formatDistance(d[1].quantity));
+            val.html(ff(d[1].quantity));
         });
 
     container.selectAll('hr').data([1]).join('hr');
@@ -848,15 +849,16 @@ class RadialTree {
                     .attr('stroke', 'none')
                     .transition()
                     .duration(that.transitionTime)
-                    .attr('d', d =>
-                        !outer.children
+                    .attr('d', d => {
+                        //there's a timing issue here that can lead to issues with tweening between scales
+                        return !outer.children
                             ? arc()({
                                   innerRadius: 0,
                                   outerRadius: pieScale(outer.value!),
                                   ...d.counts,
                               })
-                            : null
-                    )
+                            : null;
+                    })
 
                     .attr('fill', d => {
                         return colorScale(d.counts.data[1].scaleKey);

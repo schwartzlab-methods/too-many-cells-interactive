@@ -70,7 +70,7 @@ const ControlPanel: React.FC = () => {
                             type="radio"
                         />
                         <RadioLabel htmlFor="labelCount">
-                            Show Tissue Types
+                            Show Labels
                         </RadioLabel>
                     </RadioGroup>
                 )}

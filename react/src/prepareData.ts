@@ -22,9 +22,9 @@ export const buildTree = (node: TMCFlatNode[]) => {
 /**
  * Import TMC Rosetree, flatten, and pass to d3 hierarchy for rebuilding into
  *  tree that is compatible with D3 layout
- * Flattening tree as intermediate step is useful for filtering and rebuilding later on
+ * Note that flattening tree as intermediate step is useful for filtering and rebuilding later on
  *
- * @returns HierarchyNode<TMCNode> Root tree that can be passed to D3 layout
+ * @returns Promise<HierarchyNode<TMCNode>> Root tree that can be passed to D3 layout
  */
 export const getData = async () => {
     const labels = await (await fetch('/files/labels.csv')).text();

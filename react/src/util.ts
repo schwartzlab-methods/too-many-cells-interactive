@@ -38,7 +38,7 @@ export const carToTheta = (x: number, y: number) =>
 export const squared = (base: number) => Math.pow(base, 2);
 
 /**
- * Calculate the median absolute distance for a node and its children
+ * Calculate the median absolute distance
  * @param values array of numbers
  * @returns float
  */
