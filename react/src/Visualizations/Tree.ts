@@ -9,9 +9,10 @@ import {
     HierarchyPointLink,
     HierarchyPointNode,
 } from 'd3-hierarchy';
+import { interpolate } from 'd3-interpolate';
 import { ScaleLinear, scaleLinear, ScaleOrdinal } from 'd3-scale';
-import { BaseType, select, selectAll, Selection } from 'd3-selection';
-import { arc, pie, pointRadial } from 'd3-shape';
+import { BaseType, local, select, selectAll, Selection } from 'd3-selection';
+import { arc, pie, PieArcDatum, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
 import {
     carToRadius,
@@ -162,8 +163,18 @@ const arcPath = arc()({
     endAngle: Math.PI * 2,
 });
 
-const getPie = (data: [string, AttributeMapValue][]) =>
+const makePie = (data: [string, AttributeMapValue][]) =>
     pie<[string, AttributeMapValue]>().value(d => d[1].quantity || 1)(data);
+
+const getPie = (
+    d: PieArcDatum<[string, AttributeMapValue]>,
+    outerRadius: number
+) =>
+    arc()({
+        innerRadius: 0,
+        outerRadius,
+        ...d,
+    }) || '';
 
 type BlendArg = { color: string; weight: number };
 
@@ -602,6 +613,7 @@ class RadialTree {
 
                 update =>
                     update
+                        //issue is here too, in fact, this is real source?
                         .transition()
                         .delay(this.transitionTime)
                         .duration(this.transitionTime)
@@ -743,8 +755,10 @@ class RadialTree {
                         .delay(this.transitionTime)
                         .duration(this.transitionTime)
                         .attr('transform', d => {
-                            //seems there's a timing issue that prints errors to the console on certain updates that don't seem pertinent
-                            //need to investigate why
+                            //https://stackoverflow.com/questions/59356095/error-when-transitioning-an-arc-path-attribute-d-expected-arc-flag-0-or
+                            //seeing same at #605
+                            //note that this does call interpolate for pie.d, which is what the problem
+                            //so does putting a custom transition on the pie fix things?
                             return `translate(${pointRadial(d.x, d.y)})`;
                         })
                         .each(function (d) {
@@ -828,6 +842,8 @@ class RadialTree {
 
         /* pies */
 
+        const lastVals = local();
+
         this.nodes
             .selectAll('g.pie')
             .data(d => [d])
@@ -839,30 +855,31 @@ class RadialTree {
                     .selectAll('path')
                     .attr('class', 'pie')
                     .data(
-                        getPie(Object.entries(outer.data[colorScaleKey])).map(
-                            counts => ({
-                                counts,
-                            })
-                        ),
+                        makePie(Object.entries(outer.data[colorScaleKey])),
                         () => `${outer.data.nodeId}-${outer.children}`
                     )
                     .join('path')
                     .attr('stroke', 'none')
+                    .each(function (d) {
+                        /*
+                        keep track of previous values for custom tween, which must replace d3's due to performance issues
+                        https://stackoverflow.com/questions/59356095/error-when-transitioning-an-arc-path-attribute-d-expected-arc-flag-0-or 
+                        */
+                        lastVals.set(this as Element, d);
+                    })
                     .transition()
                     .duration(that.transitionTime)
-                    .attr('d', d => {
-                        //there's a timing issue here that can lead to issues with tweening between scales
-                        return !outer.children
-                            ? arc()({
-                                  innerRadius: 0,
-                                  outerRadius: pieScale(outer.value!),
-                                  ...d.counts,
-                              })
-                            : null;
+                    .attrTween('d', function (d) {
+                        const i = interpolate(lastVals.get(this as Element), d);
+                        lastVals.set(this as Element, i(0));
+                        return function (t) {
+                            return !outer.children
+                                ? getPie(i(t), pieScale(outer.value!))
+                                : '';
+                        };
                     })
-
                     .attr('fill', d => {
-                        return colorScale(d.counts.data[1].scaleKey);
+                        return colorScale(d.data[1].scaleKey);
                     });
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')
