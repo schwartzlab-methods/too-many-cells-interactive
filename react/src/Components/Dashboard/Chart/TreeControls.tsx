@@ -73,7 +73,7 @@ const downloadPng = (colorScale: ScaleOrdinal<string, string>) => {
             context.drawImage(image, 0, 0, w, h);
 
             canvas.toBlob(function (blob) {
-                saveAs(blob!, 'pretty image.png');
+                saveAs(blob!, 'my-tree.png');
             });
         };
     } finally {

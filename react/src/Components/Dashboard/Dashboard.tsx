@@ -9,6 +9,7 @@ import TreeControls from './Chart/TreeControls';
 import PruneHistory from './DisplayControls/PruneHistory';
 import ControlPanel from './DisplayControls/ControlPanel';
 import TreeComponent from './Chart/TreeComponent';
+import { Settings } from 'http2';
 
 const theme = {
     palette: {
@@ -29,6 +30,7 @@ const GlobalStyle = createGlobalStyle`
 export interface DisplayContext {
     branchSizeScale?: ScaleLinear<number, number>;
     distanceVisible?: boolean;
+    expressionThresholds?: Record<string, number>;
     colorScale?: ScaleOrdinal<string, string>;
     colorScaleKey?: 'featureCount' | 'labelCount';
     nodeIdsVisible?: boolean;

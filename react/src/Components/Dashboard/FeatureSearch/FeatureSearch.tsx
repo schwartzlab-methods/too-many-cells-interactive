@@ -11,7 +11,7 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import { quantile } from 'd3-array';
+import { max, min, quantile, sum } from 'd3-array';
 import { HierarchyPointNode } from 'd3-hierarchy';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
@@ -19,6 +19,7 @@ import useClickAway from '../../../hooks/useClickAway';
 import {
     buildColorScale,
     getEntries,
+    getMAD,
     getObjectIsEmpty,
     levenshtein,
 } from '../../../util';
@@ -27,43 +28,15 @@ import { TreeContext } from '../../Dashboard/Dashboard';
 import { Input } from '../../Input';
 import { Column, Row } from '../../Layout';
 import Modal from '../../Modal';
-import { Caption, Title } from '../../Typography';
+import { Caption, Label, Title } from '../../Typography';
 import { CloseIcon } from '../../Icons';
 import { AttributeMap, TMCNode } from '../../../types';
 
 /* assumes all cells are up to date with expression values  */
 const calculateExpressionValues = (
     nodes: HierarchyPointNode<TMCNode>,
-    _thresholds?: Record<string, number>
+    thresholds: Record<string, number>
 ) => {
-    let thresholds: Record<string, number>;
-    if (!_thresholds) {
-        //if user has not set thresholds, we'll default to median
-        const medianMap = nodes
-            .leaves()
-            .flatMap(l =>
-                (l.data.items || []).map(item => item._barcode._featureCounts)
-            )
-            .filter(item => item !== undefined)
-            .reduce<Record<string, number[]>>((acc, curr) => {
-                for (const prop in curr) {
-                    if (!acc[prop]) {
-                        acc[prop] = [curr[prop]!];
-                    } else {
-                        acc[prop].push(curr[prop]!);
-                    }
-                }
-                return acc;
-            }, {});
-        thresholds = getEntries(medianMap).reduce<Record<string, number>>(
-            (acc, [k, v]) => ({
-                ...acc,
-                [k]: quantile(v, 0.5) || 0,
-            }),
-            {}
-        );
-    } else thresholds = _thresholds;
-
     return nodes.eachAfter(n => {
         // our featureCounts, for the scale to read
         const hilo = {} as AttributeMap;
@@ -75,7 +48,7 @@ const calculateExpressionValues = (
                 const key = getEntries(cell._barcode._featureCounts).reduce(
                     (acc, [k, v]) =>
                         `${acc ? acc + '-' : ''}${
-                            v && v > thresholds[k] ? 'high' : 'low'
+                            v && v >= thresholds[k] ? 'high' : 'low'
                         }-${k}`,
                     ''
                 );
@@ -88,7 +61,7 @@ const calculateExpressionValues = (
             });
         } else {
             //if node is not a leaf, sum feature counts in leaves and divide by leaf count for
-            //average expression per node
+            //average expression per node in subtree
             n.leaves()
                 .map(node => node.data.featureCount)
                 .filter(Boolean)
@@ -108,14 +81,22 @@ const calculateExpressionValues = (
     });
 };
 
+interface FeatureCount {
+    mad: number;
+    max: number;
+    median: number;
+    min: number;
+    total: number;
+}
+
 const FeatureSearch: React.FC = () => {
     const [features, setFeatures] = useState<string[]>([]);
-    const [featureCounts, setFeatureCounts] = useState<Record<string, number>>(
-        {}
-    );
+    const [featureCounts, setFeatureCounts] = useState<
+        Record<string, FeatureCount>
+    >({});
     const [loading, setLoading] = useState(false);
     const {
-        displayContext: { visibleNodes },
+        displayContext: { expressionThresholds, visibleNodes },
         setDisplayContext,
     } = useContext(TreeContext);
 
@@ -125,11 +106,24 @@ const FeatureSearch: React.FC = () => {
         });
     }, [setDisplayContext]);
 
-    const removeFeature = (featureName: string) => {
-        /* 
-            first, remove the feature from all **leaves.cells**, then call calculateExpressionValues 
-        */
+    const updateExpressionThresholds = useCallback(
+        (feature: string, threshold: number) => {
+            const newExpressionThresholds = {
+                ...expressionThresholds!,
+                [feature]: threshold,
+            };
 
+            calculateExpressionValues(visibleNodes!, newExpressionThresholds);
+
+            setDisplayContext({
+                expressionThresholds: newExpressionThresholds,
+                visibleNodes,
+            });
+        },
+        [visibleNodes, expressionThresholds]
+    );
+
+    const removeFeature = (featureName: string) => {
         visibleNodes!.leaves().forEach(n =>
             n.data.items?.forEach(item => {
                 if (
@@ -141,23 +135,30 @@ const FeatureSearch: React.FC = () => {
             })
         );
 
-        const nodes = calculateExpressionValues(visibleNodes!);
+        const nodes = calculateExpressionValues(
+            visibleNodes!,
+            expressionThresholds!
+        );
         delete featureCounts[featureName];
+        delete expressionThresholds![featureName];
+        //todo: drop threshold for this item and update display context
         setFeatureCounts(featureCounts);
-        updateColorScale(nodes);
+        const { colorScale, colorScaleKey } = updateColorScale(nodes);
+        setDisplayContext({ colorScale, colorScaleKey, expressionThresholds });
     };
 
     const updateColorScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
         //if we removed last feature, reset to regular color scale
 
-        const colorScaleKey = Object.values(visibleNodes.data.featureCount)
-            .length
-            ? 'featureCount'
-            : 'labelCount';
+        const colorScaleKey = (
+            Object.values(visibleNodes.data.featureCount).length
+                ? 'featureCount'
+                : 'labelCount'
+        ) as 'featureCount' | 'labelCount';
 
         const colorScale = buildColorScale(colorScaleKey, visibleNodes);
 
-        setDisplayContext({ visibleNodes, colorScale, colorScaleKey });
+        return { colorScale, colorScaleKey };
     };
 
     const getFeature = async (feature: string) => {
@@ -165,18 +166,12 @@ const FeatureSearch: React.FC = () => {
             setLoading(true);
             const features = await fetchFeatures(feature);
             const featureMap: Record<string, number> = {};
-            let count = 0;
+            const range: number[] = [];
 
-            //create map of features to avoid inner loops
             features.forEach(f => {
                 featureMap[f.id] = f.value;
-                count += f.value;
             });
 
-            //for GUI display
-            setFeatureCounts({ ...featureCounts, [feature]: count });
-
-            // map results to items
             visibleNodes.leaves().forEach(n => {
                 if (n.data.items) {
                     n.data.items = n.data.items.map(cell => {
@@ -185,14 +180,45 @@ const FeatureSearch: React.FC = () => {
                         fcounts[feature] =
                             featureMap[cell._barcode.unCell] || 0;
                         cell._barcode._featureCounts = fcounts;
+                        range.push(fcounts[feature] as number);
                         return cell;
                     });
                 }
             });
 
-            const withExpression = calculateExpressionValues(visibleNodes);
+            const median = quantile(range, 0.5)!;
 
-            updateColorScale(withExpression);
+            //for local GUI display
+            setFeatureCounts({
+                ...featureCounts,
+                [feature]: {
+                    mad: getMAD(range) || 0,
+                    max: max(range) || 0,
+                    min: min(range) || 0,
+                    median,
+                    total: sum(range) || 0,
+                },
+            });
+
+            const newExpressionThresholds = {
+                ...expressionThresholds,
+                [feature]: median,
+            };
+
+            const withExpression = calculateExpressionValues(
+                visibleNodes,
+                newExpressionThresholds
+            );
+
+            //todo: update thresholds with new median
+            const { colorScale, colorScaleKey } =
+                updateColorScale(withExpression);
+
+            setDisplayContext({
+                colorScale,
+                colorScaleKey,
+                expressionThresholds: newExpressionThresholds,
+            });
 
             setLoading(false);
         }
@@ -216,20 +242,65 @@ const FeatureSearch: React.FC = () => {
 
             {!!visibleNodes &&
                 !getObjectIsEmpty(visibleNodes.data.featureCount) && (
-                    <FeatureListContainer>
-                        <FeatureListLabel>Selected Features</FeatureListLabel>
-                        <FeatureList>
-                            {getEntries(featureCounts).map(([k, v]) => (
-                                <FeaturePill
-                                    count={v.toLocaleString()}
-                                    key={k}
-                                    name={k}
-                                    removeFeature={removeFeature}
-                                />
+                    <>
+                        <FeatureListContainer>
+                            <FeatureListLabel>
+                                Selected Features
+                            </FeatureListLabel>
+                            <FeatureList>
+                                {getEntries(featureCounts).map(([k, v]) => (
+                                    <FeaturePill
+                                        count={v.total.toLocaleString()}
+                                        key={k}
+                                        name={k}
+                                        removeFeature={removeFeature}
+                                    />
+                                ))}
+                            </FeatureList>
+                        </FeatureListContainer>
+                        <Column>
+                            {getEntries(expressionThresholds).map(([k, v]) => (
+                                <Column key={k}>
+                                    <Row margin="0px">Feature Name: {k}</Row>
+                                    <Row margin="0px">
+                                        High/Low Threshold:{' '}
+                                        {expressionThresholds![k]}
+                                    </Row>
+                                    <Row margin="0px">
+                                        Threshold measure:{' '}
+                                        {'Count of cells with feature in node'}
+                                    </Row>
+                                    <Row margin="0px">
+                                        Median Count per node:{' '}
+                                        {featureCounts[k].median}
+                                    </Row>
+                                    <Row margin="0px">
+                                        MAD:
+                                        {featureCounts[k].mad}
+                                    </Row>
+                                    <Row margin="0px">
+                                        <span>{featureCounts[k].min}</span>
+                                        <input
+                                            type="range"
+                                            max={featureCounts[k].max}
+                                            min={featureCounts[k].min}
+                                            step={1}
+                                            value={v}
+                                            onChange={v =>
+                                                updateExpressionThresholds(
+                                                    k,
+                                                    +v.currentTarget.value
+                                                )
+                                            }
+                                        />
+                                        <span>{featureCounts[k].max}</span>
+                                    </Row>
+                                </Column>
                             ))}
-                        </FeatureList>
-                    </FeatureListContainer>
+                        </Column>
+                    </>
                 )}
+
             <Modal open={loading} message="Loading..." />
         </Column>
     );

@@ -103,6 +103,7 @@ const TreeComponent: React.FC = () => {
                 colorScale: buildColorScale('labelCount', visibleNodes),
                 colorScaleKey: 'labelCount',
                 distanceVisible: false,
+                expressionThresholds: {},
                 nodeCountsVisible: false,
                 nodeIdsVisible: false,
                 originalTree,

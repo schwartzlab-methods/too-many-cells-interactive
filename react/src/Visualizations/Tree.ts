@@ -742,10 +742,11 @@ class RadialTree {
                         .transition()
                         .delay(this.transitionTime)
                         .duration(this.transitionTime)
-                        .attr(
-                            'transform',
-                            d => `translate(${pointRadial(d.x, d.y)})`
-                        )
+                        .attr('transform', d => {
+                            //seems there's a timing issue that prints errors to the console on certain updates that don't seem pertinent
+                            //need to investigate why
+                            return `translate(${pointRadial(d.x, d.y)})`;
+                        })
                         .each(function (d) {
                             if (!d.children) {
                                 select<
