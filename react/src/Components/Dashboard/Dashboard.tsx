@@ -9,7 +9,6 @@ import TreeControls from './Chart/TreeControls';
 import PruneHistory from './DisplayControls/PruneHistory';
 import ControlPanel from './DisplayControls/ControlPanel';
 import TreeComponent from './Chart/TreeComponent';
-import { Settings } from 'http2';
 
 const theme = {
     palette: {

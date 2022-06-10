@@ -16,11 +16,13 @@ export const Input = styled.input`
 
 interface NumberInputProps {
     onChange: (arg: string | number) => void;
+    style?: React.CSSProperties;
     value: string | number;
 }
 
 export const NumberInput: React.FC<NumberInputProps> = ({
     onChange,
+    style,
     value,
 }) => {
     /* user can type a string and we'll convert it to a float as needed */
@@ -37,6 +39,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
     return (
         <Input
             onChange={e => wrappedOnChange(e.currentTarget.value)}
+            style={style}
             value={value}
         />
     );

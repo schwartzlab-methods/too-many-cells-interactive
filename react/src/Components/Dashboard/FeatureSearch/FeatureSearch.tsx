@@ -11,7 +11,7 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import { max, min, quantile, sum } from 'd3-array';
+import { max, min, quantile, range, sum } from 'd3-array';
 import { HierarchyPointNode } from 'd3-hierarchy';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
@@ -25,20 +25,28 @@ import {
 } from '../../../util';
 import Button from '../../Button';
 import { TreeContext } from '../../Dashboard/Dashboard';
-import { Input } from '../../Input';
+import { Input, NumberInput } from '../../Input';
 import { Column, Row } from '../../Layout';
 import Modal from '../../Modal';
-import { Caption, Label, Title } from '../../Typography';
+import { Caption, Title } from '../../Typography';
 import { CloseIcon } from '../../Icons';
 import { AttributeMap, TMCNode } from '../../../types';
+import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
+import Checkbox from '../../Checkbox';
 
-/* assumes all cells are up to date with expression values  */
-const calculateExpressionValues = (
+/**
+ *
+ * @param nodes
+ * @param thresholds
+ * @returns TMCNode: Note that the tree is mutated in place
+ */
+
+const updatefeatureStats = (
     nodes: HierarchyPointNode<TMCNode>,
     thresholds: Record<string, number>
-) => {
-    return nodes.eachAfter(n => {
-        // our featureCounts, for the scale to read
+) =>
+    nodes.eachAfter(n => {
+        // our featureStats, for the scale to read
         const hilo = {} as AttributeMap;
 
         //if these are leaves, store and calculate base values
@@ -79,20 +87,21 @@ const calculateExpressionValues = (
         n.data.featureCount = hilo;
         return n;
     });
-};
 
-interface FeatureCount {
+interface FeatureStat {
     mad: number;
+    madWithZeroes: number;
     max: number;
     median: number;
+    medianWithZeroes: number;
     min: number;
     total: number;
 }
 
 const FeatureSearch: React.FC = () => {
     const [features, setFeatures] = useState<string[]>([]);
-    const [featureCounts, setFeatureCounts] = useState<
-        Record<string, FeatureCount>
+    const [featureStats, setfeatureStats] = useState<
+        Record<string, FeatureStat>
     >({});
     const [loading, setLoading] = useState(false);
     const {
@@ -113,7 +122,7 @@ const FeatureSearch: React.FC = () => {
                 [feature]: threshold,
             };
 
-            calculateExpressionValues(visibleNodes!, newExpressionThresholds);
+            updatefeatureStats(visibleNodes!, newExpressionThresholds);
 
             setDisplayContext({
                 expressionThresholds: newExpressionThresholds,
@@ -135,14 +144,11 @@ const FeatureSearch: React.FC = () => {
             })
         );
 
-        const nodes = calculateExpressionValues(
-            visibleNodes!,
-            expressionThresholds!
-        );
-        delete featureCounts[featureName];
+        const nodes = updatefeatureStats(visibleNodes!, expressionThresholds!);
+        delete featureStats[featureName];
         delete expressionThresholds![featureName];
         //todo: drop threshold for this item and update display context
-        setFeatureCounts(featureCounts);
+        setfeatureStats(featureStats);
         const { colorScale, colorScaleKey } = updateColorScale(nodes);
         setDisplayContext({ colorScale, colorScaleKey, expressionThresholds });
     };
@@ -186,31 +192,33 @@ const FeatureSearch: React.FC = () => {
                 }
             });
 
-            const median = quantile(range, 0.5)!;
+            const median = quantile(range.filter(Boolean), 0.5);
+            const medianWithZeroes = quantile(range, 0.5);
 
             //for local GUI display
-            setFeatureCounts({
-                ...featureCounts,
+            setfeatureStats({
+                ...featureStats,
                 [feature]: {
-                    mad: getMAD(range) || 0,
+                    mad: getMAD(range.filter(Boolean)) || 0, //remove 0s
+                    madWithZeroes: getMAD(range) || 0, //remove 0s
                     max: max(range) || 0,
                     min: min(range) || 0,
-                    median,
+                    median: median || 0,
+                    medianWithZeroes: medianWithZeroes || 0,
                     total: sum(range) || 0,
                 },
             });
 
             const newExpressionThresholds = {
                 ...expressionThresholds,
-                [feature]: median,
+                [feature]: median || 0,
             };
 
-            const withExpression = calculateExpressionValues(
+            const withExpression = updatefeatureStats(
                 visibleNodes,
                 newExpressionThresholds
             );
 
-            //todo: update thresholds with new median
             const { colorScale, colorScaleKey } =
                 updateColorScale(withExpression);
 
@@ -248,56 +256,23 @@ const FeatureSearch: React.FC = () => {
                                 Selected Features
                             </FeatureListLabel>
                             <FeatureList>
-                                {getEntries(featureCounts).map(([k, v]) => (
-                                    <FeaturePill
-                                        count={v.total.toLocaleString()}
-                                        key={k}
-                                        name={k}
-                                        removeFeature={removeFeature}
-                                    />
-                                ))}
+                                {getEntries(expressionThresholds).map(
+                                    ([k, v]) => (
+                                        <FeatureSlider
+                                            key={k}
+                                            featureName={k}
+                                            featureStats={featureStats[k]}
+                                            highLowThreshold={v}
+                                            removeFeature={removeFeature}
+                                            updateThreshold={updateExpressionThresholds.bind(
+                                                null,
+                                                k
+                                            )}
+                                        />
+                                    )
+                                )}
                             </FeatureList>
                         </FeatureListContainer>
-                        <Column>
-                            {getEntries(expressionThresholds).map(([k, v]) => (
-                                <Column key={k}>
-                                    <Row margin="0px">Feature Name: {k}</Row>
-                                    <Row margin="0px">
-                                        High/Low Threshold:{' '}
-                                        {expressionThresholds![k]}
-                                    </Row>
-                                    <Row margin="0px">
-                                        Threshold measure:{' '}
-                                        {'Count of cells with feature in node'}
-                                    </Row>
-                                    <Row margin="0px">
-                                        Median Count per node:{' '}
-                                        {featureCounts[k].median}
-                                    </Row>
-                                    <Row margin="0px">
-                                        MAD:
-                                        {featureCounts[k].mad}
-                                    </Row>
-                                    <Row margin="0px">
-                                        <span>{featureCounts[k].min}</span>
-                                        <input
-                                            type="range"
-                                            max={featureCounts[k].max}
-                                            min={featureCounts[k].min}
-                                            step={1}
-                                            value={v}
-                                            onChange={v =>
-                                                updateExpressionThresholds(
-                                                    k,
-                                                    +v.currentTarget.value
-                                                )
-                                            }
-                                        />
-                                        <span>{featureCounts[k].max}</span>
-                                    </Row>
-                                </Column>
-                            ))}
-                        </Column>
                     </>
                 )}
 
@@ -364,6 +339,136 @@ const FeaturePillContainer = styled.span`
     margin: 3px;
     padding: 4px;
 `;
+
+interface FeatureSliderProps {
+    featureName: string;
+    featureStats: FeatureStat;
+    highLowThreshold: number;
+    removeFeature: (featureName: string) => void;
+    updateThreshold: (newThreshold: number) => void;
+}
+
+const FeatureSlider: React.FC<FeatureSliderProps> = ({
+    featureName,
+    featureStats,
+    highLowThreshold,
+    removeFeature,
+    updateThreshold,
+}) => {
+    const [rangeType, setRangeType] = useState<'mad' | 'raw'>('raw');
+    const [includeZeroes, setIncludeZeroes] = useState(false);
+
+    const {
+        mad: _mad,
+        madWithZeroes,
+        max,
+        median: _median,
+        medianWithZeroes,
+    } = featureStats;
+
+    const mad = useMemo(() => {
+        return includeZeroes ? madWithZeroes : _mad;
+    }, [includeZeroes, madWithZeroes, _mad]);
+
+    const median = useMemo(() => {
+        return includeZeroes ? medianWithZeroes : _median;
+    }, [includeZeroes, madWithZeroes, _median]);
+
+    const madRange = useMemo(() => {
+        if (mad !== undefined) {
+            return range(median, max, mad);
+        } else {
+            return [];
+        }
+    }, [featureStats, includeZeroes]);
+
+    return (
+        <Column>
+            <Row margin="2px">
+                <FeaturePill
+                    count={featureStats.total.toString()}
+                    name={featureName}
+                    removeFeature={removeFeature}
+                />
+            </Row>
+            <Row margin="2px">High/Low Threshold: {highLowThreshold}</Row>
+            {rangeType === 'mad' && (
+                <Row alignItems="center" margin="2px">
+                    MAD: {mad}
+                    {rangeType === 'mad' && (
+                        <Checkbox
+                            checked={includeZeroes}
+                            label="Include Zeroes"
+                            onClick={() => setIncludeZeroes(!includeZeroes)}
+                            style={{ marginLeft: '5px' }}
+                        />
+                    )}
+                </Row>
+            )}
+            <Row alignItems="center" margin="2px">
+                <RadioGroup>
+                    <RadioButton
+                        checked={rangeType === 'raw'}
+                        id="rawRange"
+                        name="rawRange"
+                        onChange={() => setRangeType('raw')}
+                        type="radio"
+                    />
+                    <RadioLabel htmlFor="rawRange">Raw</RadioLabel>
+                    <RadioButton
+                        checked={rangeType === 'mad'}
+                        id="madRange"
+                        name="madRange"
+                        onChange={() => setRangeType('mad')}
+                        type="radio"
+                    />
+                    <RadioLabel htmlFor="madRange">MAD</RadioLabel>
+                </RadioGroup>
+            </Row>
+            <Row alignItems="center" margin="2px">
+                <span>{rangeType === 'raw' ? featureStats.min : 0}</span>
+                <input
+                    type="range"
+                    max={
+                        rangeType === 'raw'
+                            ? featureStats.max
+                            : madRange?.length
+                    }
+                    min={rangeType === 'raw' ? featureStats.min : 0}
+                    step={1}
+                    value={
+                        rangeType === 'raw'
+                            ? highLowThreshold
+                            : highLowThreshold / mad - median
+                    }
+                    onChange={v =>
+                        updateThreshold(
+                            rangeType === 'raw'
+                                ? +v.currentTarget.value
+                                : median + +v.currentTarget.value * mad
+                        )
+                    }
+                />
+                <span>
+                    {rangeType === 'raw' ? featureStats.max : madRange?.length}
+                </span>
+                <NumberInput
+                    onChange={v =>
+                        updateThreshold(
+                            rangeType === 'raw' ? +v : median + +v * mad
+                        )
+                    }
+                    style={{ marginLeft: '3px' }}
+                    value={
+                        rangeType === 'raw'
+                            ? highLowThreshold
+                            : (highLowThreshold - median) / mad
+                    }
+                />
+            </Row>
+        </Column>
+    );
+};
 
 interface AutocompleteProps {
     options: string[];

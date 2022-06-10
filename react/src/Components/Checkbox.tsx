@@ -10,8 +10,8 @@ const CheckboxContainer = styled.div`
     align-items: center;
     cursor: pointer;
     display: flex;
-    + {CheckboxContainer} {
-        margin-bottom: 10px;
+    & + & {
+        margin-top: 10px;
     }
 `;
 
@@ -19,11 +19,17 @@ interface CheckboxProps {
     checked: boolean;
     label: string;
     onClick: () => void;
+    style?: React.CSSProperties;
 }
 
-const Checkbox: React.FC<CheckboxProps> = ({ checked, label, onClick }) => {
+const Checkbox: React.FC<CheckboxProps> = ({
+    checked,
+    label,
+    onClick,
+    style,
+}) => {
     return (
-        <CheckboxContainer onClick={onClick}>
+        <CheckboxContainer style={style} onClick={onClick}>
             {checked ? (
                 <CheckboxCheckedIcon fill="none" />
             ) : (
