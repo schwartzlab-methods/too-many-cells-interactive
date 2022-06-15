@@ -694,16 +694,19 @@ class RadialTree {
 
         const {
             branchSizeScale,
-            distanceVisible,
             colorScale,
             colorScaleKey,
-            nodeCountsVisible,
-            nodeIdsVisible,
             pieScale,
-            piesVisible,
-            strokeVisible,
             visibleNodes,
         } = this.ContextManager.displayContext;
+
+        const {
+            distanceVisible,
+            nodeCountsVisible,
+            nodeIdsVisible,
+            piesVisible,
+            strokeVisible,
+        } = this.ContextManager.toggleableFeatures;
 
         const textSizeScale = scaleLinear([10, 40]).domain(
             extent(visibleNodes.leaves().map(d => d.value!)) as [number, number]

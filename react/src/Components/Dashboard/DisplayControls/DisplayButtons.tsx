@@ -1,5 +1,11 @@
 import React, { useContext, useMemo } from 'react';
 import styled from 'styled-components';
+import { useAppDispatch, useAppSelector } from '../../../hooks';
+import {
+    selectToggleableDisplayElement,
+    ToggleableDisplayElements,
+    toggleDisplayProperty,
+} from '../../../redux/displayConfigSlice';
 import Checkbox from '../../Checkbox';
 import { DisplayContext, TreeContext } from '../Dashboard';
 
@@ -25,7 +31,10 @@ interface ToggleCheckboxProps {
     label: string;
 }
 
-const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({ propName, label }) => {
+const ToggleCheckboxOld: React.FC<ToggleCheckboxProps> = ({
+    propName,
+    label,
+}) => {
     const { displayContext, setDisplayContext } = useContext(TreeContext);
     const checked = useMemo(() => !!displayContext[propName], [displayContext]);
 
@@ -38,6 +47,27 @@ const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({ propName, label }) => {
         <Checkbox
             checked={checked}
             onClick={() => toggleTreeProp(propName)}
+            label={label}
+        />
+    );
+};
+
+interface ToggleCheckboxReduxProps {
+    propName: keyof ToggleableDisplayElements;
+    label: string;
+}
+
+const ToggleCheckbox: React.FC<ToggleCheckboxReduxProps> = ({
+    propName,
+    label,
+}) => {
+    const isVisible = useAppSelector(selectToggleableDisplayElement(propName));
+    const dipatch = useAppDispatch();
+
+    return (
+        <Checkbox
+            checked={isVisible}
+            onClick={dipatch.bind(null, toggleDisplayProperty(propName))}
             label={label}
         />
     );

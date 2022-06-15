@@ -32,6 +32,11 @@ import {
     ClickPruneType,
     DisplayContext,
 } from '../Dashboard';
+import {
+    selectToggleableDisplayElements,
+    ToggleableDisplayElements,
+} from '../../../redux/displayConfigSlice';
+import { useAppSelector } from '../../../hooks';
 
 /**
  *  Class for passing context between React and D3.
@@ -45,15 +50,18 @@ export class ContextManager {
     displayContext!: Readonly<Required<DisplayContext>>;
     setContext!: (ctx: Partial<TreeContext>) => void;
     setPruneContext!: (ctx: Partial<PruneContext>) => void;
+    toggleableFeatures!: ToggleableDisplayElements;
     constructor(
         context: TreeContext,
+        toggleableFeatures: ToggleableDisplayElements,
         setContext: (ctx: Partial<BaseTreeContext>) => void
     ) {
-        this.refresh(context, setContext);
+        this.refresh(context, toggleableFeatures, setContext);
     }
 
     refresh = (
         context: TreeContext,
+        toggleableFeatures: ToggleableDisplayElements,
         setContext: (ctx: Partial<BaseTreeContext>) => void
     ) => {
         this.context = context;
@@ -63,6 +71,7 @@ export class ContextManager {
             .displayContext as Required<DisplayContext>;
         this.setContext = setContext;
         this.setPruneContext = this.context.setPruneContext;
+        this.toggleableFeatures = toggleableFeatures;
     };
 }
 
@@ -78,6 +87,8 @@ const TreeComponent: React.FC = () => {
         setDisplayContext,
         setTreeContext,
     } = treeContext;
+
+    const toggleableFeatures = useAppSelector(selectToggleableDisplayElements);
 
     const previousContext = useRef<Readonly<TreeContext>>(treeContext);
 
@@ -127,7 +138,11 @@ const TreeComponent: React.FC = () => {
     /* intial render */
     useLayoutEffect(() => {
         if (treeContext.displayContext.rootPositionedTree && !Tree) {
-            const Manager = new ContextManager(treeContext, setTreeContext);
+            const Manager = new ContextManager(
+                treeContext,
+                toggleableFeatures,
+                setTreeContext
+            );
             const _Tree = new TreeViz(
                 Manager,
                 '.legend',
@@ -141,16 +156,20 @@ const TreeComponent: React.FC = () => {
     useEffect(() => {
         /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
         if (Tree) {
-            Tree.ContextManager.refresh(treeContext, setTreeContext);
+            Tree.ContextManager.refresh(
+                treeContext,
+                toggleableFeatures,
+                setTreeContext
+            );
         }
-    }, [treeContext, setTreeContext]);
+    }, [treeContext, toggleableFeatures, setTreeContext]);
 
     /* React executes effects in order: this must follow previous so that tree has correct context when rendering */
     useEffect(() => {
         if (Tree) {
             Tree.render();
         }
-    }, [displayContext]);
+    }, [displayContext, toggleableFeatures]);
 
     /* 
         This effect 'watches' prune context, creates new pruned tree, and updates display context. 

@@ -10,7 +10,9 @@
     "test": "jest"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^1.8.2",
     "@types/file-saver": "^2.0.5",
+    "@types/react-redux": "^7.1.24",
     "d3-array": "^3.1.1",
     "d3-axis": "^3.0.0",
     "d3-brush": "^3.0.0",
@@ -31,6 +33,8 @@
     "react": "^17.0.2",
     "react-colorful": "^5.5.1",
     "react-dom": "^17.0.2",
+    "react-redux": "^8.0.2",
+    "redux": "^4.2.0",
     "reflect-metadata": "^0.1.13",
     "styled-components": "^5.3.5"
   },
