@@ -249,7 +249,8 @@ const showToolTip = (data: TMCNode, e: MouseEvent) => {
             const strong = s.append('strong');
             strong.html(`${d[1].scaleKey}: `);
             const val = s.append('span');
-            val.html(ff(d[1].quantity));
+            //val.html(ff(d[1].quantity));
+            val.html(d[1].quantity.toLocaleString());
         });
 
     container.selectAll('hr').data([1]).join('hr');

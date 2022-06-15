@@ -68,21 +68,16 @@ const updatefeatureStats = (
                 }
             });
         } else {
-            //if node is not a leaf, sum feature counts in leaves and divide by leaf count for
-            //average expression per node in subtree
-            n.leaves()
-                .map(node => node.data.featureCount)
-                .filter(Boolean)
-                .forEach(count => {
-                    for (const featurekey in count) {
-                        if (!hilo[featurekey]) {
-                            hilo[featurekey] = count[featurekey];
-                        } else {
-                            hilo[featurekey].quantity +=
-                                count[featurekey].quantity;
-                        }
+            //if node is not a leaf, just add both children
+            n.children!.map(node => node.data.featureCount).forEach(count => {
+                for (const featurekey in count) {
+                    if (!hilo[featurekey]) {
+                        hilo[featurekey] = count[featurekey];
+                    } else {
+                        hilo[featurekey].quantity += count[featurekey].quantity;
                     }
-                });
+                }
+            });
         }
         n.data.featureCount = hilo;
         return n;
