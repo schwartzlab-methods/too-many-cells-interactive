@@ -1,6 +1,5 @@
 import React, { createContext, useCallback, useState } from 'react';
 import { HierarchyPointNode } from 'd3-hierarchy';
-import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
 import { createGlobalStyle, ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
 import { Column, Row } from '../Layout';
@@ -27,18 +26,8 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 export interface DisplayContext {
-    branchSizeScale?: ScaleLinear<number, number>;
-    distanceVisible?: boolean;
-    expressionThresholds?: Record<string, number>;
-    colorScale?: ScaleOrdinal<string, string>;
-    colorScaleKey?: 'featureCount' | 'labelCount';
-    nodeIdsVisible?: boolean;
-    nodeCountsVisible?: boolean;
     originalTree?: Readonly<HierarchyPointNode<TMCNode>>;
-    pieScale?: ScaleLinear<number, number>;
-    piesVisible?: boolean;
     rootPositionedTree?: Readonly<HierarchyPointNode<TMCNode>>;
-    strokeVisible?: boolean;
     visibleNodes?: Readonly<HierarchyPointNode<TMCNode>>;
     w?: number;
 }

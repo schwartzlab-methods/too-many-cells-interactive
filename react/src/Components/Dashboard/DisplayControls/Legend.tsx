@@ -1,37 +1,42 @@
-import React, { useContext, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
 import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
-import { TreeContext } from '../Dashboard';
 import { Column } from '../../Layout';
 import { Input } from '../../Input';
+import { useAppDispatch, useColorScale } from '../../../hooks';
+import { updateColorScale } from '../../../redux/displayConfigSlice';
 
 const Legend: React.FC = () => {
-    const { displayContext, setDisplayContext } = useContext(TreeContext);
+    const colorScale = useColorScale();
+    const dispatch = useAppDispatch();
 
     return (
         <Column>
-            {displayContext.colorScale &&
-                displayContext.colorScale
+            {colorScale &&
+                colorScale
                     .domain()
                     .sort((a, b) => (a < b ? -1 : 1))
                     .map(d => (
                         <LegendItem
                             key={d}
                             label={d}
-                            color={displayContext.colorScale!(d)}
+                            color={colorScale!(d)}
                             updateColor={(color: string) => {
-                                const currColor = displayContext.colorScale!(d);
-                                const newRange = displayContext
-                                    .colorScale!.range()
+                                const currColor = colorScale!(d);
+                                const range = colorScale!
+                                    .range()
                                     .map(r => (currColor === r ? color : r));
 
-                                displayContext.colorScale?.range(newRange);
+                                colorScale?.range(range);
 
-                                setDisplayContext({
-                                    colorScale: displayContext.colorScale,
-                                });
+                                dispatch(
+                                    updateColorScale({
+                                        range,
+                                        domain: colorScale.domain(),
+                                    })
+                                );
                             }}
                         />
                     ))}

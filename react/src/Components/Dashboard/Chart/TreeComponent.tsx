@@ -2,17 +2,18 @@ import React, {
     useContext,
     useEffect,
     useLayoutEffect,
+    useMemo,
     useRef,
     useState,
 } from 'react';
 import { extent } from 'd3-array';
 import { HierarchyNode } from 'd3-hierarchy';
-import { scaleLinear } from 'd3-scale';
+import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
 import { TMCNode } from '../../../types';
 import { Tree as TreeViz } from '../../../Visualizations';
 import { getData } from '../../../prepareData';
 import {
-    buildColorScale,
+    calculateColorScaleRangeAndDomain,
     calculateTreeLayout,
     collapseNode,
     pruneContextsAreEqual,
@@ -33,10 +34,23 @@ import {
     DisplayContext,
 } from '../Dashboard';
 import {
+    Scales,
+    selectScales,
     selectToggleableDisplayElements,
     ToggleableDisplayElements,
+    updateColorScale,
+    updateLinearScale,
 } from '../../../redux/displayConfigSlice';
-import { useAppSelector } from '../../../hooks';
+import { useAppDispatch, useAppSelector } from '../../../hooks';
+import { useColorScale, useLinearScale } from '../../../hooks/useScale';
+
+interface TreeScales {
+    branchSizeScale: ScaleLinear<number, number>;
+    colorScale: ScaleOrdinal<string, string>;
+    pieScale: ScaleLinear<number, number>;
+}
+
+type ColorScaleKey = Scales['colorScale']['variant'];
 
 /**
  *  Class for passing context between React and D3.
@@ -46,29 +60,43 @@ import { useAppSelector } from '../../../hooks';
 export class ContextManager {
     activePruneStep!: PruneContext;
     private context!: TreeContext;
-    pruneContext!: Readonly<PruneContext[]>;
+    colorScaleKey!: ColorScaleKey;
     displayContext!: Readonly<Required<DisplayContext>>;
+    pruneContext!: Readonly<PruneContext[]>;
+    scales!: TreeScales;
     setContext!: (ctx: Partial<TreeContext>) => void;
     setPruneContext!: (ctx: Partial<PruneContext>) => void;
     toggleableFeatures!: ToggleableDisplayElements;
     constructor(
+        colorScaleKey: ColorScaleKey,
         context: TreeContext,
+        scales: TreeScales,
         toggleableFeatures: ToggleableDisplayElements,
         setContext: (ctx: Partial<BaseTreeContext>) => void
     ) {
-        this.refresh(context, toggleableFeatures, setContext);
+        this.refresh(
+            colorScaleKey,
+            context,
+            scales,
+            toggleableFeatures,
+            setContext
+        );
     }
 
     refresh = (
+        colorScaleKey: ColorScaleKey,
         context: TreeContext,
+        scales: TreeScales,
         toggleableFeatures: ToggleableDisplayElements,
         setContext: (ctx: Partial<BaseTreeContext>) => void
     ) => {
         this.context = context;
         this.pruneContext = this.context.pruneContext;
+        this.colorScaleKey = colorScaleKey;
         this.activePruneStep = this.pruneContext[this.context.activePrune];
         this.displayContext = this.context
             .displayContext as Required<DisplayContext>;
+        this.scales = scales;
         this.setContext = setContext;
         this.setPruneContext = this.context.setPruneContext;
         this.toggleableFeatures = toggleableFeatures;
@@ -77,6 +105,22 @@ export class ContextManager {
 
 const TreeComponent: React.FC = () => {
     const [Tree, setTree] = useState<TreeViz>();
+
+    const branchSizeScale = useLinearScale('branchSizeScale');
+    const colorScale = useColorScale();
+    const pieScale = useLinearScale('pieScale');
+
+    const { variant: colorScaleKey } =
+        useAppSelector(selectScales)['colorScale'];
+
+    const treeScales = useMemo(
+        () => ({
+            branchSizeScale,
+            colorScale,
+            pieScale,
+        }),
+        [branchSizeScale, colorScale, pieScale]
+    );
 
     const treeContext = useContext(TreeContext);
 
@@ -89,10 +133,11 @@ const TreeComponent: React.FC = () => {
     } = treeContext;
 
     const toggleableFeatures = useAppSelector(selectToggleableDisplayElements);
+    const dispatch = useAppDispatch();
 
     const previousContext = useRef<Readonly<TreeContext>>(treeContext);
 
-    /* Initialize tree context on first render  */
+    /* Initialize tree context on first load  */
     useEffect(() => {
         const cb = async () => {
             const data = await getData();
@@ -101,33 +146,41 @@ const TreeComponent: React.FC = () => {
             const originalTree = calculateTreeLayout(data, w);
             const visibleNodes = calculateTreeLayout(data, w);
 
-            setDisplayContext({
-                branchSizeScale: scaleLinear([0.01, 20])
-                    .domain(
-                        extent(
+            dispatch(
+                updateLinearScale({
+                    branchSizeScale: {
+                        domain: extent(
                             rootPositionedTree
                                 .descendants()
                                 .map(d => +(d.value || 0))
-                        ) as [number, number]
-                    )
-                    .clamp(true),
-                colorScale: buildColorScale('labelCount', visibleNodes),
-                colorScaleKey: 'labelCount',
-                distanceVisible: false,
-                expressionThresholds: {},
-                nodeCountsVisible: false,
-                nodeIdsVisible: false,
-                originalTree,
-                pieScale: scaleLinear([5, 20])
-                    .domain(
-                        extent(
+                        ) as [number, number],
+                        range: [0.01, 20],
+                    },
+                })
+            );
+            dispatch(
+                updateLinearScale({
+                    pieScale: {
+                        range: [5, 20],
+                        domain: extent(
                             rootPositionedTree.leaves().map(d => d.value!)
-                        ) as [number, number]
+                        ) as [number, number],
+                    },
+                })
+            );
+
+            dispatch(
+                updateColorScale(
+                    calculateColorScaleRangeAndDomain(
+                        'labelCount',
+                        rootPositionedTree
                     )
-                    .clamp(true),
-                piesVisible: true,
+                )
+            );
+
+            setDisplayContext({
+                originalTree,
                 rootPositionedTree,
-                strokeVisible: false,
                 visibleNodes,
                 w,
             });
@@ -137,9 +190,15 @@ const TreeComponent: React.FC = () => {
 
     /* intial render */
     useLayoutEffect(() => {
-        if (treeContext.displayContext.rootPositionedTree && !Tree) {
+        if (
+            treeContext.displayContext.rootPositionedTree &&
+            treeScales &&
+            !Tree
+        ) {
             const Manager = new ContextManager(
+                colorScaleKey,
                 treeContext,
+                treeScales,
                 toggleableFeatures,
                 setTreeContext
             );
@@ -157,19 +216,29 @@ const TreeComponent: React.FC = () => {
         /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
         if (Tree) {
             Tree.ContextManager.refresh(
+                colorScaleKey,
                 treeContext,
+                treeScales,
                 toggleableFeatures,
                 setTreeContext
             );
         }
-    }, [treeContext, toggleableFeatures, setTreeContext]);
+    }, [
+        setTreeContext,
+        treeContext,
+        toggleableFeatures,
+        treeScales,
+        colorScaleKey,
+    ]);
+
+    console.log(treeScales.colorScale);
 
     /* React executes effects in order: this must follow previous so that tree has correct context when rendering */
     useEffect(() => {
         if (Tree) {
             Tree.render();
         }
-    }, [displayContext, toggleableFeatures]);
+    }, [displayContext, toggleableFeatures, treeScales, colorScaleKey]);
 
     /* 
         This effect 'watches' prune context, creates new pruned tree, and updates display context. 

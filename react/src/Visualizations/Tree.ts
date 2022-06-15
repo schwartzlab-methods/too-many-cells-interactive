@@ -443,10 +443,10 @@ class RadialTree {
                                     drawScaledTrapezoid(
                                         pointRadial(d.source.x, d.source.y),
                                         pointRadial(d.target.x, d.target.y),
-                                        that.ContextManager.displayContext.branchSizeScale(
+                                        that.ContextManager.scales.branchSizeScale(
                                             d.source.value!
                                         ),
-                                        that.ContextManager.displayContext.branchSizeScale(
+                                        that.ContextManager.scales.branchSizeScale(
                                             d.target.value!
                                         )
                                     ).toString()
@@ -483,10 +483,10 @@ class RadialTree {
                         drawScaledTrapezoid(
                             pointRadial(d.source.x, d.source.y),
                             [x, y],
-                            that.ContextManager.displayContext.branchSizeScale(
+                            that.ContextManager.scales.branchSizeScale(
                                 d.source.value!
                             ),
-                            that.ContextManager.displayContext.branchSizeScale(
+                            that.ContextManager.scales.branchSizeScale(
                                 d.target.value!
                             )
                         ).toString()
@@ -535,6 +535,10 @@ class RadialTree {
             unknown
         >
     ) => {
+        const { branchSizeScale, colorScale } = this.ContextManager.scales;
+
+        const { colorScaleKey } = this.ContextManager;
+
         const gradients = this.container
             .selectAll<BaseType, HierarchyPointLink<TMCNode>>('linearGradient')
             .data(
@@ -555,25 +559,15 @@ class RadialTree {
             .append('stop')
             .attr('offset', '40%')
             .attr('stop-color', d =>
-                getColor(
-                    this.ContextManager.displayContext.colorScale,
-                    this.ContextManager.displayContext.colorScaleKey,
-                    d.source
-                )
+                getColor(colorScale, colorScaleKey, d.source)
             );
 
         gradients
             .append('stop')
             .attr('offset', '85%')
             .attr('stop-color', d =>
-                getColor(
-                    this.ContextManager.displayContext.colorScale,
-                    this.ContextManager.displayContext.colorScaleKey,
-                    d.target
-                )
+                getColor(colorScale, colorScaleKey, d.target)
             );
-
-        const { branchSizeScale } = this.ContextManager.displayContext;
 
         return selection
             .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
@@ -644,7 +638,7 @@ class RadialTree {
             )
             .attr(
                 'stroke',
-                this.ContextManager.displayContext.strokeVisible
+                this.ContextManager.toggleableFeatures.strokeVisible
                     ? 'black'
                     : 'none'
             )
@@ -692,13 +686,9 @@ class RadialTree {
     render = () => {
         const that = this;
 
-        const {
-            branchSizeScale,
-            colorScale,
-            colorScaleKey,
-            pieScale,
-            visibleNodes,
-        } = this.ContextManager.displayContext;
+        const { colorScaleKey } = this.ContextManager;
+
+        const { visibleNodes } = this.ContextManager.displayContext;
 
         const {
             distanceVisible,
@@ -707,6 +697,9 @@ class RadialTree {
             piesVisible,
             strokeVisible,
         } = this.ContextManager.toggleableFeatures;
+
+        const { branchSizeScale, colorScale, pieScale } =
+            this.ContextManager.scales;
 
         const textSizeScale = scaleLinear([10, 40]).domain(
             extent(visibleNodes.leaves().map(d => d.value!)) as [number, number]

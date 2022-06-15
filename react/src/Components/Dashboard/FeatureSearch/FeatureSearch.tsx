@@ -11,13 +11,14 @@ import React, {
     useRef,
     useState,
 } from 'react';
+import { useDispatch } from 'react-redux';
 import { max, min, quantile, range, sum } from 'd3-array';
 import { HierarchyPointNode } from 'd3-hierarchy';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
 import {
-    buildColorScale,
+    calculateColorScaleRangeAndDomain,
     getEntries,
     getMAD,
     getObjectIsEmpty,
@@ -33,6 +34,11 @@ import { CloseIcon } from '../../Icons';
 import { AttributeMap, TMCNode } from '../../../types';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import Checkbox from '../../Checkbox';
+import { useAppSelector } from '../../../hooks';
+import {
+    selectScales,
+    updateColorScale,
+} from '../../../redux/displayConfigSlice';
 
 /**
  *
@@ -100,9 +106,15 @@ const FeatureSearch: React.FC = () => {
     >({});
     const [loading, setLoading] = useState(false);
     const {
-        displayContext: { expressionThresholds, visibleNodes },
+        displayContext: { visibleNodes },
         setDisplayContext,
     } = useContext(TreeContext);
+
+    const {
+        colorScale: { expressionThresholds, variant: colorScaleKey },
+    } = useAppSelector(selectScales);
+
+    const dispatch = useDispatch();
 
     const resetOverlay = useCallback(() => {
         setDisplayContext({
@@ -119,10 +131,17 @@ const FeatureSearch: React.FC = () => {
 
             updatefeatureStats(visibleNodes!, newExpressionThresholds);
 
+            dispatch(
+                updateColorScale({
+                    expressionThresholds: newExpressionThresholds,
+                    variant: colorScaleKey,
+                })
+            );
+
             setDisplayContext({
-                expressionThresholds: newExpressionThresholds,
                 visibleNodes,
             });
+            setDisplayContext;
         },
         [visibleNodes, expressionThresholds]
     );
@@ -144,11 +163,11 @@ const FeatureSearch: React.FC = () => {
         delete expressionThresholds![featureName];
         //todo: drop threshold for this item and update display context
         setfeatureStats(featureStats);
-        const { colorScale, colorScaleKey } = updateColorScale(nodes);
-        setDisplayContext({ colorScale, colorScaleKey, expressionThresholds });
+
+        dispatch(updateColorScale(_updateColorScale(nodes)));
     };
 
-    const updateColorScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
+    const _updateColorScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
         //if we removed last feature, reset to regular color scale
 
         const colorScaleKey = (
@@ -157,9 +176,7 @@ const FeatureSearch: React.FC = () => {
                 : 'labelCount'
         ) as 'featureCount' | 'labelCount';
 
-        const colorScale = buildColorScale(colorScaleKey, visibleNodes);
-
-        return { colorScale, colorScaleKey };
+        return calculateColorScaleRangeAndDomain(colorScaleKey, visibleNodes);
     };
 
     const getFeature = async (feature: string) => {
@@ -214,14 +231,7 @@ const FeatureSearch: React.FC = () => {
                 newExpressionThresholds
             );
 
-            const { colorScale, colorScaleKey } =
-                updateColorScale(withExpression);
-
-            setDisplayContext({
-                colorScale,
-                colorScaleKey,
-                expressionThresholds: newExpressionThresholds,
-            });
+            dispatch(updateColorScale(_updateColorScale(withExpression)));
 
             setLoading(false);
         }

@@ -7,27 +7,45 @@ import { Column, Row } from '../../Layout';
 import { TreeContext } from '../Dashboard';
 import { Label } from '../../Typography';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
-import { buildColorScale } from '../../../util';
+import { useAppDispatch, useAppSelector } from '../../../hooks';
+import {
+    selectScales,
+    updateColorScale,
+    updateLinearScale,
+} from '../../../redux/displayConfigSlice';
+import { calculateColorScaleRangeAndDomain } from '../../../util';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import DisplayButtons from './DisplayButtons';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
 
 const ControlPanel: React.FC = () => {
-    const { displayContext, setDisplayContext } = useContext(TreeContext);
+    const { displayContext } = useContext(TreeContext);
+    const { visibleNodes } = displayContext;
 
-    const { visibleNodes, colorScaleKey } = displayContext;
+    const {
+        branchSizeScale,
+        colorScale: { variant: colorScaleType, expressionThresholds },
+    } = useAppSelector(selectScales);
+
+    const dispatch = useAppDispatch();
 
     const branchScalingDisabled = useMemo(() => {
-        return (
-            displayContext.branchSizeScale?.domain()[0] ===
-            displayContext.branchSizeScale?.domain()[1]
-        );
-    }, [displayContext]);
+        return branchSizeScale.domain[0] === branchSizeScale.domain[1];
+    }, [branchSizeScale]);
 
     const featureScaleAvailable = useMemo(() => {
         return !!Object.keys(visibleNodes?.data.featureCount || {}).length;
     }, [visibleNodes?.data.featureCount]);
+
+    const toggleScale = (scaleType: typeof colorScaleType) =>
+        dispatch(
+            updateColorScale({
+                variant: scaleType,
+                expressionThresholds,
+                ...calculateColorScaleRangeAndDomain(scaleType, visibleNodes!),
+            })
+        );
 
     return (
         <>
@@ -37,36 +55,20 @@ const ControlPanel: React.FC = () => {
                 {featureScaleAvailable && (
                     <RadioGroup>
                         <RadioButton
-                            checked={colorScaleKey === 'featureCount'}
+                            checked={colorScaleType === 'featureCount'}
                             id="featureCount"
                             name="featureCount"
-                            onChange={() =>
-                                setDisplayContext({
-                                    colorScaleKey: 'featureCount',
-                                    colorScale: buildColorScale(
-                                        'featureCount',
-                                        visibleNodes!
-                                    ),
-                                })
-                            }
+                            onChange={toggleScale.bind(null, 'featureCount')}
                             type="radio"
                         />
                         <RadioLabel htmlFor="featureCount">
                             Show Features
                         </RadioLabel>
                         <RadioButton
-                            checked={colorScaleKey === 'labelCount'}
+                            checked={colorScaleType === 'labelCount'}
                             id="labelCount"
                             name="labelCount"
-                            onChange={() =>
-                                setDisplayContext({
-                                    colorScaleKey: 'labelCount',
-                                    colorScale: buildColorScale(
-                                        'labelCount',
-                                        visibleNodes!
-                                    ),
-                                })
-                            }
+                            onChange={toggleScale.bind(null, 'labelCount')}
                             type="radio"
                         />
                         <RadioLabel htmlFor="labelCount">
@@ -77,37 +79,33 @@ const ControlPanel: React.FC = () => {
                 <SliderGroup>
                     <Slider
                         label="Adjust Max Width"
-                        contextKey="branchSizeScale"
+                        scaleType="branchSizeScale"
                         max={50}
                     />
                     <Slider
                         label="Adjust Max Pie Size"
-                        contextKey="pieScale"
+                        scaleType="pieScale"
                         max={50}
                     />
                 </SliderGroup>
                 <Checkbox
                     checked={branchScalingDisabled}
                     label="Branch width scaling disabled"
-                    onClick={() => {
-                        const branchSizeScale = displayContext.branchSizeScale;
-
-                        if (branchSizeScale) {
-                            branchSizeScale.domain(
-                                branchScalingDisabled
-                                    ? (extent(
-                                          visibleNodes!
-                                              .descendants()
-                                              .map(d => d.value!)
-                                      ) as [number, number])
-                                    : [1, 1]
-                            );
-                        }
-
-                        setDisplayContext({
-                            branchSizeScale,
-                        });
-                    }}
+                    onClick={() =>
+                        dispatch(
+                            updateLinearScale({
+                                branchSizeScale: {
+                                    domain: branchScalingDisabled
+                                        ? (extent(
+                                              visibleNodes!
+                                                  .descendants()
+                                                  .map(d => d.value!)
+                                          ) as [number, number])
+                                        : [1, 1],
+                                },
+                            })
+                        )
+                    }
                 />
             </Column>
             <Column width="50%">
@@ -125,41 +123,40 @@ const SliderGroup = styled(Column)`
 `;
 
 interface SliderProps {
-    contextKey: 'branchSizeScale' | 'pieScale';
+    scaleType: 'branchSizeScale' | 'pieScale';
     label: string;
     max: number;
 }
 
-const Slider: React.FC<SliderProps> = ({ contextKey, label, max }) => {
-    const { displayContext, setDisplayContext } = useContext(TreeContext);
+const Slider: React.FC<SliderProps> = ({ scaleType, label, max }) => {
+    const scale = useAppSelector(selectScales)[scaleType];
+
+    const dispatch = useAppDispatch();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        displayContext[contextKey]?.range([
-            displayContext[contextKey]!.range()[0],
-            +e.currentTarget.value,
-        ]);
-        setDisplayContext({
-            [contextKey]: displayContext[contextKey],
-        });
+        dispatch(
+            updateLinearScale({
+                [scaleType]: {
+                    range: [scale.range[0], +e.currentTarget.value],
+                },
+            })
+        );
     };
 
     return (
         <Column>
             <Label>{label}</Label>
-            {displayContext[contextKey] && (
+            {scale && (
                 <Row>
                     <input
                         type="range"
                         max={max}
-                        min={displayContext[contextKey]!.range()[0]}
+                        min={scale.range[0]}
                         step={1}
-                        value={displayContext[contextKey]!.range()[1]}
+                        value={scale.range[1]}
                         onChange={handleChange}
                     />
-                    <Input
-                        value={displayContext[contextKey]!.range()[1]}
-                        onChange={handleChange}
-                    />
+                    <Input value={scale.range[1]} onChange={handleChange} />
                 </Row>
             )}
         </Column>

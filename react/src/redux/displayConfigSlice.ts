@@ -1,6 +1,8 @@
-import { HierarchyNode } from 'd3-hierarchy';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { HierarchyNode } from 'd3-hierarchy';
+import { pick } from 'lodash';
 import type { TMCNode } from '../types';
+import { getEntries } from '../util';
 import type { RootState } from './store';
 
 export interface ToggleableDisplayElements {
@@ -11,20 +13,65 @@ export interface ToggleableDisplayElements {
     distanceVisible: boolean;
 }
 
-interface DisplayConfigState extends ToggleableDisplayElements {
-    visibleNodes: HierarchyNode<TMCNode> | undefined;
+export interface ColorScaleConfig {
+    domain: string[];
+    expressionThresholds: Record<string, number>;
+    range: string[];
+    variant: 'labelCount' | 'featureCount';
 }
 
-const initialState: DisplayConfigState = {
-    piesVisible: true,
-    strokeVisible: false,
-    nodeIdsVisible: false,
-    nodeCountsVisible: false,
-    distanceVisible: false,
-    visibleNodes: undefined,
+export interface LinearScaleConfig {
+    domain: [number, number];
+    range: [number, number];
+}
+
+export interface Scales {
+    branchSizeScale: LinearScaleConfig;
+    colorScale: ColorScaleConfig;
+    pieScale: LinearScaleConfig;
+}
+
+interface DisplayConfigState {
+    scales: Scales;
+    toggleableDisplayElements: ToggleableDisplayElements;
+    visibleNodes?: HierarchyNode<TMCNode> | undefined;
+}
+
+const initialScales: Scales = {
+    branchSizeScale: {
+        domain: [0, 0],
+        range: [0, 0],
+    },
+    colorScale: {
+        domain: [''],
+        expressionThresholds: {},
+        range: [''],
+        variant: 'labelCount',
+    },
+    pieScale: {
+        domain: [0, 0],
+        range: [0, 0],
+    },
 };
 
-export const counterSlice = createSlice({
+const initialToggleableValues: ToggleableDisplayElements = {
+    distanceVisible: false,
+    nodeCountsVisible: false,
+    nodeIdsVisible: false,
+    piesVisible: true,
+    strokeVisible: false,
+};
+
+const initialState: DisplayConfigState = {
+    scales: initialScales,
+    toggleableDisplayElements: initialToggleableValues,
+};
+
+type PartialLinearScale = Partial<{
+    [K in keyof Omit<Scales, 'colorScale'>]: Partial<Scales[K]>;
+}>;
+
+export const displayConfigSlice = createSlice({
     name: 'displayConfig',
     initialState,
     reducers: {
@@ -32,25 +79,45 @@ export const counterSlice = createSlice({
             state,
             { payload }: PayloadAction<keyof ToggleableDisplayElements>
         ) => {
-            state[payload] = !state[payload];
+            state.toggleableDisplayElements[payload] =
+                !state.toggleableDisplayElements[payload];
         },
-        togglePiesVisible: state => {
-            state.piesVisible = !state.piesVisible;
+        updateColorScale: (
+            state,
+            { payload }: PayloadAction<Partial<Scales['colorScale']>>
+        ) => {
+            state.scales.colorScale = {
+                ...state.scales.colorScale,
+                ...payload,
+            };
+        },
+        updateLinearScale: (
+            state,
+            { payload }: PayloadAction<PartialLinearScale>
+        ) => {
+            getEntries(payload).map(([k, v]) => {
+                state.scales[k] = {
+                    ...(state.scales[k] as Scales[typeof k]),
+                    ...(v as Scales[typeof k]),
+                };
+            });
         },
     },
 });
 
-export const { togglePiesVisible, toggleDisplayProperty } =
-    counterSlice.actions;
-
-export const selectPiesVisible = (state: RootState) =>
-    state.displayConfig.piesVisible;
+export const { toggleDisplayProperty, updateColorScale, updateLinearScale } =
+    displayConfigSlice.actions;
 
 export const selectToggleableDisplayElements = (state: RootState) =>
-    state.displayConfig;
+    pick(
+        state.displayConfig.toggleableDisplayElements,
+        Object.keys(initialToggleableValues)
+    ) as ToggleableDisplayElements;
 
-export const selectToggleableDisplayElement =
-    (key: keyof ToggleableDisplayElements) => (state: RootState) =>
-        state.displayConfig[key];
+export const selectScales = (state: RootState) =>
+    pick<Scales>(
+        state.displayConfig.scales,
+        Object.keys(initialScales)
+    ) as Scales;
 
-export default counterSlice.reducer;
+export default displayConfigSlice.reducer;

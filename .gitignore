@@ -1,6 +1,6 @@
 node_modules
 data
-.yarn-error.log
+yarn-error.log
 node/static/files/*
 !node/static/files/.gitkeep
 .env

@@ -216,7 +216,7 @@ export const interpolateColorScale = (domain: string[]) => {
         });
 };
 
-export const buildColorScale = (
+export const calculateColorScaleRangeAndDomain = (
     colorScaleKey: 'featureCount' | 'labelCount',
     nodes: HierarchyPointNode<TMCNode>
 ) => {
@@ -234,14 +234,18 @@ export const buildColorScale = (
 
     const range = interpolateColorScale(domain);
 
-    /* intervene here to ensure that low-only scale is grey */
+    return { range, domain };
+};
 
-    if (colorScaleKey === 'featureCount') {
-        const allLowIdx = domain.findIndex(item => !item.includes('high'));
-        if (allLowIdx) {
-            range[allLowIdx] = '#D3D3D3';
-        }
-    }
+/* todo: deprecate */
+export const buildColorScale = (
+    colorScaleKey: 'featureCount' | 'labelCount',
+    nodes: HierarchyPointNode<TMCNode>
+) => {
+    const { range, domain } = calculateColorScaleRangeAndDomain(
+        colorScaleKey,
+        nodes
+    );
 
     return scaleOrdinal(range).domain(domain);
 };

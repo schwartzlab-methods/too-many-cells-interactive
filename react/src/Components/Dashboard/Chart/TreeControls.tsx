@@ -8,6 +8,8 @@ import Button from '../../Button';
 import { Column, Row } from '../../Layout';
 import { TreeContext } from '../Dashboard';
 import { Bold, Text } from '../../Typography';
+import { useAppSelector, useColorScale } from '../../../hooks';
+import { selectScales } from '../../../redux/displayConfigSlice';
 
 const getSvgSrc = (colorScale: ScaleOrdinal<string, string>) => {
     const svg = select('svg');
@@ -91,9 +93,8 @@ const downloadSvg = (colorScale: ScaleOrdinal<string, string>) => {
 };
 
 const TreeControls: React.FC = () => {
-    const {
-        displayContext: { colorScale },
-    } = useContext(TreeContext);
+    const colorScale = useColorScale();
+
     return (
         <Column>
             <Row margin="5px">
