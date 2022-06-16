@@ -1,32 +1,29 @@
-import React, { useContext, useMemo } from 'react';
-import { extent } from 'd3-array';
+import React, { useMemo } from 'react';
 import styled from 'styled-components';
 import { Input } from '../../Input';
 import Checkbox from '../../Checkbox';
 import { Column, Row } from '../../Layout';
-import { TreeContext } from '../Dashboard';
 import { Label } from '../../Typography';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectScales,
-    updateColorScale,
+    selectTreeMetadata,
+    updateColorScaleType,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
-import { calculateColorScaleRangeAndDomain } from '../../../util';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import DisplayButtons from './DisplayButtons';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
 
 const ControlPanel: React.FC = () => {
-    const { displayContext } = useContext(TreeContext);
-    const { visibleNodes } = displayContext;
-
     const {
         branchSizeScale,
         colorScale: { variant: colorScaleType, expressionThresholds },
     } = useAppSelector(selectScales);
+
+    const { minValue, maxValue } = useAppSelector(selectTreeMetadata);
 
     const dispatch = useAppDispatch();
 
@@ -34,18 +31,13 @@ const ControlPanel: React.FC = () => {
         return branchSizeScale.domain[0] === branchSizeScale.domain[1];
     }, [branchSizeScale]);
 
-    const featureScaleAvailable = useMemo(() => {
-        return !!Object.keys(visibleNodes?.data.featureCount || {}).length;
-    }, [visibleNodes?.data.featureCount]);
+    /* todo: reenable */
+    /* note that all this could come from meta (as in, high and low count for range and domain) */
+    const featureScaleAvailable = false;
 
+    /* this should just be togglescale type */
     const toggleScale = (scaleType: typeof colorScaleType) =>
-        dispatch(
-            updateColorScale({
-                variant: scaleType,
-                expressionThresholds,
-                ...calculateColorScaleRangeAndDomain(scaleType, visibleNodes!),
-            })
-        );
+        dispatch(updateColorScaleType(scaleType));
 
     return (
         <>
@@ -96,11 +88,7 @@ const ControlPanel: React.FC = () => {
                             updateLinearScale({
                                 branchSizeScale: {
                                     domain: branchScalingDisabled
-                                        ? (extent(
-                                              visibleNodes!
-                                                  .descendants()
-                                                  .map(d => d.value!)
-                                          ) as [number, number])
+                                        ? [minValue, maxValue]
                                         : [1, 1],
                                 },
                             })

@@ -1,23 +1,13 @@
-import React, {
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
-} from 'react';
-import { median, min, quantile, range, ticks } from 'd3-array';
+import React, { useEffect, useState } from 'react';
 import { format } from 'd3-format';
-import { HierarchyNode } from 'd3-hierarchy';
+import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
-import { max } from 'lodash';
-import { TMCNode } from '../../../types';
 import {
-    getMAD,
-    pruneTreeByMinDistance,
-    pruneTreeByMinDistanceSearch,
-    pruneTreeByMinValue,
-} from '../../../util';
-import { TreeContext, ValuePruneType } from '../Dashboard';
+    addValuePrune as _addValuePrune,
+    selectActivePruneStep,
+    selectDistributionMetadata,
+    ValuePruneType,
+} from '../../../redux/pruneSlice';
 import {
     AreaChartComponent,
     CaretDownIcon,
@@ -28,6 +18,7 @@ import Button from '../../Button';
 import { NumberInput } from '../../Input';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import { Column, Row } from '../../Layout';
+import { useAppDispatch, useAppSelector } from '../../../hooks';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -60,141 +51,31 @@ const TextInputGroup = styled.div`
 const PrunerPanel: React.FC = () => {
     const [expanded, setExpanded] = useState<ValuePruneType>();
 
-    const {
-        displayContext: { rootPositionedTree },
-        pruneContext,
-        setPruneContext,
-    } = useContext(TreeContext);
-
-    const currentValuePruner = useMemo(() => {
-        return pruneContext.slice(-1)[0].valuePruner;
-    }, [pruneContext]);
-
-    const setValuePruner = useCallback(
-        (key: ValuePruneType, value: number) => {
-            return setPruneContext({
-                valuePruner: {
-                    key,
-                    value,
-                },
-                clickPruneHistory: [],
-            });
+    const { addValuePrune } = bindActionCreators(
+        {
+            addValuePrune: _addValuePrune,
         },
-        [setPruneContext]
+        useAppDispatch()
     );
 
-    const sizeGroupsPlain = useMemo(() => {
-        if (rootPositionedTree) {
-            return getSizeGroups(rootPositionedTree!);
-        } else return new Map();
-    }, [rootPositionedTree]);
+    const {
+        depthGroups,
+        distance: distanceMeta,
+        distanceSearch: distanceSearchMeta,
+        size: sizeMeta,
+    } = useAppSelector(selectDistributionMetadata);
 
-    const sizeGroupsMad = useMemo(() => {
-        if (rootPositionedTree) {
-            return getSizeMadGroups(rootPositionedTree!);
-        } else return new Map();
-    }, [rootPositionedTree]);
-
-    const sizeMadValue = useMemo(() => {
-        if (rootPositionedTree) {
-            return getMAD(
-                rootPositionedTree
-                    .descendants()
-                    .map(v => v.data.distance!)
-                    .filter(Boolean)
-            )!;
-        } else return 0;
-    }, [rootPositionedTree]);
-
-    const sizeMedian = useMemo(() => {
-        if (rootPositionedTree) {
-            return median(
-                rootPositionedTree
-                    .descendants()
-                    .map(v => v.value!)
-                    .filter(Boolean)
-            )!;
-        } else return 0;
-    }, [rootPositionedTree]);
-
-    const distanceGroupsPlain = useMemo(() => {
-        if (rootPositionedTree) {
-            return getDistanceGroups(
-                rootPositionedTree!,
-                getMaxCutoffDistance(rootPositionedTree!),
-                pruneTreeByMinDistance
-            );
-        } else return new Map();
-    }, [rootPositionedTree]);
-
-    const distanceGroupsMad = useMemo(() => {
-        if (rootPositionedTree) {
-            return getDistanceMadGroups(
-                rootPositionedTree!,
-                getMaxCutoffDistance(rootPositionedTree!),
-                pruneTreeByMinDistance
-            );
-        } else return new Map();
-    }, [rootPositionedTree]);
-
-    const distanceSearchGroupsMad = useMemo(() => {
-        if (rootPositionedTree) {
-            return getDistanceMadGroups(
-                rootPositionedTree!,
-                getMaxCutoffDistanceSearch(rootPositionedTree!),
-                pruneTreeByMinDistanceSearch
-            );
-        } else return new Map();
-    }, [rootPositionedTree]);
-
-    const distanceSearchGroupsPlain = useMemo(() => {
-        if (rootPositionedTree) {
-            return getDistanceGroups(
-                rootPositionedTree!,
-                getMaxCutoffDistanceSearch(rootPositionedTree!),
-                pruneTreeByMinDistanceSearch
-            );
-        } else return new Map();
-    }, [rootPositionedTree]);
-
-    const distanceMadValue = useMemo(() => {
-        if (rootPositionedTree) {
-            return getMAD(
-                rootPositionedTree
-                    .descendants()
-                    .map(v => v.data.distance!)
-                    .filter(Boolean)
-            )!;
-        } else return 0;
-    }, [rootPositionedTree]);
-
-    const distanceMedian = useMemo(() => {
-        if (rootPositionedTree) {
-            return quantile(
-                rootPositionedTree
-                    .descendants()
-                    .map(v => v.data.distance!)
-                    .filter(Boolean),
-                0.5
-            )!;
-        } else return 0;
-    }, [rootPositionedTree]);
-
-    const depthSearchGroupsPlain = useMemo(() => {
-        if (rootPositionedTree) {
-            return getDepthGroups(rootPositionedTree!);
-        } else return new Map();
-    }, [rootPositionedTree]);
+    const { step } = useAppSelector(selectActivePruneStep);
 
     const getPrunerVal = (key: ValuePruneType) =>
-        key === currentValuePruner.key ? currentValuePruner.value : undefined;
+        key === step.valuePruner.key ? step.valuePruner.value : undefined;
 
     const onExpand = (id: ValuePruneType) => () => {
         setExpanded(expanded === id ? undefined : id);
     };
 
-    const pruneByContext = (contextKey: ValuePruneType) => (val: number) => {
-        return setValuePruner(contextKey, val);
+    const prune = (key: ValuePruneType) => (value: number) => {
+        return addValuePrune({ key, value });
     };
 
     return (
@@ -203,12 +84,12 @@ const PrunerPanel: React.FC = () => {
                 expanded={expanded === 'minSize'}
                 id="minSize"
                 label="Prune by size"
-                madValues={sizeGroupsMad}
-                madSize={sizeMadValue}
-                median={sizeMedian}
+                madValues={sizeMeta.madGroups}
+                madSize={sizeMeta.mad}
+                median={sizeMeta.median}
                 onExpand={onExpand('minSize')}
-                onSubmit={pruneByContext('minSize')}
-                plainValues={sizeGroupsPlain}
+                onSubmit={prune('minSize')}
+                plainValues={sizeMeta.plainGroups}
                 value={getPrunerVal('minSize')}
                 xLabel="Size"
             />
@@ -216,12 +97,12 @@ const PrunerPanel: React.FC = () => {
                 expanded={expanded === 'minDistance'}
                 id="minDistance"
                 label="Prune by distance"
-                madValues={distanceGroupsMad}
-                madSize={distanceMadValue}
-                median={distanceMedian}
+                madValues={distanceMeta.madGroups}
+                madSize={distanceMeta.mad}
+                median={distanceMeta.median}
                 onExpand={onExpand('minDistance')}
-                onSubmit={pruneByContext('minDistance')}
-                plainValues={distanceGroupsPlain}
+                onSubmit={prune('minDistance')}
+                plainValues={distanceMeta.plainGroups}
                 value={getPrunerVal('minDistance')}
                 xLabel="Distance"
             />
@@ -229,12 +110,12 @@ const PrunerPanel: React.FC = () => {
                 expanded={expanded === 'minDistanceSearch'}
                 id="minDistanceSearch"
                 label="Prune by distance (search)"
-                madValues={distanceSearchGroupsMad}
-                madSize={distanceMadValue}
-                median={distanceMedian}
+                madValues={distanceSearchMeta.madGroups}
+                madSize={distanceSearchMeta.mad}
+                median={distanceSearchMeta.median}
                 onExpand={onExpand('minDistanceSearch')}
-                onSubmit={pruneByContext('minDistanceSearch')}
-                plainValues={distanceSearchGroupsPlain}
+                onSubmit={prune('minDistanceSearch')}
+                plainValues={distanceSearchMeta.plainGroups}
                 value={getPrunerVal('minDistanceSearch')}
                 xLabel="Distance (Search)"
             />
@@ -242,8 +123,8 @@ const PrunerPanel: React.FC = () => {
                 expanded={expanded === 'minDepth'}
                 label="Prune by depth"
                 onExpand={onExpand('minDepth')}
-                onSubmit={pruneByContext('minDepth')}
-                plainValues={depthSearchGroupsPlain}
+                onSubmit={prune('minDepth')}
+                plainValues={depthGroups}
                 xLabel="Depth"
                 value={getPrunerVal('minDepth')}
             />
@@ -258,7 +139,7 @@ interface PrunerProps {
     label: string;
     onExpand: () => void;
     onSubmit: (size: number) => void;
-    plainValues: Map<number, number>;
+    plainValues: Record<number, number>;
     xLabel: string;
     value?: number;
 }
@@ -318,10 +199,10 @@ interface SmartPrunerProps {
     id: ValuePruneType;
     label: string;
     madSize: number;
-    madValues: Map<number, number>;
+    madValues: Record<number, number>;
     median: number;
     onExpand: () => void;
-    plainValues: Map<number, number>;
+    plainValues: Record<number, number>;
     onSubmit: (size: number) => void;
     xLabel: string;
     value?: number;
@@ -450,155 +331,4 @@ const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => {
             <SubmitButton onClick={() => onSubmit(value)}>Update</SubmitButton>
         </TextInputGroup>
     );
-};
-
-/**
- * Find the minimum size-cutoff value needed to display at least one generation of the tree
- * This ends up being the smallest child of the root
- */
-const getMaxCutoffNodeSize = (tree: HierarchyNode<TMCNode>) => {
-    if (tree.children) {
-        return min(tree.children.map(d => d.value || 0));
-    } else return 0;
-};
-
-/**
- * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
- */
-const getSizeGroups = (tree: HierarchyNode<TMCNode>, binCount = 50) => {
-    const maxSize = getMaxCutoffNodeSize(tree)!;
-
-    const bounds = ticks(0, maxSize, binCount);
-
-    return bounds.reduce(
-        (acc, curr) =>
-            acc.set(curr, pruneTreeByMinValue(tree, curr).descendants().length),
-        new Map<number, number>()
-    );
-};
-
-/**
- * @returns object keyed by integer `n` whose value is count of nodes with `value` >= median + (n * MAD) in tree
- */
-const getSizeMadGroups = (tree: HierarchyNode<TMCNode>) => {
-    const maxSize = getMaxCutoffNodeSize(tree)!;
-
-    const values = tree
-        .descendants()
-        .map(d => d.value!)
-        .sort((a, b) => (a < b ? -1 : 1));
-
-    const mad = getMAD(values)!;
-    const med = median(values)!;
-
-    const maxMads = Math.ceil((maxSize - med) / mad);
-
-    const bounds = range(0, maxMads).map(m => ({
-        size: med + m * mad,
-        mads: m,
-    }));
-
-    return bounds.reduce(
-        (acc, curr) =>
-            acc.set(
-                curr.mads,
-                pruneTreeByMinValue(tree, curr.size).descendants().length
-            ),
-        new Map<number, number>()
-    );
-};
-
-/**
- * Find the minimum size-cutoff value needed to display at least one generation of the tree
- * This ends up being the smallest grandchild of the root
- */
-const getMaxCutoffDistance = (tree: HierarchyNode<TMCNode>) => {
-    if (tree.children) {
-        return min(
-            tree.children.flatMap(d =>
-                d.children ? d.children.map(d => d.data.distance || 0) : 0
-            )
-        )!;
-    } else return 0;
-};
-
-/**
- * Find the minimum size-cutoff value needed to display at least one generation of the tree
- * This ends up being the smallest child of the root
- */
-const getMaxCutoffDistanceSearch = (tree: HierarchyNode<TMCNode>) => {
-    if (tree.children) {
-        return min(tree.children.map(d => d.data.distance || 0))!;
-    } else return 0;
-};
-
-/**
- * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
- */
-const getDistanceGroups = (
-    tree: HierarchyNode<TMCNode>,
-    cutoffDistance: number,
-    pruneFn: (
-        tree: HierarchyNode<TMCNode>,
-        size: number
-    ) => HierarchyNode<TMCNode>,
-    binCount = 50
-) => {
-    const bounds = ticks(0, cutoffDistance, binCount);
-
-    return bounds.reduce(
-        (acc, curr) => acc.set(curr, pruneFn(tree, curr).descendants().length),
-        new Map<number, number>()
-    );
-};
-
-/**
- * @returns object keyed by integer `n` whose value is count of nodes with `distance` >= median + (n * MAD) in tree
- */
-const getDistanceMadGroups = (
-    tree: HierarchyNode<TMCNode>,
-    cutoffDistance: number,
-    pruneFn: (
-        tree: HierarchyNode<TMCNode>,
-        size: number
-    ) => HierarchyNode<TMCNode>
-) => {
-    const values = tree
-        .descendants()
-        .map(d => d.data.distance!)
-        .sort((a, b) => (a < b ? -1 : 1));
-
-    const mad = getMAD(values)!;
-    const med = median(values)!;
-
-    const maxMads = Math.ceil((cutoffDistance - med) / mad);
-
-    const bounds = range(0, maxMads).map(m => ({
-        size: med + m * mad,
-        mads: m,
-    }));
-
-    return bounds.reduce(
-        (acc, curr) =>
-            acc.set(curr.mads, pruneFn(tree, curr.size).descendants().length),
-        new Map<number, number>()
-    );
-};
-
-/**
- * @returns object keyed by integer `n` whose value is count of nodes with `depth` <= n
- */
-const getDepthGroups = (tree: HierarchyNode<TMCNode>) => {
-    const maxSize = max(tree.descendants().map(n => n.depth))!;
-
-    return range(0, maxSize + 1)
-        .reverse()
-        .reduce(
-            (acc, curr) =>
-                acc.set(
-                    curr,
-                    tree.descendants().filter(d => d.depth <= curr).length
-                ),
-            new Map<number, number>()
-        );
 };

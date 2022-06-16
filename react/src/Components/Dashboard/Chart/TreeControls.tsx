@@ -1,15 +1,13 @@
-import React, { useContext } from 'react';
-import { max, min } from 'd3-array';
+import React from 'react';
 import { ScaleOrdinal } from 'd3-scale';
 import { BaseType, select } from 'd3-selection';
 import styled from 'styled-components';
 import { saveAs } from 'file-saver';
 import Button from '../../Button';
 import { Column, Row } from '../../Layout';
-import { TreeContext } from '../Dashboard';
 import { Bold, Text } from '../../Typography';
 import { useAppSelector, useColorScale } from '../../../hooks';
-import { selectScales } from '../../../redux/displayConfigSlice';
+import { selectTreeMetadata } from '../../../redux/displayConfigSlice';
 
 const getSvgSrc = (colorScale: ScaleOrdinal<string, string>) => {
     const svg = select('svg');
@@ -113,31 +111,22 @@ const TreeControls: React.FC = () => {
 };
 
 const PruneStatuses: React.FC = () => {
-    const {
-        displayContext: { visibleNodes },
-    } = useContext(TreeContext);
+    const { leafCount, minValue, maxValue, nodeCount } =
+        useAppSelector(selectTreeMetadata);
 
     return (
         <StatusContainer>
             <Text>
-                <Bold>Node count:</Bold>{' '}
-                {visibleNodes?.descendants().length?.toLocaleString()}
+                <Bold>Node count:</Bold> {nodeCount}
             </Text>
             <Text>
-                <Bold>Leaf count:</Bold>{' '}
-                {visibleNodes?.leaves().length?.toLocaleString()}
+                <Bold>Leaf count:</Bold> {leafCount}
             </Text>
             <Text>
-                <Bold>Min value:</Bold>{' '}
-                {min(
-                    (visibleNodes?.descendants() || []).map(d => d.value!)
-                )?.toLocaleString()}
+                <Bold>Min value:</Bold> {minValue}
             </Text>
             <Text>
-                <Bold>Max value:</Bold>{' '}
-                {max(
-                    (visibleNodes?.descendants() || []).map(d => d.value!)
-                )?.toLocaleString()}
+                <Bold>Max value:</Bold> {maxValue.toLocaleString()}
             </Text>
         </StatusContainer>
     );

@@ -25,7 +25,6 @@ import {
     levenshtein,
 } from '../../../util';
 import Button from '../../Button';
-import { TreeContext } from '../../Dashboard/Dashboard';
 import { Input, NumberInput } from '../../Input';
 import { Column, Row } from '../../Layout';
 import Modal from '../../Modal';
@@ -105,10 +104,6 @@ const FeatureSearch: React.FC = () => {
         Record<string, FeatureStat>
     >({});
     const [loading, setLoading] = useState(false);
-    const {
-        displayContext: { visibleNodes },
-        setDisplayContext,
-    } = useContext(TreeContext);
 
     const {
         colorScale: { expressionThresholds, variant: colorScaleKey },
@@ -116,6 +111,7 @@ const FeatureSearch: React.FC = () => {
 
     const dispatch = useDispatch();
 
+    /* todo: action: strip feature counts */
     const resetOverlay = useCallback(() => {
         setDisplayContext({
             visibleNodes: visibleNodes?.each(n => (n.data.featureCount = {})),

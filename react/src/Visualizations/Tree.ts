@@ -22,8 +22,8 @@ import {
     squared,
 } from '../util';
 import { AttributeMap, AttributeMapValue, isLinkNode, TMCNode } from '../types';
-import { ClickPruner } from '../Components/Dashboard/Dashboard';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
+import { ClickPruner } from '../redux/pruneSlice';
 
 // for debugging
 (window as any).select = select;
@@ -321,7 +321,7 @@ class RadialTree {
 
         this.distanceScale = scaleLinear([0, 1]).domain(
             extent(
-                this.ContextManager.displayContext.rootPositionedTree
+                this.ContextManager.visibleNodes
                     .descendants()
                     .map(d => +(d.data.distance || 0))
             ) as [number, number]
@@ -542,7 +542,7 @@ class RadialTree {
         const gradients = this.container
             .selectAll<BaseType, HierarchyPointLink<TMCNode>>('linearGradient')
             .data(
-                this.ContextManager.displayContext.visibleNodes.links(),
+                this.ContextManager.visibleNodes.links(),
                 // (d: HierarchyPointLink<TMCNode>) =>
                 //     `${makeLinkId(d)}-${this.colorScale.range().join(' ')}`
                 () => Math.random()
@@ -672,13 +672,7 @@ class RadialTree {
                 };
             }
             if (pruner.key) {
-                const newHistory = that.ContextManager.pruneContext
-                    .slice(-1)[0]
-                    .clickPruneHistory.concat(pruner);
-
-                that.ContextManager.setPruneContext({
-                    clickPruneHistory: newHistory,
-                });
+                that.ContextManager.addClickPrune(pruner);
             }
         });
     };
@@ -686,9 +680,7 @@ class RadialTree {
     render = () => {
         const that = this;
 
-        const { colorScaleKey } = this.ContextManager;
-
-        const { visibleNodes } = this.ContextManager.displayContext;
+        const { colorScaleKey, visibleNodes } = this.ContextManager;
 
         const {
             distanceVisible,
@@ -883,23 +875,13 @@ class RadialTree {
             .on('click', (event, d) => {
                 if (event.shiftKey) {
                     const collapsed =
-                        that.ContextManager.activePruneStep.clickPruneHistory.find(
+                        that.ContextManager.clickPruneHistory.find(
                             p =>
                                 p.key === 'setCollapsedNode' &&
                                 p.value === d.data.id
                         );
                     if (collapsed) {
-                        const clickPruneHistory =
-                            that.ContextManager.activePruneStep?.clickPruneHistory.filter(
-                                h =>
-                                    !(
-                                        h.key === 'setCollapsedNode' &&
-                                        h.value === d.data.id
-                                    )
-                            );
-                        that.ContextManager.setPruneContext({
-                            clickPruneHistory,
-                        });
+                        that.ContextManager.removeClickPrune(collapsed);
                     }
 
                     event.stopPropagation();

@@ -5,7 +5,6 @@ import { HierarchyNode, HierarchyPointNode, tree } from 'd3-hierarchy';
 import { interpolate } from 'd3-interpolate';
 import { scaleOrdinal } from 'd3-scale';
 import { schemeSet1 } from 'd3-scale-chromatic';
-import { PruneContext } from './Components/Dashboard/Dashboard';
 import { PruneStep } from './redux/pruneSlice';
 import { AttributeMap, TMCNode } from './types';
 
@@ -158,15 +157,15 @@ export const getObjectIsEmpty = (obj: Record<any, any>) =>
     !Object.keys(obj).length;
 
 export const pruneContextsAreEqual = (
-    ctx1: Readonly<PruneContext>,
-    ctx2: Readonly<PruneContext>
+    ctx1: Readonly<PruneStep>,
+    ctx2: Readonly<PruneStep>
 ) =>
     ctx1.clickPruneHistory.length === ctx2.clickPruneHistory.length &&
     valuePrunersAreEqual(ctx1, ctx2);
 
 export const valuePrunersAreEqual = (
-    ctx1: Readonly<PruneContext>,
-    ctx2: Readonly<PruneContext>
+    ctx1: Readonly<PruneStep>,
+    ctx2: Readonly<PruneStep>
 ) =>
     ctx1.valuePruner.key === ctx2.valuePruner.key &&
     ctx1.valuePruner.value === ctx2.valuePruner.value;

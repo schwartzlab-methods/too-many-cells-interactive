@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { getEntries } from '../util';
 import type { RootState } from './store';
 
-interface TreeMetaData {
+export interface TreeMetaData {
     leafCount: number;
     maxDistance: number;
     minDistance: number;
@@ -19,9 +19,11 @@ export interface ToggleableDisplayElements {
 }
 
 export interface ColorScaleConfig {
-    domain: string[];
+    featureDomain: string[];
+    featureRange: string[];
+    labelDomain: string[];
+    labelRange: string[];
     expressionThresholds: Record<string, number>;
-    range: string[];
     variant: 'labelCount' | 'featureCount';
 }
 
@@ -49,9 +51,11 @@ const initialScales: Scales = {
         range: [0, 0],
     },
     colorScale: {
-        domain: [''],
         expressionThresholds: {},
-        range: [''],
+        featureDomain: [''],
+        featureRange: [''],
+        labelDomain: [''],
+        labelRange: [''],
         variant: 'labelCount',
     },
     pieScale: {
@@ -90,14 +94,28 @@ export const displayConfigSlice = createSlice({
             state.toggleableDisplayElements[payload] =
                 !state.toggleableDisplayElements[payload];
         },
+        /* this is mainly used by legend to blindly update colors */
         updateColorScale: (
             state,
-            { payload }: PayloadAction<Partial<Scales['colorScale']>>
+            {
+                payload: { domain, range },
+            }: PayloadAction<{ domain: string[]; range: string[] }>
         ) => {
-            state.scales.colorScale = {
-                ...state.scales.colorScale,
-                ...payload,
-            };
+            const { variant } = state.scales.colorScale;
+
+            if (variant === 'featureCount') {
+                state.scales.colorScale.featureDomain = domain;
+                state.scales.colorScale.featureRange = range;
+            } else {
+                state.scales.colorScale.labelDomain = domain;
+                state.scales.colorScale.labelRange = range;
+            }
+        },
+        updateColorScaleType: (
+            state,
+            { payload }: PayloadAction<'featureCount' | 'labelCount'>
+        ) => {
+            state.scales.colorScale.variant = payload;
         },
         updateLinearScale: (
             state,
@@ -110,11 +128,22 @@ export const displayConfigSlice = createSlice({
                 };
             });
         },
+        updateTreeMetadata: (
+            state,
+            { payload }: PayloadAction<TreeMetaData>
+        ) => {
+            state.treeMetadata = payload;
+        },
     },
 });
 
-export const { toggleDisplayProperty, updateColorScale, updateLinearScale } =
-    displayConfigSlice.actions;
+export const {
+    toggleDisplayProperty,
+    updateColorScale,
+    updateColorScaleType,
+    updateLinearScale,
+    updateTreeMetadata,
+} = displayConfigSlice.actions;
 
 export const selectToggleableDisplayElements = (state: RootState) =>
     state.displayConfig.toggleableDisplayElements;
@@ -122,5 +151,8 @@ export const selectToggleableDisplayElements = (state: RootState) =>
 export const selectScales = (state: RootState) => state.displayConfig.scales;
 
 export const selectWidth = (state: RootState) => state.displayConfig.width;
+
+export const selectTreeMetadata = (state: RootState) =>
+    state.displayConfig.treeMetadata;
 
 export default displayConfigSlice.reducer;

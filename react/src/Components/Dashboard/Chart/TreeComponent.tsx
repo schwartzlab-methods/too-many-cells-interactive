@@ -1,38 +1,17 @@
 import React, {
-    useContext,
     useEffect,
     useLayoutEffect,
     useMemo,
     useRef,
     useState,
 } from 'react';
+import { bindActionCreators } from 'redux';
 import { extent } from 'd3-array';
-import { HierarchyNode } from 'd3-hierarchy';
 import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
-import { TMCNode } from '../../../types';
+import { HierarchyNode, HierarchyPointNode } from 'd3-hierarchy';
 import { Tree as TreeViz } from '../../../Visualizations';
-import { getData } from '../../../prepareData';
-import {
-    calculateColorScaleRangeAndDomain,
-    calculateTreeLayout,
-    collapseNode,
-    pruneContextsAreEqual,
-    pruneTreeByDepth,
-    pruneTreeByMinDistance,
-    pruneTreeByMinDistanceSearch,
-    pruneTreeByMinValue,
-    setRootNode,
-} from '../../../util';
-import {
-    ClickPruner,
-    PruneContext,
-    TreeContext,
-    BaseTreeContext,
-    AllPruner,
-    ValuePruneType,
-    ClickPruneType,
-    DisplayContext,
-} from '../Dashboard';
+import { calculateColorScaleRangeAndDomain } from '../../../util';
+
 import {
     Scales,
     selectScales,
@@ -42,8 +21,15 @@ import {
     updateColorScale,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
-import { useAppDispatch, useAppSelector } from '../../../hooks';
+import { useAppDispatch, useAppSelector, usePruner } from '../../../hooks';
 import { useColorScale, useLinearScale } from '../../../hooks/useScale';
+import { TMCNode } from '../../../types';
+import {
+    addClickPrune as _addClickPrune,
+    ClickPruner,
+    removeClickPrune as _removeClickPrune,
+    selectActiveStepPruneHistory,
+} from '../../../redux/pruneSlice';
 
 interface TreeScales {
     branchSizeScale: ScaleLinear<number, number>;
@@ -58,58 +44,63 @@ type ColorScaleKey = Scales['colorScale']['variant'];
  *  @method refresh must be used by React (in a useEffect hook) to keep context up to date,
  *      since Tree chart depends on it for accurate rendering and most values are controlled by React components.
  */
+
+//need to pass in: clickPrune history, setters for....
 export class ContextManager {
-    activePruneStep!: PruneContext;
-    private context!: TreeContext;
+    addClickPrune!: (pruner: ClickPruner) => void;
     colorScaleKey!: ColorScaleKey;
-    displayContext!: Readonly<Required<DisplayContext>>;
-    pruneContext!: Readonly<PruneContext[]>;
+    clickPruneHistory!: ClickPruner[];
+    removeClickPrune!: (purner: ClickPruner) => void;
     scales!: TreeScales;
-    setContext!: (ctx: Partial<TreeContext>) => void;
-    setPruneContext!: (ctx: Partial<PruneContext>) => void;
     toggleableFeatures!: ToggleableDisplayElements;
+    visibleNodes!: HierarchyPointNode<TMCNode>;
     width!: number;
     constructor(
+        addClickPrune: (pruner: ClickPruner) => void,
+        clickPruneHistory: ClickPruner[],
         colorScaleKey: ColorScaleKey,
-        context: TreeContext,
+        removeClickPrune: (pruner: ClickPruner) => void,
         scales: TreeScales,
         toggleableFeatures: ToggleableDisplayElements,
-        setContext: (ctx: Partial<BaseTreeContext>) => void,
+        visibleNodes: HierarchyPointNode<TMCNode>,
         width: number
     ) {
         this.refresh(
+            addClickPrune,
+            clickPruneHistory,
             colorScaleKey,
-            context,
+            removeClickPrune,
             scales,
             toggleableFeatures,
-            setContext,
+            visibleNodes,
             width
         );
     }
 
     refresh = (
+        addClickPrune: (pruner: ClickPruner) => void,
+        clickPruneHistory: ClickPruner[],
         colorScaleKey: ColorScaleKey,
-        context: TreeContext,
+        removeClickPrune: (pruner: ClickPruner) => void,
         scales: TreeScales,
         toggleableFeatures: ToggleableDisplayElements,
-        setContext: (ctx: Partial<BaseTreeContext>) => void,
+        visibleNodes: HierarchyPointNode<TMCNode>,
         width: number
     ) => {
-        this.context = context;
-        this.pruneContext = this.context.pruneContext;
+        this.addClickPrune = addClickPrune;
+        this.clickPruneHistory = clickPruneHistory;
         this.colorScaleKey = colorScaleKey;
-        this.activePruneStep = this.pruneContext[this.context.activePrune];
-        this.displayContext = this.context
-            .displayContext as Required<DisplayContext>;
+        this.removeClickPrune = removeClickPrune;
         this.scales = scales;
-        this.setContext = setContext;
-        this.setPruneContext = this.context.setPruneContext;
         this.toggleableFeatures = toggleableFeatures;
+        this.visibleNodes = visibleNodes;
         this.width = width;
     };
 }
 
-const TreeComponent: React.FC = () => {
+const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
+    baseTree,
+}) => {
     const [Tree, setTree] = useState<TreeViz>();
 
     const branchSizeScale = useLinearScale('branchSizeScale');
@@ -128,115 +119,93 @@ const TreeComponent: React.FC = () => {
         [branchSizeScale, colorScale, pieScale]
     );
 
-    const treeContext = useContext(TreeContext);
-
-    const {
-        activePrune,
-        displayContext,
-        pruneContext,
-        setDisplayContext,
-        setTreeContext,
-    } = treeContext;
-
     const toggleableFeatures = useAppSelector(selectToggleableDisplayElements);
     const width = useAppSelector(selectWidth);
+    const { clickPruneHistory } = useAppSelector(selectActiveStepPruneHistory);
+
     const dispatch = useAppDispatch();
 
-    const previousContext = useRef<Readonly<TreeContext>>(treeContext);
+    const { addClickPrune, removeClickPrune } = bindActionCreators(
+        {
+            addClickPrune: _addClickPrune,
+            removeClickPrune: _removeClickPrune,
+        },
+        dispatch
+    );
 
-    /* Initialize tree context on first load  */
+    const visibleNodes = usePruner(baseTree as HierarchyNode<TMCNode>);
+
     useEffect(() => {
-        const cb = async () => {
-            const data = await getData();
-            const w = 1000;
-            const rootPositionedTree = calculateTreeLayout(data, w);
-            const originalTree = calculateTreeLayout(data, w);
-            const visibleNodes = calculateTreeLayout(data, w);
+        dispatch(
+            updateLinearScale({
+                branchSizeScale: {
+                    domain: extent(
+                        visibleNodes.descendants().map(d => +(d.value || 0))
+                    ) as [number, number],
+                    range: [0.01, 20],
+                },
+            })
+        );
+        dispatch(
+            updateLinearScale({
+                pieScale: {
+                    range: [5, 20],
+                    domain: extent(
+                        visibleNodes.leaves().map(d => d.value!)
+                    ) as [number, number],
+                },
+            })
+        );
 
-            dispatch(
-                updateLinearScale({
-                    branchSizeScale: {
-                        domain: extent(
-                            rootPositionedTree
-                                .descendants()
-                                .map(d => +(d.value || 0))
-                        ) as [number, number],
-                        range: [0.01, 20],
-                    },
-                })
-            );
-            dispatch(
-                updateLinearScale({
-                    pieScale: {
-                        range: [5, 20],
-                        domain: extent(
-                            rootPositionedTree.leaves().map(d => d.value!)
-                        ) as [number, number],
-                    },
-                })
-            );
-
-            dispatch(
-                updateColorScale(
-                    calculateColorScaleRangeAndDomain(
-                        'labelCount',
-                        rootPositionedTree
-                    )
+        dispatch(
+            updateColorScale(
+                calculateColorScaleRangeAndDomain(
+                    'labelCount',
+                    visibleNodes as HierarchyPointNode<TMCNode>
                 )
-            );
-
-            setDisplayContext({
-                originalTree,
-                rootPositionedTree,
-                visibleNodes,
-            });
-        };
-        cb();
+            )
+        );
     }, []);
 
     /* intial render */
     useLayoutEffect(() => {
-        if (
-            treeContext.displayContext.rootPositionedTree &&
-            treeScales &&
-            !Tree
-        ) {
-            const Manager = new ContextManager(
-                colorScaleKey,
-                treeContext,
-                treeScales,
-                toggleableFeatures,
-                setTreeContext,
-                width
-            );
-            const _Tree = new TreeViz(
-                Manager,
-                '.legend',
-                `.${selector.current}`
-            );
-            setTree(_Tree);
-            _Tree.render();
-        }
-    }, [treeContext]);
+        const Manager = new ContextManager(
+            addClickPrune,
+            clickPruneHistory,
+            colorScaleKey,
+            removeClickPrune,
+            treeScales,
+            toggleableFeatures,
+            visibleNodes as HierarchyPointNode<TMCNode>,
+            width
+        );
+        const _Tree = new TreeViz(Manager, '.legend', `.${selector.current}`);
+        setTree(_Tree);
+        _Tree.render();
+    }, []);
+
+    //todo: prune stuff has to be there too
 
     useEffect(() => {
         /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
         if (Tree) {
             Tree.ContextManager.refresh(
+                addClickPrune,
+                clickPruneHistory,
                 colorScaleKey,
-                treeContext,
+                removeClickPrune,
                 treeScales,
                 toggleableFeatures,
-                setTreeContext,
+                visibleNodes as HierarchyPointNode<TMCNode>,
                 width
             );
         }
     }, [
-        setTreeContext,
-        treeContext,
+        clickPruneHistory,
+        colorScaleKey,
         toggleableFeatures,
         treeScales,
-        colorScaleKey,
+        visibleNodes,
     ]);
 
     /* React executes effects in order: this must follow previous so that tree has correct context when rendering */
@@ -244,93 +213,13 @@ const TreeComponent: React.FC = () => {
         if (Tree) {
             Tree.render();
         }
-    }, [displayContext, toggleableFeatures, treeScales, colorScaleKey]);
-
-    /* 
-        This effect 'watches' prune context, creates new pruned tree, and updates display context. 
-        Note that this should never call setContext itself, its job is to translate PruneContext to DisplayContext.
-    
-    */
-    useEffect(() => {
-        const { pruneContext: previousPrune, activePrune: previousActive } =
-            previousContext.current;
-
-        if (Tree) {
-            if (previousPrune.length < pruneContext.length) {
-                /* 
-                    if new context is longer than previous context, this is a new step.
-                */
-                setDisplayContext({
-                    rootPositionedTree: displayContext.visibleNodes,
-                });
-            } else if (previousActive !== activePrune) {
-                /* 
-                     When changing from one existing step to another we need to rerun all previous prunes. 
-                        For each pruner, we'll first run the value pruner (if any), then the click pruners. 
-                */
-                let _rootPositionedTree =
-                    displayContext.originalTree!.copy() as HierarchyNode<TMCNode>;
-                let _visibleNodes =
-                    displayContext.originalTree!.copy() as HierarchyNode<TMCNode>;
-
-                let i = 0;
-                while (i <= activePrune) {
-                    _visibleNodes = runPrune(
-                        pruneContext[i].valuePruner,
-                        _visibleNodes
-                    );
-
-                    _visibleNodes = runClickPrunes(
-                        pruneContext[i].clickPruneHistory,
-                        _visibleNodes
-                    );
-                    /* the rootPositionedNode for this step will actually be the tree from the previous step's prune */
-                    if (activePrune > 0 && i === activePrune - 1) {
-                        _rootPositionedTree = _visibleNodes.copy();
-                    }
-                    i++;
-                }
-
-                const visibleNodes = calculateTreeLayout(_visibleNodes, width);
-                const rootPositionedTree = calculateTreeLayout(
-                    _rootPositionedTree,
-                    width
-                );
-
-                setDisplayContext({
-                    rootPositionedTree,
-                    visibleNodes,
-                });
-            } else if (
-                !pruneContextsAreEqual(
-                    previousPrune[activePrune],
-                    pruneContext[activePrune]
-                )
-            ) {
-                /* 
-                    If we haven't changed or added steps and prune context has changed, prune the tree. 
-                    Because click history can change in both directions, we need to rerun from root every time.
-                    It's possible to optimize this to skip the redundant prunes.
-                */
-
-                let newTree = runPrune(
-                    pruneContext[activePrune].valuePruner,
-                    displayContext.rootPositionedTree!
-                );
-
-                newTree = runClickPrunes(
-                    pruneContext[activePrune].clickPruneHistory,
-                    newTree
-                );
-
-                setDisplayContext({
-                    visibleNodes: calculateTreeLayout(newTree, width),
-                });
-            }
-        }
-        //note right now that previous value is not reliable component-wide, should be used only in this hook!
-        previousContext.current = treeContext;
-    }, [activePrune, pruneContext]);
+    }, [
+        clickPruneHistory,
+        colorScaleKey,
+        toggleableFeatures,
+        treeScales,
+        visibleNodes,
+    ]);
 
     const selector = useRef<string>('tree');
 
@@ -338,38 +227,3 @@ const TreeComponent: React.FC = () => {
 };
 
 export default TreeComponent;
-
-const runClickPrunes = (
-    clickPruneHistory: ClickPruner[],
-    tree: HierarchyNode<TMCNode>
-) => {
-    let i = 0;
-    let _tree = tree.copy();
-    while (i < clickPruneHistory.length) {
-        _tree = runPrune(clickPruneHistory[i], _tree);
-        i++;
-    }
-    return _tree;
-};
-
-const runPrune = (arg: AllPruner, tree: HierarchyNode<TMCNode>) => {
-    if (!arg.key) return tree;
-    if (isClickPruner(arg)) {
-        return pruners[arg.key as ClickPruneType](tree, arg.value!);
-    } else {
-        return pruners[arg.key as ValuePruneType](tree, arg.value! as number);
-    }
-};
-
-const pruners = {
-    minDepth: pruneTreeByDepth,
-    minSize: pruneTreeByMinValue,
-    minDistance: pruneTreeByMinDistance,
-    minDistanceSearch: pruneTreeByMinDistanceSearch,
-    setCollapsedNode: collapseNode,
-    setRootNode: setRootNode,
-};
-
-const isClickPruner = (pruner: ClickPruner | any): pruner is ClickPruner => {
-    return ['setCollapsedNode', 'setRootNode'].includes(pruner.key);
-};

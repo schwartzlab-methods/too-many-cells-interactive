@@ -18,8 +18,13 @@ export const useLinearScale = <K extends keyof Omit<Scales, 'colorScale'>>(
 };
 
 export const useColorScale = () => {
-    const { domain, range, variant } =
+    const { featureDomain, featureRange, labelDomain, labelRange, variant } =
         useAppSelector(selectScales)['colorScale'];
+
+    const [range, domain] =
+        variant === 'featureCount'
+            ? [featureRange, featureDomain]
+            : [labelRange, labelDomain];
 
     if (variant === 'featureCount') {
         const allLowIdx = domain.findIndex(item => !item.includes('high'));

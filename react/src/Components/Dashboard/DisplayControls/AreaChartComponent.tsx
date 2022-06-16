@@ -4,7 +4,7 @@ import { Text } from '../../Typography';
 import { AreaChart } from '../../../Visualizations';
 
 interface AreaChartComponentProps {
-    counts: Map<number, number>;
+    counts: Record<number, number>;
     onBrush: (val: number) => void;
     title?: string;
     value?: number;
@@ -50,7 +50,7 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
         }
     }, [counts]);
 
-    return counts.size < 3 ? (
+    return Object.values(counts).length < 3 ? (
         <ErrorContainer>
             <Text>
                 This filter is incompatible with the current distribution of

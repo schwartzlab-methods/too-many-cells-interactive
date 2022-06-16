@@ -14,7 +14,7 @@ const bisectDownSorted = (arr: number[], target: number) => {
     return i;
 };
 export default class Histogram {
-    counts: Map<number, number>;
+    counts: Record<number, number>;
     selector: string;
     svg: Selection<SVGGElement, unknown, any, any>;
     w = 400;
@@ -26,7 +26,7 @@ export default class Histogram {
     xLabel: string;
     yScale!: ScaleLinear<number, number>;
     constructor(
-        counts: Map<number, number>,
+        counts: Record<number, number>,
         onBrush: (val: number) => void,
         selector: string,
         xLabel: string,
@@ -51,7 +51,7 @@ export default class Histogram {
         let startX = 0;
         let selectedIdx: number;
 
-        const counts = Array.from(this.counts.keys()).map(Number);
+        const counts = Array.from(Object.keys(this.counts)).map(Number);
 
         /* store starting location of each bin*/
         const ticks = counts
@@ -119,13 +119,13 @@ export default class Histogram {
     };
 
     render = (initialValue?: number) => {
-        const bins = Array.from(this.counts.keys());
+        const bins = Array.from(Object.keys(this.counts));
 
         this.xScale = scaleLinear([
             0 + this.margin + 12,
             this.w - this.margin,
         ]).domain(
-            extent(Array.from(this.counts.keys()).map(d => +d)) as [
+            extent(Array.from(Object.keys(this.counts)).map(d => +d)) as [
                 number,
                 number
             ]
@@ -135,9 +135,7 @@ export default class Histogram {
             this.h - this.margin,
             this.title ? this.margin : this.margin / 2,
         ])
-            .domain(
-                extent(Array.from(this.counts.values())) as [number, number]
-            )
+            .domain(extent(Object.values(this.counts)) as [number, number])
             .nice();
 
         if (this.title) {
@@ -160,7 +158,7 @@ export default class Histogram {
 
         this.svg
             .selectAll('path.area')
-            .data([Array.from(this.counts.entries())])
+            .data([Object.entries(this.counts)])
             .join('path')
             .attr('class', 'area')
             .transition()

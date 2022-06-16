@@ -3,19 +3,25 @@ import type { RootState } from './store';
 
 interface DistributionMetadata {
     mad: number;
-    madGroups: Map<any, any>;
+    madGroups: Record<number, number>;
     median: number;
-    plainGroups: Map<any, any>;
+    plainGroups: Record<number, number>;
 }
 
 type DistributionKeys = 'distance' | 'distanceSearch' | 'size';
 
-export type Distributions = { [K in DistributionKeys]: DistributionMetadata };
+type DetailedDistributions = { [K in DistributionKeys]: DistributionMetadata };
+
+export interface Distributions extends DetailedDistributions {
+    depthGroups: Record<number, number>;
+}
+
+export type PruneHistory = PruneStep[];
 
 interface PruneSliceState {
     currentPruneStep: number;
     distributionMetadata: Distributions;
-    pruneHistory: PruneStep[];
+    pruneHistory: PruneHistory;
 }
 
 const makeFreshPruneStep = () => ({
@@ -27,6 +33,7 @@ const initialState: PruneSliceState = {
     //todo: each prunestep could have its own metadata on it, including tree metadata?
     currentPruneStep: 0,
     distributionMetadata: {
+        depthGroups: {},
         distance: {} as DistributionMetadata,
         distanceSearch: {} as DistributionMetadata,
         size: {} as DistributionMetadata,
@@ -78,6 +85,10 @@ export const pruneSlice = createSlice({
                 payload,
             ];
         },
+        addStep: state => {
+            state.pruneHistory.push(makeFreshPruneStep());
+            state.currentPruneStep += 1;
+        },
         addValuePrune: (
             { currentPruneStep, pruneHistory },
             { payload }: PayloadAction<ValuePruner>
@@ -85,17 +96,17 @@ export const pruneSlice = createSlice({
             pruneHistory[currentPruneStep].valuePruner = payload;
             pruneHistory[currentPruneStep].clickPruneHistory = [];
         },
-        addStep: state => {
-            state.pruneHistory.push(makeFreshPruneStep());
-            state.currentPruneStep += 1;
-        },
         removeClickPrune: (
             { currentPruneStep, pruneHistory },
-            { payload }: PayloadAction<string>
+            { payload: { key, value } }: PayloadAction<ClickPruner>
         ) => {
             pruneHistory[currentPruneStep].clickPruneHistory.filter(
-                h => h.key !== payload
+                h => h.key !== key && h.value === value
             );
+        },
+        resetHistory: state => {
+            state.currentPruneStep = 0;
+            state.pruneHistory = [makeFreshPruneStep()];
         },
         revertToStep: (state, { payload }: PayloadAction<number>) => {
             state.currentPruneStep = payload;
@@ -112,14 +123,28 @@ export const pruneSlice = createSlice({
     },
 });
 
-export const { addStep, updateDistributions } = pruneSlice.actions;
+export const {
+    addClickPrune,
+    addStep,
+    addValuePrune,
+    removeClickPrune,
+    resetHistory,
+    revertToStep,
+    updateDistributions,
+} = pruneSlice.actions;
 
 export const selectActivePruneStep = (state: RootState) => ({
     step: state.pruneSlice.pruneHistory[state.pruneSlice.currentPruneStep],
     index: state.pruneSlice.currentPruneStep,
 });
 
+export const selectDistributionMetadata = (state: RootState) =>
+    state.pruneSlice.distributionMetadata;
+
 export const selectPruneHistory = (state: RootState) =>
+    state.pruneSlice.pruneHistory;
+
+export const selectActiveStepPruneHistory = (state: RootState) =>
     state.pruneSlice.pruneHistory[state.pruneSlice.currentPruneStep];
 
 export default pruneSlice.reducer;

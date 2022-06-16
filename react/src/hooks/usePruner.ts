@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { compose } from 'redux';
 import { HierarchyNode } from 'd3-hierarchy';
-import { median, min, range, ticks } from 'd3-array';
+import { max, median, min, range, ticks } from 'd3-array';
 import { TMCNode } from '../types';
 import {
     AllPruner,
@@ -13,6 +13,11 @@ import {
     updateDistributions,
     ValuePruneType,
 } from '../redux/pruneSlice';
+import {
+    selectWidth,
+    TreeMetaData,
+    updateTreeMetadata,
+} from '../redux/displayConfigSlice';
 import {
     calculateTreeLayout,
     collapseNode,
@@ -26,7 +31,6 @@ import {
 } from '../util';
 import useAppSelector from './useAppSelector';
 import useAppDispatch from './useAppDispatch';
-import { selectWidth } from '../redux/displayConfigSlice';
 
 /* 
     todo: "base tree" needs to be updated sometimes (i.e., with expression values) 
@@ -102,6 +106,10 @@ const usePruner = (tree: HierarchyNode<TMCNode>) => {
     }, [valuePruner, activePruneIndex]);
 
     useEffect(() => {
+        updateTreeMetadata(buildTreeMetadata(visibleNodes));
+    }, [visibleNodes]);
+
+    useEffect(() => {
         //we update this value last, after other hookds have used it
         currentStep.current = activePruneIndex;
     }, [activePruneIndex]);
@@ -112,13 +120,14 @@ const usePruner = (tree: HierarchyNode<TMCNode>) => {
 export default usePruner;
 
 const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
+    depthGroups: getDepthGroups(nodes),
     distance: {
         mad: getMAD(
             nodes
                 .descendants()
                 .map(v => v.data.distance!)
                 .filter(Boolean)
-        ),
+        )!,
         madGroups: getDistanceMadGroups(
             nodes,
             getMaxCutoffDistance(nodes),
@@ -129,7 +138,7 @@ const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
                 .descendants()
                 .map(v => v.data.distance!)
                 .filter(Boolean)
-        ),
+        )!,
         plainGroups: getDistanceGroups(
             nodes,
             getMaxCutoffDistance(nodes),
@@ -142,7 +151,7 @@ const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
                 .descendants()
                 .map(v => v.data.distance!)
                 .filter(Boolean)
-        ),
+        )!,
         madGroups: getDistanceMadGroups(
             nodes,
             getMaxCutoffDistance(nodes),
@@ -153,7 +162,7 @@ const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
                 .descendants()
                 .map(v => v.data.distance!)
                 .filter(Boolean)
-        ),
+        )!,
         plainGroups: getDistanceGroups(
             nodes,
             getMaxCutoffDistanceSearch(nodes),
@@ -161,12 +170,38 @@ const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
         ),
     },
     size: {
-        mad: getMAD(nodes.descendants().map(v => v.value!)),
+        mad: getMAD(nodes.descendants().map(v => v.value!))!,
         madGroups: getSizeMadGroups(nodes),
-        median: median(nodes.descendants().map(v => v.value!)),
+        median: median(nodes.descendants().map(v => v.value!))!,
         plainGroups: getSizeGroups(nodes),
     },
 });
+
+const buildTreeMetadata = (nodes: HierarchyNode<TMCNode>): TreeMetaData => ({
+    leafCount: nodes.leaves().length,
+    maxDistance: max(nodes.descendants().map(n => n.data.distance!)) || 0,
+    minDistance: min(nodes.descendants().map(n => n.data.distance!)) || 0,
+    minValue: min(nodes.descendants().map(n => n.value!)) || 0,
+    maxValue: max(nodes.descendants().map(n => n.value!)) || 0,
+    nodeCount: nodes.descendants().length,
+});
+
+/**
+ * @returns object keyed by integer `n` whose value is count of nodes with `depth` <= n
+ */
+const getDepthGroups = (tree: HierarchyNode<TMCNode>) => {
+    const maxSize = max(tree.descendants().map(n => n.depth))!;
+
+    return range(0, maxSize + 1)
+        .reverse()
+        .reduce<Record<number, number>>(
+            (acc, curr) => ({
+                ...acc,
+                [curr]: tree.descendants().filter(d => d.depth <= curr).length,
+            }),
+            {}
+        );
+};
 
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
@@ -182,9 +217,12 @@ const getDistanceGroups = (
 ) => {
     const bounds = ticks(0, cutoffDistance, binCount);
 
-    return bounds.reduce(
-        (acc, curr) => acc.set(curr, pruneFn(tree, curr).descendants().length),
-        new Map<number, number>()
+    return bounds.reduce<Record<number, number>>(
+        (acc, curr) => ({
+            ...acc,
+            [curr]: pruneFn(tree, curr).descendants().length,
+        }),
+        {}
     );
 };
 
@@ -214,10 +252,12 @@ const getDistanceMadGroups = (
         mads: m,
     }));
 
-    return bounds.reduce(
-        (acc, curr) =>
-            acc.set(curr.mads, pruneFn(tree, curr.size).descendants().length),
-        new Map<number, number>()
+    return bounds.reduce<Record<number, number>>(
+        (acc, curr) => ({
+            ...acc,
+            [curr.mads]: pruneFn(tree, curr.size).descendants().length,
+        }),
+        {}
     );
 };
 
@@ -263,10 +303,12 @@ const getSizeGroups = (tree: HierarchyNode<TMCNode>, binCount = 50) => {
 
     const bounds = ticks(0, maxSize, binCount);
 
-    return bounds.reduce(
-        (acc, curr) =>
-            acc.set(curr, pruneTreeByMinValue(tree, curr).descendants().length),
-        new Map<number, number>()
+    return bounds.reduce<Record<number, number>>(
+        (acc, curr) => ({
+            ...acc,
+            [curr]: pruneTreeByMinValue(tree, curr).descendants().length,
+        }),
+        {}
     );
 };
 
@@ -291,13 +333,13 @@ const getSizeMadGroups = (tree: HierarchyNode<TMCNode>) => {
         mads: m,
     }));
 
-    return bounds.reduce(
-        (acc, curr) =>
-            acc.set(
-                curr.mads,
-                pruneTreeByMinValue(tree, curr.size).descendants().length
-            ),
-        new Map<number, number>()
+    return bounds.reduce<Record<number, number>>(
+        (acc, curr) => ({
+            ...acc,
+            [curr.mads]: pruneTreeByMinValue(tree, curr.size).descendants()
+                .length,
+        }),
+        {}
     );
 };
 

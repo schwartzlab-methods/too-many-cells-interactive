@@ -1,57 +1,55 @@
-import React, { useContext } from 'react';
+import React from 'react';
+import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import { formatDistance, formatInteger, pruneStepIsEmpty } from '../../../util';
 import Button from '../../Button';
 import { Column, Row } from '../../Layout';
 import { Text, Title } from '../../Typography';
-import { makeFreshPruneContext, PruneContext, TreeContext } from '../Dashboard';
+import {
+    addStep as _addStep,
+    PruneStep,
+    resetHistory as _resestHistory,
+    revertToStep as _revertToStep,
+    selectActivePruneStep,
+    selectPruneHistory,
+} from '../../../redux/pruneSlice';
+import { useAppDispatch, useAppSelector } from '../../../hooks';
 
 const PruneHistory: React.FC = () => {
-    const treeContext = useContext(TreeContext);
-    const {
-        activePrune,
-        displayContext,
-        pruneContext,
-        setActivePrune,
-        setTreeContext,
-    } = treeContext;
+    const { addStep, resetHistory, revertToStep } = bindActionCreators(
+        {
+            addStep: _addStep,
+            resetHistory: _resestHistory,
+            revertToStep: _revertToStep,
+        },
+        useAppDispatch()
+    );
+
+    const { step: activeStep, index: activePruneIdx } = useAppSelector(
+        selectActivePruneStep
+    );
+
+    const pruneHistory = useAppSelector(selectPruneHistory);
 
     /**
      * Apply current step by pushing in new context and setting it active
      */
-    const applyPrune = () => {
-        const _pruneContext = pruneContext.slice();
-        _pruneContext.push(makeFreshPruneContext());
-        setTreeContext({
-            pruneContext: _pruneContext,
-            activePrune: activePrune + 1,
-        });
-    };
+    const applyPrune = () => addStep();
 
     /**
      * Apply button is only enabled if we are on the latest step and that step is not empty
      */
     const getApplyButtonDisabled = () =>
-        pruneStepIsEmpty(pruneContext[activePrune]) ||
-        activePrune !== pruneContext.length - 1;
+        pruneStepIsEmpty(activeStep) ||
+        activePruneIdx !== pruneHistory.length - 1;
 
     /**
      * Disable reset button if there is only one step and it is empty
      */
     const getResetButtonDisabled = () =>
-        pruneContext.length === 1 &&
-        pruneStepIsEmpty(pruneContext.slice(-1)[0]);
+        pruneHistory.length === 1 && pruneStepIsEmpty(activeStep);
 
-    const resetPruneHistory = () =>
-        setTreeContext({
-            activePrune: 0,
-            pruneContext: [makeFreshPruneContext()],
-            displayContext: {
-                ...displayContext,
-                visibleNodes: displayContext.originalTree,
-                rootPositionedTree: displayContext.originalTree,
-            },
-        });
+    const resetPruneHistory = () => resetHistory();
 
     return (
         <Column>
@@ -76,15 +74,15 @@ const PruneHistory: React.FC = () => {
                     </span>
                 </Row>
                 <StepContainer>
-                    {pruneContext.map((ctx, i) => (
+                    {pruneHistory.map((history, i) => (
                         <PruneStep
                             key={i}
-                            active={i === treeContext.activePrune}
-                            empty={pruneStepIsEmpty(ctx)}
+                            active={i === activePruneIdx}
+                            empty={pruneStepIsEmpty(history)}
                             index={i}
-                            pruneContext={ctx}
+                            pruneStep={history}
                             setActive={() => {
-                                setActivePrune(i);
+                                revertToStep(i);
                             }}
                         />
                     ))}
@@ -110,7 +108,7 @@ interface PruneStepProps {
     active: boolean;
     empty: boolean;
     index: number;
-    pruneContext: PruneContext;
+    pruneStep: PruneStep;
     setActive: () => void;
 }
 
@@ -118,19 +116,19 @@ const PruneStep: React.FC<PruneStepProps> = ({
     active,
     empty,
     index,
-    pruneContext,
+    pruneStep,
     setActive,
 }) => {
     return (
         <PruneStepContainer onClick={setActive} active={active} empty={empty}>
-            {getPruneHistoryLabel(pruneContext, index)}
+            {getPruneHistoryLabel(pruneStep, index)}
         </PruneStepContainer>
     );
 };
 
-const getPruneHistoryLabel = (pruneContext: PruneContext, index: number) => {
-    const { key, value } = pruneContext.valuePruner;
-    const manualPruneCount = pruneContext.clickPruneHistory.length;
+const getPruneHistoryLabel = (pruneStep: PruneStep, index: number) => {
+    const { key, value } = pruneStep.valuePruner;
+    const manualPruneCount = pruneStep.clickPruneHistory.length;
     const labels = [];
     if (key && value) {
         const formatter = key.startsWith('minDistance')

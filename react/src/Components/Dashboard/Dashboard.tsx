@@ -1,9 +1,13 @@
-import React, { createContext, useCallback, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { HierarchyPointNode } from 'd3-hierarchy';
 import { createGlobalStyle, ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
 import { Column, Row } from '../Layout';
 import { Main } from '../Typography';
+import { calculateTreeLayout } from '../../util';
+import { useAppSelector } from '../../hooks';
+import { selectWidth } from '../../redux/displayConfigSlice';
+import { getData } from '../../prepareData';
 import TreeControls from './Chart/TreeControls';
 import PruneHistory from './DisplayControls/PruneHistory';
 import ControlPanel from './DisplayControls/ControlPanel';
@@ -25,168 +29,45 @@ const GlobalStyle = createGlobalStyle`
     }
 `;
 
-export interface DisplayContext {
-    originalTree?: Readonly<HierarchyPointNode<TMCNode>>;
-    rootPositionedTree?: Readonly<HierarchyPointNode<TMCNode>>;
-    visibleNodes?: Readonly<HierarchyPointNode<TMCNode>>;
-}
-
-export type ValuePruneType =
-    | 'minSize'
-    | 'minDistance'
-    | 'minDistanceSearch'
-    | 'minDepth';
-
-export type ClickPruneType = 'setRootNode' | 'setCollapsedNode';
-
-export type AllPruneType = ValuePruneType | ClickPruneType;
-
-export interface Pruner<T> {
-    key?: T;
-}
-
-export interface ClickPruner extends Pruner<ClickPruneType> {
-    value?: string;
-}
-export interface ValuePruner extends Pruner<ValuePruneType> {
-    value?: number;
-}
-export interface AllPruner extends Pruner<AllPruneType> {
-    value?: string | number;
-}
-
-export interface PruneContext {
-    valuePruner: ValuePruner;
-    clickPruneHistory: ClickPruner[];
-}
-
-export const makeFreshPruneContext = () => ({
-    valuePruner: {},
-    clickPruneHistory: [],
-});
-
-export interface BaseTreeContext {
-    activePrune: Readonly<number>;
-    displayContext: Readonly<DisplayContext>;
-    pruneContext: Readonly<PruneContext[]>;
-}
-
-export interface TreeContext extends BaseTreeContext {
-    setActivePrune: (idx: number) => void;
-    setDisplayContext: (newContext: DisplayContext) => void;
-    setPruneContext: (newContext: Partial<PruneContext>) => void;
-    setTreeContext: (newContext: Partial<BaseTreeContext>) => void;
-}
-
-export const TreeContext = createContext<TreeContext>({
-    /* initialize so that typescript doesn't complain about the value  being null */
-    activePrune: 0,
-    displayContext: {},
-    pruneContext: [makeFreshPruneContext()],
-    /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-    setActivePrune: (idx: number) => {
-        throw 'Uninitialized setter!';
-    },
-
-    /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-    setDisplayContext: (newContext: DisplayContext) => {
-        throw 'Uninitialized setter!';
-    },
-    /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-    setPruneContext: (newContext: Partial<PruneContext>) => {
-        throw 'Uninitialized setter!';
-    },
-    /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-    setTreeContext: (newContext: Partial<TreeContext>) => {
-        throw 'Uninitialized setter!';
-    },
-});
-
 const Dashboard: React.FC = () => {
-    const [treeContext, _setTreeContext] = useState<BaseTreeContext>({
-        activePrune: 0,
-        displayContext: {},
-        pruneContext: [makeFreshPruneContext()],
-    });
+    const [baseTree, setBaseTree] = useState<HierarchyPointNode<TMCNode>>();
 
-    const setTreeContext = useCallback(
-        (contextSlice: Partial<TreeContext>) =>
-            _setTreeContext({ ...treeContext, ...contextSlice }),
-        [treeContext, _setTreeContext]
-    );
+    const width = useAppSelector(selectWidth);
 
-    const setActivePrune = useCallback(
-        (idx: number) => setTreeContext({ ...treeContext, activePrune: idx }),
-        [treeContext, setTreeContext]
-    );
-
-    const setDisplayContext = useCallback(
-        (contextSlice: DisplayContext) =>
-            setTreeContext({
-                displayContext: {
-                    ...treeContext.displayContext,
-                    ...contextSlice,
-                },
-            }),
-        [setTreeContext, treeContext]
-    );
-
-    /* note that we will wipe out any subsequent prune contexts here, since a prune
-        change forks prune history */
-    const setPruneContext = useCallback(
-        (contextSlice: Partial<PruneContext>) => {
-            const activeIdx = treeContext.activePrune;
-            const latest = treeContext.pruneContext[activeIdx];
-            const pruneContext = treeContext.pruneContext.slice(
-                0,
-                activeIdx + 1
-            );
-            const updated = {
-                ...latest,
-                ...contextSlice,
-            };
-
-            pruneContext[activeIdx] = updated;
-
-            setTreeContext({ pruneContext });
-        },
-        [setTreeContext, treeContext]
-    );
+    /* Initialize tree context on first load --nope! this needs to move up a component -- this component should not render without a tree */
+    useEffect(() => {
+        const cb = async () => {
+            const data = await getData();
+            setBaseTree(calculateTreeLayout(data, width));
+        };
+        cb();
+    }, []);
 
     return (
         <ThemeProvider theme={theme}>
             <GlobalStyle />
-            <TreeContext.Provider
-                value={{
-                    ...treeContext,
-                    setActivePrune,
-                    setDisplayContext,
-                    setPruneContext,
-                    setTreeContext,
-                }}
-            >
-                <Column>
-                    <Main>TooManyCellsJs</Main>
-                    <Row alignItems="flex-start" margin="0px">
-                        <Row width="50%">
-                            <Column>
-                                <TreeControls />
-                                <TreeComponent />
-                            </Column>
-                        </Row>
-                        <Row width="50%">
-                            <Column justifyContent="flex-start">
-                                <Row margin="0px">
-                                    <PruneHistory />
-                                </Row>
-                                <Row margin="0px" alignItems="flex-start">
-                                    <ControlPanel />
-                                </Row>
-                            </Column>
-                        </Row>
+
+            <Column>
+                <Main>TooManyCellsJs</Main>
+                <Row alignItems="flex-start" margin="0px">
+                    <Row width="50%">
+                        <Column>
+                            <TreeControls />
+                            {baseTree && <TreeComponent baseTree={baseTree} />}
+                        </Column>
                     </Row>
-                </Column>
-            </TreeContext.Provider>
+                    <Row width="50%">
+                        <Column justifyContent="flex-start">
+                            <Row margin="0px">
+                                <PruneHistory />
+                            </Row>
+                            <Row margin="0px" alignItems="flex-start">
+                                <ControlPanel />
+                            </Row>
+                        </Column>
+                    </Row>
+                </Row>
+            </Column>
         </ThemeProvider>
     );
 };
