@@ -5,7 +5,14 @@ import { HierarchyNode, HierarchyPointNode, tree } from 'd3-hierarchy';
 import { interpolate } from 'd3-interpolate';
 import { scaleOrdinal } from 'd3-scale';
 import { schemeSet1 } from 'd3-scale-chromatic';
-import { PruneStep } from './redux/pruneSlice';
+import {
+    AllPruner,
+    ClickPruner,
+    ClickPruneType,
+    PruneHistory,
+    PruneStep,
+    ValuePruneType,
+} from './redux/pruneSlice';
 import { AttributeMap, TMCNode } from './types';
 
 /* typescript-friendly */
@@ -237,17 +244,58 @@ export const calculateColorScaleRangeAndDomain = (
     return { range, domain };
 };
 
-/* todo: deprecate */
-export const buildColorScale = (
-    colorScaleKey: 'featureCount' | 'labelCount',
-    nodes: HierarchyPointNode<TMCNode>
+export const rerunPrunes = (
+    activeStepIdx: number,
+    pruneHistory: PruneHistory,
+    tree: HierarchyNode<TMCNode>
 ) => {
-    const { range, domain } = calculateColorScaleRangeAndDomain(
-        colorScaleKey,
-        nodes
-    );
+    let i = 0;
+    let _prunedNodes = tree;
+    while (i <= activeStepIdx) {
+        _prunedNodes = runPrune(pruneHistory[i].valuePruner, _prunedNodes);
 
-    return scaleOrdinal(range).domain(domain);
+        _prunedNodes = runClickPrunes(
+            pruneHistory[i].clickPruneHistory,
+            _prunedNodes
+        );
+        i++;
+    }
+    return _prunedNodes;
+};
+
+const isClickPruner = (pruner: ClickPruner | any): pruner is ClickPruner => {
+    return ['setCollapsedNode', 'setRootNode'].includes(pruner.key);
+};
+
+export const runClickPrunes = (
+    clickPruneHistory: ClickPruner[],
+    tree: HierarchyNode<TMCNode>
+) => {
+    let i = 0;
+    let _tree = tree.copy();
+    while (i < clickPruneHistory.length) {
+        _tree = runPrune(clickPruneHistory[i], _tree);
+        i++;
+    }
+    return _tree;
+};
+
+const pruners = {
+    minDepth: pruneTreeByDepth,
+    minSize: pruneTreeByMinValue,
+    minDistance: pruneTreeByMinDistance,
+    minDistanceSearch: pruneTreeByMinDistanceSearch,
+    setCollapsedNode: collapseNode,
+    setRootNode: setRootNode,
+};
+
+export const runPrune = (arg: AllPruner, tree: HierarchyNode<TMCNode>) => {
+    if (!arg.key) return tree;
+    if (isClickPruner(arg)) {
+        return pruners[arg.key as ClickPruneType](tree, arg.value!);
+    } else {
+        return pruners[arg.key as ValuePruneType](tree, arg.value! as number);
+    }
 };
 
 // taken from here: https://gist.github.com/keesey/e09d0af833476385b9ee13b6d26a2b84

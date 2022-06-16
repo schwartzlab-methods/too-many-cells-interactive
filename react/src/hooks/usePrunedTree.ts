@@ -1,17 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { compose } from 'redux';
 import { HierarchyNode } from 'd3-hierarchy';
 import { max, median, min, range, ticks } from 'd3-array';
 import { TMCNode } from '../types';
 import {
-    AllPruner,
-    ClickPruneType,
-    ClickPruner,
     Distributions,
     selectActivePruneStep,
     selectPruneHistory,
     updateDistributions,
-    ValuePruneType,
 } from '../redux/pruneSlice';
 import {
     selectWidth,
@@ -20,14 +16,14 @@ import {
 } from '../redux/displayConfigSlice';
 import {
     calculateTreeLayout,
-    collapseNode,
     getMAD,
     pruneStepIsEmpty,
-    pruneTreeByDepth,
     pruneTreeByMinDistance,
     pruneTreeByMinDistanceSearch,
     pruneTreeByMinValue,
-    setRootNode,
+    rerunPrunes,
+    runClickPrunes,
+    runPrune,
 } from '../util';
 import useAppSelector from './useAppSelector';
 import useAppDispatch from './useAppDispatch';
@@ -42,9 +38,10 @@ import useAppDispatch from './useAppDispatch';
         -- then when some consumer calls it (i.e., after updating expression values)
             our useExpression hook, we'll have a useEffect that reruns all the pruners from scratch
             with the new nodes
+
+    we can cache the trees at various steps, but let's just see how slow it is to rerun always
 */
-const usePruner = (tree: HierarchyNode<TMCNode>) => {
-    const originalTree = useMemo(() => tree, []);
+const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
     const [visibleNodes, setVisibleNodes] = useState(tree);
 
     const dispatch = useAppDispatch();
@@ -57,53 +54,37 @@ const usePruner = (tree: HierarchyNode<TMCNode>) => {
 
     const width = useAppSelector(selectWidth);
 
-    const { clickPruneHistory, valuePruner } = step;
+    const { clickPruneHistory } = step;
 
-    const currentStep = useRef(0);
+    const currentStep = useRef(-1);
 
     useEffect(() => {
-        if (activePruneIndex && currentStep.current !== activePruneIndex) {
+        if (pruneStepIsEmpty(step)) {
             //if this is a new prune or a full revert, i.e., if step is empty recalculate base ditributions from visibleNodes
-            if (pruneStepIsEmpty(step)) {
-                compose(
-                    dispatch,
-                    updateDistributions,
-                    buildPruneMetadata
-                )(visibleNodes);
-            } //otherwise, this is a partial revert, so rebuild tree and refresh distributions
-            else {
-                let i = 0;
-                let _prunedNodes =
-                    originalTree!.copy() as HierarchyNode<TMCNode>;
-                while (i <= activePruneIndex) {
-                    _prunedNodes = runPrune(
-                        pruneHistory[i].valuePruner,
-                        _prunedNodes
-                    );
+            compose(
+                dispatch,
+                updateDistributions,
+                buildPruneMetadata
+            )(activePruneIndex === 0 ? tree.copy() : visibleNodes);
 
-                    _prunedNodes = runClickPrunes(
-                        pruneHistory[i].clickPruneHistory,
-                        _prunedNodes
-                    );
-                    i++;
-                }
-
-                setVisibleNodes(calculateTreeLayout(_prunedNodes, width));
+            if (activePruneIndex === 0) {
+                setVisibleNodes(calculateTreeLayout(tree.copy(), width));
             }
         }
-    }, [activePruneIndex, step]);
+    }, [step]);
 
+    /* for now rerun everytime and keep an eye on performance */
     useEffect(() => {
-        if (activePruneIndex === currentStep.current) {
-            setVisibleNodes(runClickPrunes(clickPruneHistory, visibleNodes));
+        if (!pruneStepIsEmpty(step)) {
+            const prunedNodes = rerunPrunes(
+                activePruneIndex,
+                pruneHistory,
+                tree.copy()
+            );
+
+            setVisibleNodes(calculateTreeLayout(prunedNodes, width));
         }
     }, [clickPruneHistory, activePruneIndex]);
-
-    useEffect(() => {
-        if (activePruneIndex === currentStep.current) {
-            setVisibleNodes(runPrune(valuePruner, visibleNodes));
-        }
-    }, [valuePruner, activePruneIndex]);
 
     useEffect(() => {
         updateTreeMetadata(buildTreeMetadata(visibleNodes));
@@ -117,7 +98,7 @@ const usePruner = (tree: HierarchyNode<TMCNode>) => {
     return visibleNodes;
 };
 
-export default usePruner;
+export default usePrunedTree;
 
 const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
     depthGroups: getDepthGroups(nodes),
@@ -341,39 +322,4 @@ const getSizeMadGroups = (tree: HierarchyNode<TMCNode>) => {
         }),
         {}
     );
-};
-
-const isClickPruner = (pruner: ClickPruner | any): pruner is ClickPruner => {
-    return ['setCollapsedNode', 'setRootNode'].includes(pruner.key);
-};
-
-const runClickPrunes = (
-    clickPruneHistory: ClickPruner[],
-    tree: HierarchyNode<TMCNode>
-) => {
-    let i = 0;
-    let _tree = tree.copy();
-    while (i < clickPruneHistory.length) {
-        _tree = runPrune(clickPruneHistory[i], _tree);
-        i++;
-    }
-    return _tree;
-};
-
-const pruners = {
-    minDepth: pruneTreeByDepth,
-    minSize: pruneTreeByMinValue,
-    minDistance: pruneTreeByMinDistance,
-    minDistanceSearch: pruneTreeByMinDistanceSearch,
-    setCollapsedNode: collapseNode,
-    setRootNode: setRootNode,
-};
-
-const runPrune = (arg: AllPruner, tree: HierarchyNode<TMCNode>) => {
-    if (!arg.key) return tree;
-    if (isClickPruner(arg)) {
-        return pruners[arg.key as ClickPruneType](tree, arg.value!);
-    } else {
-        return pruners[arg.key as ValuePruneType](tree, arg.value! as number);
-    }
 };

@@ -4,40 +4,36 @@ import React, {
     InputHTMLAttributes,
     KeyboardEvent,
     MutableRefObject,
-    useCallback,
-    useContext,
     useEffect,
     useMemo,
     useRef,
     useState,
 } from 'react';
-import { useDispatch } from 'react-redux';
-import { max, min, quantile, range, sum } from 'd3-array';
-import { HierarchyPointNode } from 'd3-hierarchy';
+import { bindActionCreators } from 'redux';
+import { range } from 'd3-array';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
-import {
-    calculateColorScaleRangeAndDomain,
-    getEntries,
-    getMAD,
-    getObjectIsEmpty,
-    levenshtein,
-} from '../../../util';
+import { getEntries, levenshtein } from '../../../util';
 import Button from '../../Button';
 import { Input, NumberInput } from '../../Input';
 import { Column, Row } from '../../Layout';
 import Modal from '../../Modal';
 import { Caption, Title } from '../../Typography';
 import { CloseIcon } from '../../Icons';
-import { AttributeMap, TMCNode } from '../../../types';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import Checkbox from '../../Checkbox';
-import { useAppSelector } from '../../../hooks';
+import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectScales,
-    updateColorScale,
+    updateColorScaleThresholds as _updateColorScaleThresholds,
 } from '../../../redux/displayConfigSlice';
+import {
+    clearActiveFeatures as _clearActiveFeatures,
+    FeatureDistribution,
+    removeActiveFeature as _removeActiveFeature,
+    selectFeatureSlice,
+} from '../../../redux/featureSlice';
 
 /**
  *
@@ -46,196 +42,51 @@ import {
  * @returns TMCNode: Note that the tree is mutated in place
  */
 
-const updatefeatureStats = (
-    nodes: HierarchyPointNode<TMCNode>,
-    thresholds: Record<string, number>
-) =>
-    nodes.eachAfter(n => {
-        // our featureStats, for the scale to read
-        const hilo = {} as AttributeMap;
-
-        //if these are leaves, store and calculate base values
-        if (n.data.items) {
-            n.data.items.forEach(cell => {
-                //reduce cells for each node to hi/lows
-                const key = getEntries(cell._barcode._featureCounts).reduce(
-                    (acc, [k, v]) =>
-                        `${acc ? acc + '-' : ''}${
-                            v && v >= thresholds[k] ? 'high' : 'low'
-                        }-${k}`,
-                    ''
-                );
-                //add to node's running total of hilos
-                if (key) {
-                    hilo[key] = hilo[key]
-                        ? { ...hilo[key], quantity: hilo[key].quantity + 1 }
-                        : { scaleKey: key, quantity: 1 };
-                }
-            });
-        } else {
-            //if node is not a leaf, just add both children
-            n.children!.map(node => node.data.featureCount).forEach(count => {
-                for (const featurekey in count) {
-                    if (!hilo[featurekey]) {
-                        hilo[featurekey] = count[featurekey];
-                    } else {
-                        hilo[featurekey].quantity += count[featurekey].quantity;
-                    }
-                }
-            });
-        }
-        n.data.featureCount = hilo;
-        return n;
-    });
-
-interface FeatureStat {
-    mad: number;
-    madWithZeroes: number;
-    max: number;
-    median: number;
-    medianWithZeroes: number;
-    min: number;
-    total: number;
-}
-
 const FeatureSearch: React.FC = () => {
-    const [features, setFeatures] = useState<string[]>([]);
-    const [featureStats, setfeatureStats] = useState<
-        Record<string, FeatureStat>
-    >({});
     const [loading, setLoading] = useState(false);
+    const [featureList, setFeatureList] = useState<string[]>();
 
     const {
         colorScale: { expressionThresholds, variant: colorScaleKey },
     } = useAppSelector(selectScales);
 
-    const dispatch = useDispatch();
+    const { activeFeatures, featureDistributions } =
+        useAppSelector(selectFeatureSlice);
 
-    /* todo: action: strip feature counts */
-    const resetOverlay = useCallback(() => {
-        setDisplayContext({
-            visibleNodes: visibleNodes?.each(n => (n.data.featureCount = {})),
-        });
-    }, [setDisplayContext]);
-
-    const updateExpressionThresholds = useCallback(
-        (feature: string, threshold: number) => {
-            const newExpressionThresholds = {
-                ...expressionThresholds!,
-                [feature]: threshold,
-            };
-
-            updatefeatureStats(visibleNodes!, newExpressionThresholds);
-
-            dispatch(
-                updateColorScale({
-                    expressionThresholds: newExpressionThresholds,
-                    variant: colorScaleKey,
-                })
-            );
-
-            setDisplayContext({
-                visibleNodes,
-            });
-            setDisplayContext;
+    const {
+        clearActiveFeatures,
+        removeActiveFeature,
+        updateColorScaleThresholds,
+    } = bindActionCreators(
+        {
+            clearActiveFeatures: _clearActiveFeatures,
+            removeActiveFeature: _removeActiveFeature,
+            updateColorScaleThresholds: _updateColorScaleThresholds,
         },
-        [visibleNodes, expressionThresholds]
+        useAppDispatch()
     );
 
-    const removeFeature = (featureName: string) => {
-        visibleNodes!.leaves().forEach(n =>
-            n.data.items?.forEach(item => {
-                if (
-                    item._barcode?._featureCounts &&
-                    item._barcode._featureCounts[featureName] !== undefined
-                ) {
-                    delete item._barcode._featureCounts[featureName];
-                }
-            })
-        );
+    const resetOverlay = clearActiveFeatures;
 
-        const nodes = updatefeatureStats(visibleNodes!, expressionThresholds!);
-        delete featureStats[featureName];
-        delete expressionThresholds![featureName];
-        //todo: drop threshold for this item and update display context
-        setfeatureStats(featureStats);
-
-        dispatch(updateColorScale(_updateColorScale(nodes)));
-    };
-
-    const _updateColorScale = (visibleNodes: HierarchyPointNode<TMCNode>) => {
-        //if we removed last feature, reset to regular color scale
-
-        const colorScaleKey = (
-            Object.values(visibleNodes.data.featureCount).length
-                ? 'featureCount'
-                : 'labelCount'
-        ) as 'featureCount' | 'labelCount';
-
-        return calculateColorScaleRangeAndDomain(colorScaleKey, visibleNodes);
-    };
+    const removeFeature = (featureName: string) =>
+        removeActiveFeature(featureName);
 
     const getFeature = async (feature: string) => {
-        if (visibleNodes) {
-            setLoading(true);
-            const features = await fetchFeatures(feature);
-            const featureMap: Record<string, number> = {};
-            const range: number[] = [];
+        setLoading(true);
+        const features = await fetchFeatures(feature);
+        const featureMap: Record<string, number> = {};
 
-            features.forEach(f => {
-                featureMap[f.id] = f.value;
-            });
+        //todo: this gets pushed to store
+        features.forEach(f => {
+            featureMap[f.id] = f.value;
+        });
 
-            visibleNodes.leaves().forEach(n => {
-                if (n.data.items) {
-                    n.data.items = n.data.items.map(cell => {
-                        //add the new feature to cell-level raw feature counts
-                        const fcounts = cell._barcode._featureCounts || {};
-                        fcounts[feature] =
-                            featureMap[cell._barcode.unCell] || 0;
-                        cell._barcode._featureCounts = fcounts;
-                        range.push(fcounts[feature] as number);
-                        return cell;
-                    });
-                }
-            });
-
-            const median = quantile(range.filter(Boolean), 0.5);
-            const medianWithZeroes = quantile(range, 0.5);
-
-            //for local GUI display
-            setfeatureStats({
-                ...featureStats,
-                [feature]: {
-                    mad: getMAD(range.filter(Boolean)) || 0, //remove 0s
-                    madWithZeroes: getMAD(range) || 0, //remove 0s
-                    max: max(range) || 0,
-                    min: min(range) || 0,
-                    median: median || 0,
-                    medianWithZeroes: medianWithZeroes || 0,
-                    total: sum(range) || 0,
-                },
-            });
-
-            const newExpressionThresholds = {
-                ...expressionThresholds,
-                [feature]: median || 0,
-            };
-
-            const withExpression = updatefeatureStats(
-                visibleNodes,
-                newExpressionThresholds
-            );
-
-            dispatch(updateColorScale(_updateColorScale(withExpression)));
-
-            setLoading(false);
-        }
+        setLoading(false);
     };
 
     useEffect(() => {
         fetchFeatureNames().then(f => {
-            setFeatures(f);
+            setFeatureList(f);
         });
     }, []);
 
@@ -245,37 +96,35 @@ const FeatureSearch: React.FC = () => {
             <Caption>Search for a feature by identifier</Caption>
             <Autocomplete
                 resetOverlay={resetOverlay}
-                options={features}
+                options={featureList || []}
                 onSelect={getFeature}
             />
 
-            {!!visibleNodes &&
-                !getObjectIsEmpty(visibleNodes.data.featureCount) && (
-                    <>
-                        <FeatureListContainer>
-                            <FeatureListLabel>
-                                Selected Features
-                            </FeatureListLabel>
-                            <FeatureList>
-                                {getEntries(expressionThresholds).map(
-                                    ([k, v]) => (
-                                        <FeatureSlider
-                                            key={k}
-                                            featureName={k}
-                                            featureStats={featureStats[k]}
-                                            highLowThreshold={v}
-                                            removeFeature={removeFeature}
-                                            updateThreshold={updateExpressionThresholds.bind(
-                                                null,
-                                                k
-                                            )}
-                                        />
-                                    )
-                                )}
-                            </FeatureList>
-                        </FeatureListContainer>
-                    </>
-                )}
+            {activeFeatures.length && (
+                <>
+                    <FeatureListContainer>
+                        <FeatureListLabel>Selected Features</FeatureListLabel>
+                        <FeatureList>
+                            {getEntries(expressionThresholds)
+                                .filter(([k, v]) => activeFeatures.includes(k))
+                                .map(([k, v]) => (
+                                    <FeatureSlider
+                                        key={k}
+                                        featureName={k}
+                                        featureStats={featureDistributions[k]}
+                                        highLowThreshold={v}
+                                        removeFeature={removeFeature}
+                                        updateThreshold={(val: number) =>
+                                            updateColorScaleThresholds({
+                                                [k]: val,
+                                            })
+                                        }
+                                    />
+                                ))}
+                        </FeatureList>
+                    </FeatureListContainer>
+                </>
+            )}
 
             <Modal open={loading} message="Loading..." />
         </Column>
@@ -343,7 +192,7 @@ const FeaturePillContainer = styled.span`
 
 interface FeatureSliderProps {
     featureName: string;
-    featureStats: FeatureStat;
+    featureStats: FeatureDistribution;
     highLowThreshold: number;
     removeFeature: (featureName: string) => void;
     updateThreshold: (newThreshold: number) => void;

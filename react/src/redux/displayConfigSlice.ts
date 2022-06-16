@@ -111,6 +111,15 @@ export const displayConfigSlice = createSlice({
                 state.scales.colorScale.labelRange = range;
             }
         },
+        updateColorScaleThresholds: (
+            state,
+            { payload }: PayloadAction<Record<string, number>>
+        ) => {
+            state.scales.colorScale.expressionThresholds = {
+                ...state.scales.colorScale.expressionThresholds,
+                ...payload,
+            };
+        },
         updateColorScaleType: (
             state,
             { payload }: PayloadAction<'featureCount' | 'labelCount'>
@@ -140,6 +149,7 @@ export const displayConfigSlice = createSlice({
 export const {
     toggleDisplayProperty,
     updateColorScale,
+    updateColorScaleThresholds,
     updateColorScaleType,
     updateLinearScale,
     updateTreeMetadata,

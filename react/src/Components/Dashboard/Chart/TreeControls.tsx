@@ -126,7 +126,7 @@ const PruneStatuses: React.FC = () => {
                 <Bold>Min value:</Bold> {minValue}
             </Text>
             <Text>
-                <Bold>Max value:</Bold> {maxValue.toLocaleString()}
+                <Bold>Max value:</Bold> {(maxValue || 0).toLocaleString()}
             </Text>
         </StatusContainer>
     );
