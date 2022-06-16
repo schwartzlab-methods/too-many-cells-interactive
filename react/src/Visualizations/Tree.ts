@@ -308,9 +308,9 @@ class RadialTree {
         this.svg = select(this.selector)
             .append('svg')
             .attr('viewBox', [
-                -this.ContextManager.displayContext.w / 2,
+                -this.ContextManager.width / 2,
                 -this.h / 2,
-                this.ContextManager.displayContext.w,
+                this.ContextManager.width,
                 this.h,
             ]);
 

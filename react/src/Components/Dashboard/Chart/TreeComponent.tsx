@@ -37,6 +37,7 @@ import {
     Scales,
     selectScales,
     selectToggleableDisplayElements,
+    selectWidth,
     ToggleableDisplayElements,
     updateColorScale,
     updateLinearScale,
@@ -67,19 +68,22 @@ export class ContextManager {
     setContext!: (ctx: Partial<TreeContext>) => void;
     setPruneContext!: (ctx: Partial<PruneContext>) => void;
     toggleableFeatures!: ToggleableDisplayElements;
+    width!: number;
     constructor(
         colorScaleKey: ColorScaleKey,
         context: TreeContext,
         scales: TreeScales,
         toggleableFeatures: ToggleableDisplayElements,
-        setContext: (ctx: Partial<BaseTreeContext>) => void
+        setContext: (ctx: Partial<BaseTreeContext>) => void,
+        width: number
     ) {
         this.refresh(
             colorScaleKey,
             context,
             scales,
             toggleableFeatures,
-            setContext
+            setContext,
+            width
         );
     }
 
@@ -88,7 +92,8 @@ export class ContextManager {
         context: TreeContext,
         scales: TreeScales,
         toggleableFeatures: ToggleableDisplayElements,
-        setContext: (ctx: Partial<BaseTreeContext>) => void
+        setContext: (ctx: Partial<BaseTreeContext>) => void,
+        width: number
     ) => {
         this.context = context;
         this.pruneContext = this.context.pruneContext;
@@ -100,6 +105,7 @@ export class ContextManager {
         this.setContext = setContext;
         this.setPruneContext = this.context.setPruneContext;
         this.toggleableFeatures = toggleableFeatures;
+        this.width = width;
     };
 }
 
@@ -133,6 +139,7 @@ const TreeComponent: React.FC = () => {
     } = treeContext;
 
     const toggleableFeatures = useAppSelector(selectToggleableDisplayElements);
+    const width = useAppSelector(selectWidth);
     const dispatch = useAppDispatch();
 
     const previousContext = useRef<Readonly<TreeContext>>(treeContext);
@@ -182,7 +189,6 @@ const TreeComponent: React.FC = () => {
                 originalTree,
                 rootPositionedTree,
                 visibleNodes,
-                w,
             });
         };
         cb();
@@ -200,7 +206,8 @@ const TreeComponent: React.FC = () => {
                 treeContext,
                 treeScales,
                 toggleableFeatures,
-                setTreeContext
+                setTreeContext,
+                width
             );
             const _Tree = new TreeViz(
                 Manager,
@@ -220,7 +227,8 @@ const TreeComponent: React.FC = () => {
                 treeContext,
                 treeScales,
                 toggleableFeatures,
-                setTreeContext
+                setTreeContext,
+                width
             );
         }
     }, [
@@ -230,8 +238,6 @@ const TreeComponent: React.FC = () => {
         treeScales,
         colorScaleKey,
     ]);
-
-    console.log(treeScales.colorScale);
 
     /* React executes effects in order: this must follow previous so that tree has correct context when rendering */
     useEffect(() => {
@@ -285,13 +291,10 @@ const TreeComponent: React.FC = () => {
                     i++;
                 }
 
-                const visibleNodes = calculateTreeLayout(
-                    _visibleNodes,
-                    displayContext.w!
-                );
+                const visibleNodes = calculateTreeLayout(_visibleNodes, width);
                 const rootPositionedTree = calculateTreeLayout(
                     _rootPositionedTree,
-                    displayContext.w!
+                    width
                 );
 
                 setDisplayContext({
@@ -321,10 +324,7 @@ const TreeComponent: React.FC = () => {
                 );
 
                 setDisplayContext({
-                    visibleNodes: calculateTreeLayout(
-                        newTree,
-                        displayContext.w!
-                    ),
+                    visibleNodes: calculateTreeLayout(newTree, width),
                 });
             }
         }

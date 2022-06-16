@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import displayConfigReducer from './displayConfigSlice';
+import pruneSliceReducer from './pruneSlice';
 
 const store = configureStore({
     reducer: {
         displayConfig: displayConfigReducer,
+        pruneSlice: pruneSliceReducer,
     },
 });
 

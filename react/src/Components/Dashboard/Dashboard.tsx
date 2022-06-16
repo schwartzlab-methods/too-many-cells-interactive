@@ -29,7 +29,6 @@ export interface DisplayContext {
     originalTree?: Readonly<HierarchyPointNode<TMCNode>>;
     rootPositionedTree?: Readonly<HierarchyPointNode<TMCNode>>;
     visibleNodes?: Readonly<HierarchyPointNode<TMCNode>>;
-    w?: number;
 }
 
 export type ValuePruneType =

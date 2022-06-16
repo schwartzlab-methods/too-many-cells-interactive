@@ -1,10 +1,15 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { HierarchyNode } from 'd3-hierarchy';
-import { pick } from 'lodash';
-import type { TMCNode } from '../types';
 import { getEntries } from '../util';
 import type { RootState } from './store';
 
+interface TreeMetaData {
+    leafCount: number;
+    maxDistance: number;
+    minDistance: number;
+    minValue: number;
+    maxValue: number;
+    nodeCount: number;
+}
 export interface ToggleableDisplayElements {
     piesVisible: boolean;
     strokeVisible: boolean;
@@ -34,7 +39,8 @@ export interface Scales {
 interface DisplayConfigState {
     scales: Scales;
     toggleableDisplayElements: ToggleableDisplayElements;
-    visibleNodes?: HierarchyNode<TMCNode> | undefined;
+    treeMetadata: TreeMetaData;
+    width: number;
 }
 
 const initialScales: Scales = {
@@ -65,6 +71,8 @@ const initialToggleableValues: ToggleableDisplayElements = {
 const initialState: DisplayConfigState = {
     scales: initialScales,
     toggleableDisplayElements: initialToggleableValues,
+    treeMetadata: {} as TreeMetaData,
+    width: 1000,
 };
 
 type PartialLinearScale = Partial<{
@@ -97,8 +105,8 @@ export const displayConfigSlice = createSlice({
         ) => {
             getEntries(payload).map(([k, v]) => {
                 state.scales[k] = {
-                    ...(state.scales[k] as Scales[typeof k]),
-                    ...(v as Scales[typeof k]),
+                    ...state.scales[k],
+                    ...v,
                 };
             });
         },
@@ -109,15 +117,10 @@ export const { toggleDisplayProperty, updateColorScale, updateLinearScale } =
     displayConfigSlice.actions;
 
 export const selectToggleableDisplayElements = (state: RootState) =>
-    pick(
-        state.displayConfig.toggleableDisplayElements,
-        Object.keys(initialToggleableValues)
-    ) as ToggleableDisplayElements;
+    state.displayConfig.toggleableDisplayElements;
 
-export const selectScales = (state: RootState) =>
-    pick<Scales>(
-        state.displayConfig.scales,
-        Object.keys(initialScales)
-    ) as Scales;
+export const selectScales = (state: RootState) => state.displayConfig.scales;
+
+export const selectWidth = (state: RootState) => state.displayConfig.width;
 
 export default displayConfigSlice.reducer;

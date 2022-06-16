@@ -13,10 +13,7 @@ export const useLinearScale = <K extends keyof Omit<Scales, 'colorScale'>>(
 ) => {
     const { domain, range } = useAppSelector(selectScales)[scaleName];
     return useMemo(() => {
-        return scaleLinear()
-            .range(range as [number, number])
-            .domain(domain as [number, number])
-            .clamp(true);
+        return scaleLinear().range(range).domain(domain).clamp(true);
     }, [domain, range]) as ScaleType[K];
 };
 
@@ -32,8 +29,9 @@ export const useColorScale = () => {
     }
 
     return useMemo(() => {
-        return scaleOrdinal()
-            .range(range as string[])
-            .domain(domain as string[]) as ScaleOrdinal<string, string>;
+        return scaleOrdinal().range(range).domain(domain) as ScaleOrdinal<
+            string,
+            string
+        >;
     }, [domain, range]);
 };

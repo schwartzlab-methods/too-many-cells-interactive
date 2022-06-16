@@ -6,6 +6,7 @@ import { interpolate } from 'd3-interpolate';
 import { scaleOrdinal } from 'd3-scale';
 import { schemeSet1 } from 'd3-scale-chromatic';
 import { PruneContext } from './Components/Dashboard/Dashboard';
+import { PruneStep } from './redux/pruneSlice';
 import { AttributeMap, TMCNode } from './types';
 
 /* typescript-friendly */
@@ -149,7 +150,7 @@ export const calculateTreeLayout = (nodes: HierarchyNode<TMCNode>, w: number) =>
         .size([2 * Math.PI, (w / 2) * 0.9])
         .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
 
-export const pruneContextIsEmpty = (ctx: Readonly<PruneContext>) =>
+export const pruneStepIsEmpty = (ctx: Readonly<PruneStep>) =>
     getObjectIsEmpty(ctx.clickPruneHistory) &&
     getObjectIsEmpty(ctx.valuePruner);
 

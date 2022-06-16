@@ -1,10 +1,6 @@
 import React, { useContext } from 'react';
 import styled from 'styled-components';
-import {
-    formatDistance,
-    formatInteger,
-    pruneContextIsEmpty,
-} from '../../../util';
+import { formatDistance, formatInteger, pruneStepIsEmpty } from '../../../util';
 import Button from '../../Button';
 import { Column, Row } from '../../Layout';
 import { Text, Title } from '../../Typography';
@@ -36,7 +32,7 @@ const PruneHistory: React.FC = () => {
      * Apply button is only enabled if we are on the latest step and that step is not empty
      */
     const getApplyButtonDisabled = () =>
-        pruneContextIsEmpty(pruneContext[activePrune]) ||
+        pruneStepIsEmpty(pruneContext[activePrune]) ||
         activePrune !== pruneContext.length - 1;
 
     /**
@@ -44,7 +40,7 @@ const PruneHistory: React.FC = () => {
      */
     const getResetButtonDisabled = () =>
         pruneContext.length === 1 &&
-        pruneContextIsEmpty(pruneContext.slice(-1)[0]);
+        pruneStepIsEmpty(pruneContext.slice(-1)[0]);
 
     const resetPruneHistory = () =>
         setTreeContext({
@@ -84,7 +80,7 @@ const PruneHistory: React.FC = () => {
                         <PruneStep
                             key={i}
                             active={i === treeContext.activePrune}
-                            empty={pruneContextIsEmpty(ctx)}
+                            empty={pruneStepIsEmpty(ctx)}
                             index={i}
                             pruneContext={ctx}
                             setActive={() => {

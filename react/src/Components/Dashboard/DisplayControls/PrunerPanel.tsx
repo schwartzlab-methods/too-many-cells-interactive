@@ -108,12 +108,11 @@ const PrunerPanel: React.FC = () => {
 
     const sizeMedian = useMemo(() => {
         if (rootPositionedTree) {
-            return quantile(
+            return median(
                 rootPositionedTree
                     .descendants()
                     .map(v => v.value!)
-                    .filter(Boolean),
-                0.5
+                    .filter(Boolean)
             )!;
         } else return 0;
     }, [rootPositionedTree]);
