@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { bindActionCreators, compose } from 'redux';
 import { HierarchyNode, HierarchyPointNode } from 'd3-hierarchy';
-import { max, median, min, range, sum, ticks } from 'd3-array';
+import { extent, max, median, min, range, sum, ticks } from 'd3-array';
 import { AttributeMap, TMCNode } from '../types';
 import {
     Distributions,
@@ -90,7 +90,7 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
                 featureMaps
             );
 
-            const distributions = {} as Record<string, FeatureDistribution>;
+            //const distributions = {} as Record<string, FeatureDistribution>;
             const thresholds = {} as Record<string, number>;
 
             // calculate new scale thresholds, which will cause next hook to fire, which will
@@ -103,30 +103,17 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
                         (l.data.items || []).map(
                             item => item._barcode._featureCounts![k] || 0
                         )
-                    )
-                    .filter(f => !!f)!;
+                    );
 
-                /* todo: these go in updateFeatureCounts */
                 const med = median(range.filter(Boolean))!;
                 thresholds[k] = med;
-
-                const medianWithZeroes = median(range)!;
-
-                distributions[k] = {
-                    mad: getMAD(range.filter(Boolean)) || 0, //remove 0s
-                    madGroups: [],
-                    madWithZeroes: getMAD(range) || 0, //remove 0s
-                    max: max(range) || 0,
-                    min: min(range) || 0,
-                    median: med || 0,
-                    medianWithZeroes: medianWithZeroes || 0,
-                    plainGroups: [],
-                    total: sum(range) || 0,
-                };
             });
 
+            updateFeatureDistributions(
+                getFeatureDistributions(treeWithCells, activeFeatures)
+            );
+
             updateColorScaleThresholds(thresholds);
-            updateFeatureDistributions(distributions);
             setBaseTree(tree);
             clearFeatureMaps();
         }
@@ -482,15 +469,68 @@ const updateFeatureCounts = (
     return nodes;
 };
 
-const updateFeatureDistributions = (nodes: HierarchyPointNode<TMCNode>) => {
-    /*
-        1. this is **cell** counts, not node featureCounts counts
-        2. loop through leaves, get distribution of counts for each feature
-        3. take median, mad, etc.
-        4. then iterate through the thresholds and make a dictionary w/ threshold: count
-            - is rollup your friend here? might be a d3 function somewhere.
-        5. then these should be passable to the area charts w/o problems
-            - will need to update feature distributions to inherit from the distributions that back 
-                the prune distributions.   
-    */
+const getFeatureDistributions = (
+    nodes: HierarchyNode<TMCNode>,
+    activeFeatures: string[]
+) => {
+    const distributions = {} as Record<string, FeatureDistribution>;
+
+    activeFeatures.forEach(f => {
+        const range = nodes
+            .leaves()
+            .flatMap(l =>
+                (l.data.items || []).map(
+                    item => item._barcode._featureCounts![f] || 0
+                )
+            );
+
+        const med = median(range.filter(Boolean))!;
+
+        const medianWithZeroes = median(range)!;
+
+        const mad = getMAD(range.filter(Boolean)) || 0;
+
+        distributions[f] = {
+            mad,
+            madGroups: getMadFeatureGroups(range.filter(Boolean), mad, med),
+            madWithZeroes: getMAD(range) || 0, //remove 0s
+            max: max(range) || 0,
+            min: min(range) || 0,
+            median: med || 0,
+            medianWithZeroes: medianWithZeroes || 0,
+            plainGroups: getPlainFeatureGroups(range.filter(Boolean)),
+            total: sum(range) || 0,
+        };
+    });
+
+    return distributions;
+};
+
+const getPlainFeatureGroups = (range: number[]) => {
+    const [min, max] = extent(range);
+    const thresholds = ticks(min!, max!, 25);
+
+    return thresholds.reduce<Record<number, number>>(
+        (acc, curr) => ({
+            ...acc,
+            [curr]: range.filter(n => n > curr).length,
+        }),
+        {}
+    );
+};
+
+const getMadFeatureGroups = (range: number[], mad: number, median: number) => {
+    const [min, max] = extent(range) as [number, number];
+
+    const maxMads = Math.ceil((max - median) / mad);
+
+    const thresholds = ticks(0, maxMads, Math.min(maxMads, 25));
+
+    return thresholds.reduce<Record<number, number>>(
+        (acc, curr) => ({
+            ...acc,
+            [curr]: range.filter(n => n > median + mad * curr).length,
+        }),
+        {}
+    );
 };

@@ -38,14 +38,6 @@ import {
     selectFeatureSlice,
 } from '../../../redux/featureSlice';
 
-/* todo: 
-    1. thresholds aren't updating w/ slider
-        that's because we're updating the distributions in the wrong place (maybe)
-            - hmmm not sure about this... though the distributions will depend on prune as much as anything (sigh)
-            - yup, this means usePrune needs to update the distributions for features 
-
-*/
-
 const getScaleCombinations = (featureList: string[]) =>
     featureList
         .sort((a, b) => (a > b ? -1 : 1))

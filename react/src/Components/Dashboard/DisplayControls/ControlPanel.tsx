@@ -4,6 +4,7 @@ import { Input } from '../../Input';
 import Checkbox from '../../Checkbox';
 import { Column, Row } from '../../Layout';
 import { Label } from '../../Typography';
+import { selectFeatureSlice } from '../../../redux/featureSlice';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
@@ -25,15 +26,15 @@ const ControlPanel: React.FC = () => {
 
     const { minValue, maxValue } = useAppSelector(selectTreeMetadata);
 
+    const { activeFeatures } = useAppSelector(selectFeatureSlice);
+
     const dispatch = useAppDispatch();
 
     const branchScalingDisabled = useMemo(() => {
         return branchSizeScale.domain[0] === branchSizeScale.domain[1];
     }, [branchSizeScale]);
 
-    /* todo: reenable */
-    /* note that all this could come from meta (as in, high and low count for range and domain) */
-    const featureScaleAvailable = false;
+    const featureScaleAvailable = !!activeFeatures.length;
 
     /* this should just be togglescale type */
     const toggleScale = (scaleType: typeof colorScaleType) =>
