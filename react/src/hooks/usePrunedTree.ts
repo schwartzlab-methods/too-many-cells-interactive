@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { bindActionCreators, compose } from 'redux';
-import { HierarchyNode } from 'd3-hierarchy';
+import { HierarchyNode, HierarchyPointNode } from 'd3-hierarchy';
 import { max, median, min, range, sum, ticks } from 'd3-array';
 import { AttributeMap, TMCNode } from '../types';
 import {
@@ -80,33 +80,66 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
 
     const width = useAppSelector(selectWidth);
 
-    /* FEATURE ANNOTATUIN EFFECTS */
+    /* FEATURE ANNOTATION EFFECTS */
 
     useEffect(() => {
         if (Object.values(featureMaps).length) {
-            const { tree, distributions } = addFeaturesToCells(
+            //first annotate cells with new feature counts
+            const treeWithCells = addFeaturesToCells(
                 baseTree.copy(),
                 featureMaps
             );
-            setBaseTree(tree);
-            getEntries(distributions).map(([k, v]) => {
-                updateColorScaleThresholds({ [k]: v.median });
-                updateFeatureDistributions({ [k]: v });
+
+            const distributions = {} as Record<string, FeatureDistribution>;
+            const thresholds = {} as Record<string, number>;
+
+            // calculate new scale thresholds, which will cause next hook to fire, which will
+            // calculate node-level counts with new thresholds
+
+            getEntries(featureMaps).forEach(([k, v]) => {
+                const range = treeWithCells
+                    .leaves()
+                    .flatMap(l =>
+                        (l.data.items || []).map(
+                            item => item._barcode._featureCounts![k] || 0
+                        )
+                    )
+                    .filter(f => !!f)!;
+
+                /* todo: these go in updateFeatureCounts */
+                const med = median(range.filter(Boolean))!;
+                thresholds[k] = med;
+
+                const medianWithZeroes = median(range)!;
+
+                distributions[k] = {
+                    mad: getMAD(range.filter(Boolean)) || 0, //remove 0s
+                    madGroups: [],
+                    madWithZeroes: getMAD(range) || 0, //remove 0s
+                    max: max(range) || 0,
+                    min: min(range) || 0,
+                    median: med || 0,
+                    medianWithZeroes: medianWithZeroes || 0,
+                    plainGroups: [],
+                    total: sum(range) || 0,
+                };
             });
 
+            updateColorScaleThresholds(thresholds);
+            updateFeatureDistributions(distributions);
+            setBaseTree(tree);
             clearFeatureMaps();
         }
     }, [featureMaps]);
 
     useEffect(() => {
-        if (Object.values(featureThresholds).length) {
-            setBaseTree(
-                updateFeatureCounts(
-                    baseTree.copy(),
-                    featureThresholds,
-                    activeFeatures
-                )
+        if (activeFeatures.length || Object.keys(featureThresholds).length) {
+            const annotatedTree = updateFeatureCounts(
+                tree.copy(),
+                featureThresholds,
+                activeFeatures
             );
+            setBaseTree(annotatedTree);
         }
     }, [activeFeatures, featureThresholds]);
 
@@ -156,7 +189,6 @@ const addFeaturesToCells = (
     tree: HierarchyNode<TMCNode>,
     featureMaps: Record<string, Record<string, number>>
 ) => {
-    const distributions = {} as Record<string, FeatureDistribution>;
     getEntries(featureMaps).map(([feature, featureMap]) => {
         const range: number[] = [];
 
@@ -172,23 +204,9 @@ const addFeaturesToCells = (
                 });
             }
         });
-
-        /* todo: these go in updateFeatureCounts */
-        const med = median(range.filter(Boolean));
-        const medianWithZeroes = median(range);
-
-        distributions[feature] = {
-            mad: getMAD(range.filter(Boolean)) || 0, //remove 0s
-            madWithZeroes: getMAD(range) || 0, //remove 0s
-            max: max(range) || 0,
-            min: min(range) || 0,
-            median: med || 0,
-            medianWithZeroes: medianWithZeroes || 0,
-            total: sum(range) || 0,
-        };
     });
 
-    return { tree, distributions };
+    return tree;
 };
 
 const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
@@ -462,4 +480,17 @@ const updateFeatureCounts = (
     });
 
     return nodes;
+};
+
+const updateFeatureDistributions = (nodes: HierarchyPointNode<TMCNode>) => {
+    /*
+        1. this is **cell** counts, not node featureCounts counts
+        2. loop through leaves, get distribution of counts for each feature
+        3. take median, mad, etc.
+        4. then iterate through the thresholds and make a dictionary w/ threshold: count
+            - is rollup your friend here? might be a d3 function somewhere.
+        5. then these should be passable to the area charts w/o problems
+            - will need to update feature distributions to inherit from the distributions that back 
+                the prune distributions.   
+    */
 };

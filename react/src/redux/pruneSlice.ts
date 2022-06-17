@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from './store';
 
-interface DistributionMetadata {
+export interface DistributionMetadata {
     mad: number;
     madGroups: Record<number, number>;
     median: number;
@@ -30,7 +30,6 @@ const makeFreshPruneStep = () => ({
 });
 
 const initialState: PruneSliceState = {
-    //todo: each prunestep could have its own metadata on it, including tree metadata?
     currentPruneStep: 0,
     distributionMetadata: {
         depthGroups: {},
@@ -86,7 +85,9 @@ export const pruneSlice = createSlice({
             ];
         },
         addStep: state => {
-            state.pruneHistory.push(makeFreshPruneStep());
+            state.pruneHistory = state.pruneHistory.concat(
+                makeFreshPruneStep()
+            );
             state.currentPruneStep += 1;
         },
         addValuePrune: (
@@ -100,9 +101,9 @@ export const pruneSlice = createSlice({
             { currentPruneStep, pruneHistory },
             { payload: { key, value } }: PayloadAction<ClickPruner>
         ) => {
-            pruneHistory[currentPruneStep].clickPruneHistory.filter(
-                h => h.key !== key && h.value === value
-            );
+            pruneHistory[currentPruneStep].clickPruneHistory = pruneHistory[
+                currentPruneStep
+            ].clickPruneHistory.filter(h => h.key !== key && h.value === value);
         },
         resetHistory: state => {
             state.currentPruneStep = 0;

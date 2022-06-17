@@ -1,12 +1,11 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { DistributionMetadata } from './pruneSlice';
 import type { RootState } from './store';
 
-export interface FeatureDistribution {
-    mad: number;
+export interface FeatureDistribution extends DistributionMetadata {
     madWithZeroes: number;
     max: number;
     min: number;
-    median: number;
     medianWithZeroes: number;
     total: number;
 }
