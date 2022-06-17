@@ -21,19 +21,13 @@ import {
     updateColorScale,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
-import {
-    useAppDispatch,
-    useAppSelector,
-    usePrunedTree,
-    useTree,
-} from '../../../hooks';
+import { useAppDispatch, useAppSelector, usePrunedTree } from '../../../hooks';
 import { useColorScale, useLinearScale } from '../../../hooks/useScale';
 import { TMCNode } from '../../../types';
 import {
     addClickPrune as _addClickPrune,
     ClickPruner,
     removeClickPrune as _removeClickPrune,
-    selectPruneHistory,
     selectActivePruneStep,
 } from '../../../redux/pruneSlice';
 
@@ -141,7 +135,7 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
         dispatch
     );
 
-    const visibleNodes = useTree(baseTree);
+    const visibleNodes = usePrunedTree(baseTree);
 
     useEffect(() => {
         dispatch(

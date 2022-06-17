@@ -1,21 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
-import { compose } from 'redux';
+import { useEffect, useState } from 'react';
+import { bindActionCreators, compose } from 'redux';
 import { HierarchyNode } from 'd3-hierarchy';
-import { max, median, min, range, ticks } from 'd3-array';
-import { TMCNode } from '../types';
+import { max, median, min, range, sum, ticks } from 'd3-array';
+import { AttributeMap, TMCNode } from '../types';
 import {
     Distributions,
     selectActivePruneStep,
     selectPruneHistory,
-    updateDistributions,
+    updateDistributions as _updateDistributions,
 } from '../redux/pruneSlice';
 import {
     selectWidth,
     TreeMetaData,
-    updateTreeMetadata,
+    updateTreeMetadata as _updateTreeMetadata,
+} from '../redux/displayConfigSlice';
+import {
+    clearFeatureMaps as _clearFeatureMaps,
+    FeatureDistribution,
+    selectFeatureSlice,
+    updateFeatureDistributions as _updateFeatureDistributions,
+} from '../redux/featureSlice';
+import {
+    selectScales,
+    updateColorScaleThresholds as _updateColorScaleThresholds,
 } from '../redux/displayConfigSlice';
 import {
     calculateTreeLayout,
+    getEntries,
     getMAD,
     pruneStepIsEmpty,
     pruneTreeByMinDistance,
@@ -27,27 +38,84 @@ import useAppSelector from './useAppSelector';
 import useAppDispatch from './useAppDispatch';
 
 const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
+    const [baseTree, setBaseTree] = useState(tree);
     const [visibleNodes, setVisibleNodes] = useState(tree);
 
-    const dispatch = useAppDispatch();
+    /* action creators */
+
+    const {
+        clearFeatureMaps,
+        updateColorScaleThresholds,
+        updateFeatureDistributions,
+        updateDistributions,
+        updateTreeMetadata,
+    } = bindActionCreators(
+        {
+            clearFeatureMaps: _clearFeatureMaps,
+            updateColorScaleThresholds: _updateColorScaleThresholds,
+            updateDistributions: _updateDistributions,
+            updateFeatureDistributions: _updateFeatureDistributions,
+            updateTreeMetadata: _updateTreeMetadata,
+        },
+        useAppDispatch()
+    );
+
+    /* recalc layout if base changes (i.e., if nodes are re-annotated) */
+    useEffect(() => {
+        recalculateLayout();
+    }, [baseTree]);
+
+    const {
+        colorScale: { featureThresholds },
+    } = useAppSelector(selectScales);
+
+    const { activeFeatures, featureMaps } = useAppSelector(selectFeatureSlice);
 
     const { step, index: activePruneIndex } = useAppSelector(
         selectActivePruneStep
     );
+    const { clickPruneHistory } = step;
 
     const pruneHistory = useAppSelector(selectPruneHistory);
 
     const width = useAppSelector(selectWidth);
 
-    const { clickPruneHistory } = step;
+    /* FEATURE ANNOTATUIN EFFECTS */
 
-    const currentStep = useRef(-1);
+    useEffect(() => {
+        if (Object.values(featureMaps).length) {
+            const { tree, distributions } = addFeaturesToCells(
+                baseTree.copy(),
+                featureMaps
+            );
+            setBaseTree(tree);
+            getEntries(distributions).map(([k, v]) => {
+                updateColorScaleThresholds({ [k]: v.median });
+                updateFeatureDistributions({ [k]: v });
+            });
 
+            clearFeatureMaps();
+        }
+    }, [featureMaps]);
+
+    useEffect(() => {
+        if (Object.values(featureThresholds).length) {
+            setBaseTree(
+                updateFeatureCounts(
+                    baseTree.copy(),
+                    featureThresholds,
+                    activeFeatures
+                )
+            );
+        }
+    }, [activeFeatures, featureThresholds]);
+
+    /* PRUNING EFFECTS */
     useEffect(() => {
         if (pruneStepIsEmpty(step)) {
             //if this is a new prune or a full revert, i.e., if step is empty recalculate base ditributions from visibleNodes
+            //todo: this should include feature distributions as well
             compose(
-                dispatch,
                 updateDistributions,
                 buildPruneMetadata
             )(activePruneIndex === 0 ? tree.copy() : visibleNodes);
@@ -58,32 +126,70 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
         }
     }, [step]);
 
-    /* for now rerun everytime and keep an eye on performance */
+    /* for now rerun all prunes on every prune change and keep an eye on performance */
     useEffect(() => {
         if (!pruneStepIsEmpty(step)) {
-            const prunedNodes = rerunPrunes(
-                activePruneIndex,
-                pruneHistory,
-                tree.copy()
-            );
-
-            setVisibleNodes(calculateTreeLayout(prunedNodes, width));
+            recalculateLayout();
         }
     }, [clickPruneHistory, activePruneIndex]);
 
+    /* update base tree meta on all prunes */
     useEffect(() => {
-        dispatch(updateTreeMetadata(buildTreeMetadata(visibleNodes)));
+        updateTreeMetadata(buildTreeMetadata(visibleNodes));
     }, [visibleNodes]);
 
-    useEffect(() => {
-        //we update this value last, after other hookds have used it
-        currentStep.current = activePruneIndex;
-    }, [activePruneIndex]);
+    const recalculateLayout = () => {
+        const prunedNodes = rerunPrunes(
+            activePruneIndex,
+            pruneHistory,
+            tree.copy()
+        );
+        setVisibleNodes(calculateTreeLayout(prunedNodes, width));
+    };
 
     return visibleNodes;
 };
 
 export default usePrunedTree;
+
+const addFeaturesToCells = (
+    tree: HierarchyNode<TMCNode>,
+    featureMaps: Record<string, Record<string, number>>
+) => {
+    const distributions = {} as Record<string, FeatureDistribution>;
+    getEntries(featureMaps).map(([feature, featureMap]) => {
+        const range: number[] = [];
+
+        tree.leaves().forEach(n => {
+            if (n.data.items) {
+                n.data.items = n.data.items.map(cell => {
+                    //add the new feature to cell-level raw feature counts
+                    const fcounts = cell._barcode._featureCounts || {};
+                    fcounts[feature] = featureMap[cell._barcode.unCell] || 0;
+                    cell._barcode._featureCounts = fcounts;
+                    range.push(fcounts[feature] as number);
+                    return cell;
+                });
+            }
+        });
+
+        /* todo: these go in updateFeatureCounts */
+        const med = median(range.filter(Boolean));
+        const medianWithZeroes = median(range);
+
+        distributions[feature] = {
+            mad: getMAD(range.filter(Boolean)) || 0, //remove 0s
+            madWithZeroes: getMAD(range) || 0, //remove 0s
+            max: max(range) || 0,
+            min: min(range) || 0,
+            median: med || 0,
+            medianWithZeroes: medianWithZeroes || 0,
+            total: sum(range) || 0,
+        };
+    });
+
+    return { tree, distributions };
+};
 
 const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
     depthGroups: getDepthGroups(nodes),
@@ -307,4 +413,53 @@ const getSizeMadGroups = (tree: HierarchyNode<TMCNode>) => {
         }),
         {}
     );
+};
+
+const updateFeatureCounts = (
+    nodes: HierarchyNode<TMCNode>,
+    thresholds: Record<string, number>,
+    activeFeatures: string[]
+) => {
+    nodes.eachAfter(n => {
+        // for the scale to read
+        const hilo = {} as AttributeMap;
+        //if these are leaves, store and calculate base values
+        if (n.data.items) {
+            n.data.items.forEach(cell => {
+                //reduce cells for each node to hi/lows
+                const key = getEntries(cell._barcode._featureCounts)
+                    .filter(([k, _]) => activeFeatures.includes(k))
+                    //alphabetize keys for standardization
+                    .sort(([k1], [k2]) => (k1 < k2 ? -1 : 1))
+                    .reduce(
+                        (acc, [k, v]) =>
+                            `${acc ? acc + '-' : ''}${
+                                v && v >= thresholds[k] ? 'high' : 'low'
+                            }-${k}`,
+                        ''
+                    );
+                //add to node's running total of hilos
+                if (key) {
+                    hilo[key] = hilo[key]
+                        ? { ...hilo[key], quantity: hilo[key].quantity + 1 }
+                        : { scaleKey: key, quantity: 1 };
+                }
+            });
+        } else {
+            //if node is not a leaf, just add both children
+            n.children!.map(node => node.data.featureCount).forEach(count => {
+                for (const featurekey in count) {
+                    if (!hilo[featurekey]) {
+                        hilo[featurekey] = count[featurekey];
+                    } else {
+                        hilo[featurekey].quantity += count[featurekey].quantity;
+                    }
+                }
+            });
+        }
+        n.data.featureCount = hilo;
+        return n;
+    });
+
+    return nodes;
 };
