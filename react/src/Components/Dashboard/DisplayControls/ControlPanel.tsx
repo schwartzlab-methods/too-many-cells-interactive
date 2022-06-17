@@ -20,7 +20,7 @@ import Legend from './Legend';
 const ControlPanel: React.FC = () => {
     const {
         branchSizeScale,
-        colorScale: { variant: colorScaleType, expressionThresholds },
+        colorScale: { variant: colorScaleType, featureThresholds },
     } = useAppSelector(selectScales);
 
     const { minValue, maxValue } = useAppSelector(selectTreeMetadata);

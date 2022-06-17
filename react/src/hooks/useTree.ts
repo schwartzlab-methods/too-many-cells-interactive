@@ -1,26 +1,45 @@
 import { useEffect, useState } from 'react';
 import { max, median, min, sum } from 'd3-array';
 import { HierarchyPointNode } from 'd3-hierarchy';
+import { bindActionCreators } from 'redux';
 import {
-    clearFeatureMaps,
+    clearFeatureMaps as _clearFeatureMaps,
+    FeatureDistribution,
     selectFeatureSlice,
-    updateFeatureDistributions,
+    updateFeatureDistributions as _updateFeatureDistributions,
 } from '../redux/featureSlice';
-import { selectWidth } from '../redux/displayConfigSlice';
-import { selectActivePruneStep, selectPruneHistory } from '../redux/pruneSlice';
+import {
+    selectScales,
+    updateColorScaleThresholds as _updateColorScaleThresholds,
+} from '../redux/displayConfigSlice';
 import { AttributeMap, TMCNode } from '../types';
-import { calculateTreeLayout, getEntries, getMAD } from '../util';
+import { getEntries, getMAD } from '../util';
 import useAppDispatch from './useAppDispatch';
 import useAppSelector from './useAppSelector';
 import { usePrunedTree } from './index';
 
 /* should be called top-level, so initialTree stays kosher */
 const useTree = (initialTree: HierarchyPointNode<TMCNode>) => {
-    const dispatch = useAppDispatch();
-
     const [baseTree, setBaseTree] = useState(initialTree);
 
-    const { featureMaps, scaleThresholds } = useAppSelector(selectFeatureSlice);
+    const { activeFeatures, featureMaps } = useAppSelector(selectFeatureSlice);
+
+    const {
+        clearFeatureMaps,
+        updateColorScaleThresholds,
+        updateFeatureDistributions,
+    } = bindActionCreators(
+        {
+            clearFeatureMaps: _clearFeatureMaps,
+            updateColorScaleThresholds: _updateColorScaleThresholds,
+            updateFeatureDistributions: _updateFeatureDistributions,
+        },
+        useAppDispatch()
+    );
+
+    const {
+        colorScale: { featureThresholds },
+    } = useAppSelector(selectScales);
 
     useEffect(() => {
         if (Object.values(featureMaps).length) {
@@ -29,41 +48,52 @@ const useTree = (initialTree: HierarchyPointNode<TMCNode>) => {
                 featureMaps
             );
             setBaseTree(tree);
-            getEntries(distributions).map(([k, v]) =>
-                updateFeatureDistributions({ [k]: v })
-            );
-            dispatch(clearFeatureMaps);
+            getEntries(distributions).map(([k, v]) => {
+                updateColorScaleThresholds({ [k]: v.median });
+                updateFeatureDistributions({ [k]: v });
+            });
+
+            clearFeatureMaps();
         }
     }, [featureMaps]);
 
     useEffect(() => {
-        setBaseTree(updateThresholds(baseTree, scaleThresholds));
-    }, [scaleThresholds]);
+        if (Object.values(featureThresholds).length) {
+            setBaseTree(
+                updateFeatureCounts(baseTree, featureThresholds, activeFeatures)
+            );
+        }
+    }, [activeFeatures, featureThresholds]);
 
-    //question: do we need to rerun prunes? I don't think so... do we need a flag?
-    //well, we could just have an initial prune...
     return usePrunedTree(baseTree);
 };
 
-const updateThresholds = (
+const updateFeatureCounts = (
     nodes: HierarchyPointNode<TMCNode>,
-    thresholds: Record<string, number>
+    thresholds: Record<string, number>,
+    activeFeatures: string[]
 ) => {
     nodes.eachAfter(n => {
-        // our featureStats, for the scale to read
+        // for the scale to read
         const hilo = {} as AttributeMap;
+
+        //todo: this should be filtered by ACTIVE, and we should also put distribution here? Not sure?
 
         //if these are leaves, store and calculate base values
         if (n.data.items) {
             n.data.items.forEach(cell => {
                 //reduce cells for each node to hi/lows
-                const key = getEntries(cell._barcode._featureCounts).reduce(
-                    (acc, [k, v]) =>
-                        `${acc ? acc + '-' : ''}${
-                            v && v >= thresholds[k] ? 'high' : 'low'
-                        }-${k}`,
-                    ''
-                );
+                const key = getEntries(cell._barcode._featureCounts)
+                    .filter(([k, _]) => activeFeatures.includes(k))
+                    //alphabetize keys for standardization
+                    .sort(([k1], [k2]) => (k1 < k2 ? -1 : 1))
+                    .reduce(
+                        (acc, [k, v]) =>
+                            `${acc ? acc + '-' : ''}${
+                                v && v >= thresholds[k] ? 'high' : 'low'
+                            }-${k}`,
+                        ''
+                    );
                 //add to node's running total of hilos
                 if (key) {
                     hilo[key] = hilo[key]
@@ -95,9 +125,9 @@ const addFeaturesToItems = (
     tree: HierarchyPointNode<TMCNode>,
     featureMaps: Record<string, Record<string, number>>
 ) => {
-    const distributions = {};
+    const distributions = {} as Record<string, FeatureDistribution>;
     getEntries(featureMaps).map(([feature, featureMap]) => {
-        const range = [];
+        const range: number[] = [];
 
         tree.leaves().forEach(n => {
             if (n.data.items) {

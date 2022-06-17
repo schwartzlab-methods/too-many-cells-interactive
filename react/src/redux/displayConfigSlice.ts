@@ -23,7 +23,7 @@ export interface ColorScaleConfig {
     featureRange: string[];
     labelDomain: string[];
     labelRange: string[];
-    expressionThresholds: Record<string, number>;
+    featureThresholds: Record<string, number>;
     variant: 'labelCount' | 'featureCount';
 }
 
@@ -51,7 +51,7 @@ const initialScales: Scales = {
         range: [0, 0],
     },
     colorScale: {
-        expressionThresholds: {},
+        featureThresholds: {},
         featureDomain: [''],
         featureRange: [''],
         labelDomain: [''],
@@ -115,8 +115,8 @@ export const displayConfigSlice = createSlice({
             state,
             { payload }: PayloadAction<Record<string, number>>
         ) => {
-            state.scales.colorScale.expressionThresholds = {
-                ...state.scales.colorScale.expressionThresholds,
+            state.scales.colorScale.featureThresholds = {
+                ...state.scales.colorScale.featureThresholds,
                 ...payload,
             };
         },

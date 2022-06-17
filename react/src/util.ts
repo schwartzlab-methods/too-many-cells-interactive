@@ -204,7 +204,7 @@ export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
  */
 export const interpolateColorScale = (domain: string[]) => {
     if (domain.length <= schemeSet1.length) {
-        return schemeSet1.slice() as string[];
+        return schemeSet1.slice(0, domain.length) as string[];
     }
 
     const step = (schemeSet1.length - 1) / domain.length;

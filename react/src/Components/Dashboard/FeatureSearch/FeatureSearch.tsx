@@ -14,7 +14,7 @@ import { range } from 'd3-array';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
-import { getEntries, levenshtein } from '../../../util';
+import { getEntries, interpolateColorScale, levenshtein } from '../../../util';
 import Button from '../../Button';
 import { Input, NumberInput } from '../../Input';
 import { Column, Row } from '../../Layout';
@@ -26,14 +26,43 @@ import Checkbox from '../../Checkbox';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectScales,
+    updateColorScale as _updateColorScale,
     updateColorScaleThresholds as _updateColorScaleThresholds,
+    updateColorScaleType as _updateColorScaleType,
 } from '../../../redux/displayConfigSlice';
 import {
+    addFeature as _addFeature,
     clearActiveFeatures as _clearActiveFeatures,
     FeatureDistribution,
     removeActiveFeature as _removeActiveFeature,
     selectFeatureSlice,
 } from '../../../redux/featureSlice';
+
+/* todo: 
+    1. thresholds aren't updating w/ slider
+        that's because we're updating the distributions in the wrong place (maybe)
+            - hmmm not sure about this... though the distributions will depend on prune as much as anything (sigh)
+            - yup, this means usePrune needs to update the distributions for features 
+
+*/
+
+const getScaleCombinations = (featureList: string[]) =>
+    featureList
+        .sort((a, b) => (a > b ? -1 : 1))
+        .map(s => [`high-${s}`, `low-${s}`])
+        .reduce((acc, curr) => {
+            if (!acc.length) {
+                return curr;
+            } else {
+                const ret = [];
+                for (const item of acc) {
+                    for (const inner of curr) {
+                        ret.push(`${inner}-${item}`);
+                    }
+                }
+                return ret;
+            }
+        }, []);
 
 /**
  *
@@ -47,39 +76,68 @@ const FeatureSearch: React.FC = () => {
     const [featureList, setFeatureList] = useState<string[]>();
 
     const {
-        colorScale: { expressionThresholds, variant: colorScaleKey },
+        colorScale: { featureThresholds },
     } = useAppSelector(selectScales);
 
     const { activeFeatures, featureDistributions } =
         useAppSelector(selectFeatureSlice);
 
     const {
+        addFeature,
         clearActiveFeatures,
         removeActiveFeature,
+        updateColorScale,
         updateColorScaleThresholds,
+        updateColorScaleType,
     } = bindActionCreators(
         {
+            addFeature: _addFeature,
             clearActiveFeatures: _clearActiveFeatures,
             removeActiveFeature: _removeActiveFeature,
+            updateColorScale: _updateColorScale,
             updateColorScaleThresholds: _updateColorScaleThresholds,
+            updateColorScaleType: _updateColorScaleType,
         },
         useAppDispatch()
     );
 
     const resetOverlay = clearActiveFeatures;
 
-    const removeFeature = (featureName: string) =>
+    const removeFeature = (featureName: string) => {
         removeActiveFeature(featureName);
+        const domain = getScaleCombinations(
+            activeFeatures.filter(f => f !== featureName)
+        );
+
+        const range = interpolateColorScale(domain);
+
+        updateColorScale({ range, domain });
+
+        if (activeFeatures.length === 1) {
+            updateColorScaleType('labelCount');
+        }
+    };
 
     const getFeature = async (feature: string) => {
         setLoading(true);
         const features = await fetchFeatures(feature);
         const featureMap: Record<string, number> = {};
 
-        //todo: this gets pushed to store
         features.forEach(f => {
             featureMap[f.id] = f.value;
         });
+
+        addFeature({ key: feature, map: featureMap });
+
+        updateColorScaleType('featureCount');
+
+        const domain = getScaleCombinations(
+            activeFeatures.filter(Boolean).concat(feature)
+        );
+
+        const range = interpolateColorScale(domain);
+
+        updateColorScale({ range, domain });
 
         setLoading(false);
     };
@@ -100,13 +158,13 @@ const FeatureSearch: React.FC = () => {
                 onSelect={getFeature}
             />
 
-            {activeFeatures.length && (
+            {!!activeFeatures.length && (
                 <>
                     <FeatureListContainer>
                         <FeatureListLabel>Selected Features</FeatureListLabel>
                         <FeatureList>
-                            {getEntries(expressionThresholds)
-                                .filter(([k, v]) => activeFeatures.includes(k))
+                            {getEntries(featureThresholds)
+                                .filter(([k, _]) => activeFeatures.includes(k))
                                 .map(([k, v]) => (
                                     <FeatureSlider
                                         key={k}

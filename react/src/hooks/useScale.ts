@@ -21,10 +21,11 @@ export const useColorScale = () => {
     const { featureDomain, featureRange, labelDomain, labelRange, variant } =
         useAppSelector(selectScales)['colorScale'];
 
-    const [range, domain] =
-        variant === 'featureCount'
-            ? [featureRange, featureDomain]
-            : [labelRange, labelDomain];
+    const [domain, range] = useMemo(() => {
+        return variant === 'featureCount'
+            ? [featureDomain, featureRange.slice()]
+            : [labelDomain, labelRange];
+    }, [variant, featureDomain, featureRange, labelRange, labelDomain]);
 
     if (variant === 'featureCount') {
         const allLowIdx = domain.findIndex(item => !item.includes('high'));

@@ -21,7 +21,12 @@ import {
     updateColorScale,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
-import { useAppDispatch, useAppSelector, usePrunedTree } from '../../../hooks';
+import {
+    useAppDispatch,
+    useAppSelector,
+    usePrunedTree,
+    useTree,
+} from '../../../hooks';
 import { useColorScale, useLinearScale } from '../../../hooks/useScale';
 import { TMCNode } from '../../../types';
 import {
@@ -136,7 +141,7 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
         dispatch
     );
 
-    const visibleNodes = usePrunedTree(baseTree as HierarchyNode<TMCNode>);
+    const visibleNodes = useTree(baseTree);
 
     useEffect(() => {
         dispatch(
@@ -186,8 +191,6 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
         setTree(_Tree);
         _Tree.render();
     }, []);
-
-    //todo: prune stuff has to be there too
 
     useEffect(() => {
         /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */

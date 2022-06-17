@@ -27,7 +27,7 @@ export const expressionSlice = createSlice({
     name: 'expressionSlice',
     initialState,
     reducers: {
-        addExpressionMap: (
+        addFeature: (
             state,
             {
                 payload: { key, map },
@@ -60,7 +60,7 @@ export const expressionSlice = createSlice({
 });
 
 export const {
-    addExpressionMap,
+    addFeature,
     clearActiveFeatures,
     clearFeatureMaps,
     removeActiveFeature,

@@ -22,25 +22,10 @@ import {
     pruneTreeByMinDistanceSearch,
     pruneTreeByMinValue,
     rerunPrunes,
-    runClickPrunes,
-    runPrune,
 } from '../util';
 import useAppSelector from './useAppSelector';
 import useAppDispatch from './useAppDispatch';
 
-/* 
-    todo: "base tree" needs to be updated sometimes (i.e., with expression values) 
-    we could use composition, or we could handle it all here
-        -- i.e., listen for expression changes, then update the counts and rerun the prunes
-        -- actually that sounds good
-    for composition:
-        -- we could expose a setBaseTree prop (for the useStateHook for baseTree)
-        -- then when some consumer calls it (i.e., after updating expression values)
-            our useExpression hook, we'll have a useEffect that reruns all the pruners from scratch
-            with the new nodes
-
-    we can cache the trees at various steps, but let's just see how slow it is to rerun always
-*/
 const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
     const [visibleNodes, setVisibleNodes] = useState(tree);
 
@@ -87,7 +72,7 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
     }, [clickPruneHistory, activePruneIndex]);
 
     useEffect(() => {
-        updateTreeMetadata(buildTreeMetadata(visibleNodes));
+        dispatch(updateTreeMetadata(buildTreeMetadata(visibleNodes)));
     }, [visibleNodes]);
 
     useEffect(() => {
