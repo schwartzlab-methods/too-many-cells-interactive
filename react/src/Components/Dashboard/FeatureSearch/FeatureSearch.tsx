@@ -13,7 +13,12 @@ import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
-import { interpolateColorScale, levenshtein } from '../../../util';
+import {
+    addGray,
+    getScaleCombinations,
+    interpolateColorScale,
+    levenshtein,
+} from '../../../util';
 import Button from '../../Button';
 import { Input } from '../../Input';
 import { Column, Row } from '../../Layout';
@@ -34,32 +39,6 @@ import {
 } from '../../../redux/featureSlice';
 import { SmartPruner } from '../DisplayControls/PrunerPanel';
 import { CloseIcon } from '../../Icons';
-
-const addGray = (domain: string[], range: string[]) => {
-    const allLowIdx = domain.findIndex(item => !item.includes('high'));
-    if (allLowIdx) {
-        range[allLowIdx] = '#D3D3D3';
-    }
-    return range;
-};
-
-const getScaleCombinations = (featureList: string[]) =>
-    featureList
-        .sort((a, b) => (a > b ? -1 : 1))
-        .map(s => [`high-${s}`, `low-${s}`])
-        .reduce((acc, curr) => {
-            if (!acc.length) {
-                return curr;
-            } else {
-                const ret = [];
-                for (const item of acc) {
-                    for (const inner of curr) {
-                        ret.push(`${inner}-${item}`);
-                    }
-                }
-                return ret;
-            }
-        }, []);
 
 const FeatureSearch: React.FC = () => {
     const [loading, setLoading] = useState(false);
@@ -94,7 +73,11 @@ const FeatureSearch: React.FC = () => {
         useAppDispatch()
     );
 
-    const resetOverlay = clearActiveFeatures;
+    useEffect(() => {
+        fetchFeatureNames().then(f => {
+            setFeatureList(f);
+        });
+    }, []);
 
     const removeFeature = (featureName: string) => {
         removeActiveFeature(featureName);
@@ -149,18 +132,12 @@ const FeatureSearch: React.FC = () => {
         });
     };
 
-    useEffect(() => {
-        fetchFeatureNames().then(f => {
-            setFeatureList(f);
-        });
-    }, []);
-
     return (
         <Column>
             <SearchTitle>Feature Search</SearchTitle>
             <Caption>Search for a feature by identifier</Caption>
             <Autocomplete
-                resetOverlay={resetOverlay}
+                resetOverlay={clearActiveFeatures}
                 options={featureList || []}
                 onSelect={getFeature}
             />

@@ -334,3 +334,29 @@ export const levenshtein = (a: string, b: string): number => {
     }
     return matrix[bn][an];
 };
+
+export const getScaleCombinations = (featureList: string[]) =>
+    featureList
+        .sort((a, b) => (a > b ? -1 : 1))
+        .map(s => [`high-${s}`, `low-${s}`])
+        .reduce((acc, curr) => {
+            if (!acc.length) {
+                return curr;
+            } else {
+                const ret = [];
+                for (const item of acc) {
+                    for (const inner of curr) {
+                        ret.push(`${inner}-${item}`);
+                    }
+                }
+                return ret;
+            }
+        }, []);
+
+export const addGray = (domain: string[], range: string[]) => {
+    const allLowIdx = domain.findIndex(item => !item.includes('high'));
+    if (allLowIdx) {
+        range[allLowIdx] = '#D3D3D3';
+    }
+    return range;
+};

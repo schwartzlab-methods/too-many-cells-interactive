@@ -1,47 +1,27 @@
 import React, { useRef, useState } from 'react';
+import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
 import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
-import { Column } from '../../Layout';
+import { Column, Row } from '../../Layout';
 import { Input } from '../../Input';
 import { useAppDispatch, useColorScale } from '../../../hooks';
 import { updateColorScale } from '../../../redux/displayConfigSlice';
 import { scaleIsLinear } from '../../../types';
+import { Text } from '../../Typography';
 
 const Legend: React.FC = () => {
     const colorScale = useColorScale();
-    const dispatch = useAppDispatch();
 
     return (
         <Column>
-            {colorScale &&
-                !scaleIsLinear(colorScale) &&
-                colorScale
-                    .domain()
-                    .sort((a, b) => (a < b ? -1 : 1))
-                    .map(d => (
-                        <LegendItem
-                            key={d}
-                            label={d}
-                            color={colorScale!(d)}
-                            updateColor={(color: string) => {
-                                const currColor = colorScale!(d);
-                                const range = colorScale!
-                                    .range()
-                                    .map(r => (currColor === r ? color : r));
-
-                                colorScale?.range(range);
-
-                                dispatch(
-                                    updateColorScale({
-                                        range,
-                                        domain: colorScale.domain(),
-                                    })
-                                );
-                            }}
-                        />
-                    ))}
+            {colorScale && !scaleIsLinear(colorScale) && (
+                <OrdinalLegend scale={colorScale} />
+            )}
+            {colorScale && scaleIsLinear(colorScale) && (
+                <LinearLegend scale={colorScale} />
+            )}
         </Column>
     );
 };
@@ -116,4 +96,68 @@ const Popover = styled.div<{ open: boolean }>`
     left: 0;
 `;
 
+const LinearLegendContainer = styled.div`
+    width: 200px;
+    height: 25px;
+`;
+
+const LinearLegend: React.FC<{ scale: ScaleLinear<any, any> }> = ({
+    scale,
+}) => {
+    return (
+        <Row>
+            <Text>{scale.domain()[0]}</Text>
+            <LinearLegendContainer>
+                <svg viewBox='0 0 200 25'>
+                    <linearGradient id='scaleGradient'>
+                        <stop offset='5%' stopColor={scale.range()[0]} />
+                        <stop offset='95%' stopColor={scale.range()[1]} />
+                    </linearGradient>
+
+                    <rect
+                        fill="url('#scaleGradient')"
+                        height={25}
+                        width={200}
+                    />
+                </svg>
+            </LinearLegendContainer>
+            <Text>{scale.domain()[1].toLocaleString()}</Text>
+        </Row>
+    );
+};
+
+const OrdinalLegend: React.FC<{ scale: ScaleOrdinal<string, string> }> = ({
+    scale,
+}) => {
+    const dispatch = useAppDispatch();
+    return (
+        <>
+            {scale
+                .domain()
+                .sort((a, b) => (a < b ? -1 : 1))
+                .map(d => (
+                    <LegendItem
+                        key={d}
+                        label={d}
+                        color={scale!(d)}
+                        updateColor={(color: string) => {
+                            const currColor = scale!(d);
+                            const range = scale!
+                                .range()
+                                .map(r => (currColor === r ? color : r));
+
+                            scale?.range(range);
+
+                            dispatch(
+                                updateColorScale({
+                                    range,
+                                    domain: scale.domain(),
+                                })
+                            );
+                        }}
+                    />
+                ))}
+        </>
+    );
+};
 export default Legend;

@@ -11,10 +11,16 @@ import {
     activateContinuousFeatureScale,
     selectScales,
     selectTreeMetadata,
+    updateColorScale,
     updateColorScaleType,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
+import {
+    addGray,
+    getScaleCombinations,
+    interpolateColorScale,
+} from '../../../util';
 import DisplayButtons from './DisplayButtons';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
@@ -38,8 +44,16 @@ const ControlPanel: React.FC = () => {
 
     const featureScaleAvailable = !!activeFeatures.length;
 
-    const changeScaleType = (scaleType: typeof colorScaleType) =>
+    const changeScaleType = (scaleType: typeof colorScaleType) => {
         dispatch(updateColorScaleType(scaleType));
+    };
+
+    const activateOrdinalFeatureScale = () => {
+        dispatch(updateColorScaleType('featureHiLos'));
+        const domain = getScaleCombinations(activeFeatures.filter(Boolean));
+        const range = addGray(domain, interpolateColorScale(domain));
+        dispatch(updateColorScale({ range, domain }));
+    };
 
     const _activateContinuousFeatureScale = (
         variant: 'two-color' | 'opacity'
@@ -60,10 +74,7 @@ const ControlPanel: React.FC = () => {
                             checked={colorScaleType === 'featureHiLos'}
                             id='featureHiLos'
                             name='featureHiLos'
-                            onChange={changeScaleType.bind(
-                                null,
-                                'featureHiLos'
-                            )}
+                            onChange={activateOrdinalFeatureScale}
                             type='radio'
                         />
                         <RadioLabel htmlFor='featureHiLos'>
