@@ -19,6 +19,7 @@ import { NumberInput } from '../../Input';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import { Column, Row } from '../../Layout';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
+import { Text } from '../../Typography';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -35,6 +36,12 @@ const PrunerContainer = styled.div<{ expanded: boolean }>`
     }
     transition: 0.25s height cubic-bezier(.73,.32,.34,1.5);
     width: 320px;
+`;
+
+const PrunerLabelContainer = styled(Row)`
+    margin: 0px;
+    justify-content: space-between;
+    flex-grow: 0;
 `;
 
 const SubmitButton = styled(Button)`
@@ -82,8 +89,8 @@ const PrunerPanel: React.FC = () => {
         <Column>
             <SmartPruner
                 expanded={expanded === 'minSize'}
-                id="minSize"
-                label="Prune by size"
+                id='minSize'
+                label={<Text>Prune by size</Text>}
                 madValues={sizeMeta.madGroups}
                 madSize={sizeMeta.mad}
                 median={sizeMeta.median}
@@ -91,12 +98,12 @@ const PrunerPanel: React.FC = () => {
                 onSubmit={prune('minSize')}
                 plainValues={sizeMeta.plainGroups}
                 value={getPrunerVal('minSize')}
-                xLabel="Size"
+                xLabel='Size'
             />
             <SmartPruner
                 expanded={expanded === 'minDistance'}
-                id="minDistance"
-                label="Prune by distance"
+                id='minDistance'
+                label={<Text>Prune by distance</Text>}
                 madValues={distanceMeta.madGroups}
                 madSize={distanceMeta.mad}
                 median={distanceMeta.median}
@@ -104,12 +111,12 @@ const PrunerPanel: React.FC = () => {
                 onSubmit={prune('minDistance')}
                 plainValues={distanceMeta.plainGroups}
                 value={getPrunerVal('minDistance')}
-                xLabel="Distance"
+                xLabel='Distance'
             />
             <SmartPruner
                 expanded={expanded === 'minDistanceSearch'}
-                id="minDistanceSearch"
-                label="Prune by distance (search)"
+                id='minDistanceSearch'
+                label={<Text>Prune by distance (search)</Text>}
                 madValues={distanceSearchMeta.madGroups}
                 madSize={distanceSearchMeta.mad}
                 median={distanceSearchMeta.median}
@@ -117,15 +124,15 @@ const PrunerPanel: React.FC = () => {
                 onSubmit={prune('minDistanceSearch')}
                 plainValues={distanceSearchMeta.plainGroups}
                 value={getPrunerVal('minDistanceSearch')}
-                xLabel="Distance (Search)"
+                xLabel='Distance (Search)'
             />
             <Pruner
                 expanded={expanded === 'minDepth'}
-                label="Prune by depth"
+                label='Prune by depth'
                 onExpand={onExpand('minDepth')}
                 onSubmit={prune('minDepth')}
                 plainValues={depthGroups}
-                xLabel="Depth"
+                xLabel='Depth'
                 value={getPrunerVal('minDepth')}
             />
         </Column>
@@ -196,8 +203,8 @@ const Pruner: React.FC<PrunerProps> = ({
 
 interface SmartPrunerProps {
     expanded: boolean;
-    id: ValuePruneType;
-    label: string;
+    id: string;
+    label: JSX.Element;
     madSize: number;
     madValues: Record<number, number>;
     median: number;
@@ -208,7 +215,7 @@ interface SmartPrunerProps {
     value?: number;
 }
 
-const SmartPruner: React.FC<SmartPrunerProps> = ({
+export const SmartPruner: React.FC<SmartPrunerProps> = ({
     expanded,
     id,
     label,
@@ -243,7 +250,7 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                                 id={`${id}raw`}
                                 name={`${id}types`}
                                 onChange={() => setType('raw')}
-                                type="radio"
+                                type='radio'
                             />
                             <RadioLabel htmlFor={`${id}raw`}>Plain</RadioLabel>
                             <RadioButton
@@ -251,7 +258,7 @@ const SmartPruner: React.FC<SmartPrunerProps> = ({
                                 id={`${id}smart`}
                                 name={`${id}types`}
                                 onChange={() => setType('smart')}
-                                type="radio"
+                                type='radio'
                             />
                             <RadioLabel htmlFor={`${id}smart`}>
                                 Smart
@@ -305,12 +312,6 @@ const PrunerLabel: React.FC<{ expanded: boolean; onClick: () => void }> = ({
         {expanded ? <CaretDownIcon /> : <CaretUpIcon />}
     </PrunerLabelContainer>
 );
-
-const PrunerLabelContainer = styled(Row)`
-    margin: 0px;
-    justify-content: space-between;
-    flex-grow: 0;
-`;
 
 interface UpdateBoxProps {
     onChange: (val: number | string) => void;

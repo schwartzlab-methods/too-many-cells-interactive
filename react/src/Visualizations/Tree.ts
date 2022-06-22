@@ -1,7 +1,7 @@
 import 'd3-transition'; // must be imported before selection
 import { extent, sum } from 'd3-array';
 import { dispatch } from 'd3-dispatch';
-import { rgb } from 'd3-color';
+import { color, rgb } from 'd3-color';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import { format } from 'd3-format';
 import {
@@ -21,34 +21,67 @@ import {
     getEntries,
     squared,
 } from '../util';
-import { AttributeMap, AttributeMapValue, isLinkNode, TMCNode } from '../types';
+import {
+    AttributeMap,
+    AttributeMapValue,
+    isLinkNode,
+    scaleIsLinear,
+    TMCNode,
+} from '../types';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
 import { ClickPruner } from '../redux/pruneSlice';
+import { ColorScaleVariant } from '../redux/displayConfigSlice';
 
 // for debugging
 (window as any).select = select;
 
 type Point = [number, number];
 
-const getColor = (
-    scale: ScaleOrdinal<string, string>,
-    colorScaleKey: 'featureCount' | 'labelCount',
+const blendWeighted = (colors: BlendArg[]) => {
+    const { r, b, g, opacity } = colors.reduce(
+        (acc, curr) => {
+            const { r, g, b, opacity } = curr.color
+                ? color(curr.color)!.rgb()
+                : { r: 0, g: 0, b: 0, opacity: 0 };
+            acc.r += r * curr.weight;
+            acc.g += g * curr.weight;
+            acc.b += b * curr.weight;
+            acc.opacity += opacity * curr.weight;
+            return acc;
+        },
+        { r: 0, g: 0, b: 0, opacity: 0 }
+    );
+    const weightSum = colors.reduce((acc, curr) => (acc += curr.weight), 0);
+
+    return rgb(
+        r / weightSum,
+        g / weightSum,
+        b / weightSum,
+        opacity / weightSum
+    );
+};
+
+function getColor(
+    scale: ScaleOrdinal<string, string> | ScaleLinear<any, any>,
+    colorScaleKey: ColorScaleVariant,
     node: HierarchyPointNode<TMCNode>
-) => {
+) {
     const colorSource = node.data[colorScaleKey];
 
     return getBlendedColor(colorSource, scale).toString();
-};
+}
 
 const getBlendedColor = (
     counts: AttributeMap,
-    scale: ScaleOrdinal<string, string>
+    scale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
 ) => {
     const weightedColors = Object.values(counts).map<BlendArg>(v => ({
         //it's possible for weight to be zero, in which case we'll get black, so well set at one
         //this is mainly for enrichment
-        weight: v.quantity || 1,
-        color: scale(v.scaleKey),
+
+        //if we have a linear scale then we have at most 1 feature, so everything will get 1 weight
+        weight: scaleIsLinear(scale) ? 1 : v.quantity || 1,
+        color: scaleIsLinear(scale) ? scale(v.quantity) : scale(v.scaleKey),
     }));
     //rgb
     const color = blendWeighted(weightedColors);
@@ -178,26 +211,9 @@ const getPie = (
 
 type BlendArg = { color: string; weight: number };
 
-const blendWeighted = (colors: BlendArg[]) => {
-    const { r, b, g } = colors.reduce(
-        (acc, curr) => {
-            const { r, g, b } = rgb(curr.color);
-            acc.r += r * curr.weight;
-            acc.g += g * curr.weight;
-            acc.b += b * curr.weight;
-            return acc;
-        },
-        { r: 0, g: 0, b: 0 }
-    );
-    const weightSum = colors.reduce((acc, curr) => (acc += curr.weight), 0);
-
-    return rgb(r / weightSum, g / weightSum, b / weightSum);
-};
-
 const showToolTip = (data: TMCNode, e: MouseEvent) => {
     const cellCount = sum(Object.values(data.labelCount).map(v => v.quantity));
     const f = format('.1%');
-    const ff = format('.5');
 
     const container = select('.tooltip')
         .style('left', `${e.pageX + 15}px`)
@@ -226,7 +242,7 @@ const showToolTip = (data: TMCNode, e: MouseEvent) => {
             val.html(f(d[1].quantity / cellCount));
         });
 
-    if (Object.keys(data.featureCount).length) {
+    if (Object.keys(data.featureHiLos).length) {
         tissueContainer.style('border-right', 'thin white solid');
     } else {
         tissueContainer.style('border-right', 'none');
@@ -237,7 +253,7 @@ const showToolTip = (data: TMCNode, e: MouseEvent) => {
     featuresContainer
         .selectAll('li.item')
         .data(
-            getEntries(data.featureCount).sort((a, b) =>
+            getEntries(data.featureHiLos).sort((a, b) =>
                 a[1].quantity < b[1].quantity ? 1 : -1
             ),
             Math.random
@@ -249,7 +265,6 @@ const showToolTip = (data: TMCNode, e: MouseEvent) => {
             const strong = s.append('strong');
             strong.html(`${d[1].scaleKey}: `);
             const val = s.append('span');
-            //val.html(ff(d[1].quantity));
             val.html(d[1].quantity.toLocaleString());
         });
 
@@ -743,13 +758,10 @@ class RadialTree {
                         .transition()
                         .delay(this.transitionTime)
                         .duration(this.transitionTime)
-                        .attr('transform', d => {
-                            //https://stackoverflow.com/questions/59356095/error-when-transitioning-an-arc-path-attribute-d-expected-arc-flag-0-or
-                            //seeing same at #605
-                            //note that this does call interpolate for pie.d, which is what the problem
-                            //so does putting a custom transition on the pie fix things?
-                            return `translate(${pointRadial(d.x, d.y)})`;
-                        })
+                        .attr(
+                            'transform',
+                            d => `translate(${pointRadial(d.x, d.y)})`
+                        )
                         .each(function (d) {
                             if (!d.children) {
                                 select<
@@ -867,9 +879,11 @@ class RadialTree {
                                 : '';
                         };
                     })
-                    .attr('fill', d => {
-                        return colorScale(d.data[1].scaleKey);
-                    });
+                    .attr('fill', d =>
+                        scaleIsLinear(colorScale)
+                            ? colorScale(d.data[1].quantity)
+                            : colorScale(d.data[1].scaleKey)
+                    );
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {

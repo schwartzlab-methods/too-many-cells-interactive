@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScaleOrdinal } from 'd3-scale';
+import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
 import { BaseType, select } from 'd3-selection';
 import styled from 'styled-components';
 import { saveAs } from 'file-saver';
@@ -8,8 +8,11 @@ import { Column, Row } from '../../Layout';
 import { Bold, Text } from '../../Typography';
 import { useAppSelector, useColorScale } from '../../../hooks';
 import { selectTreeMetadata } from '../../../redux/displayConfigSlice';
+import { scaleIsLinear } from '../../../types';
 
-const getSvgSrc = (colorScale: ScaleOrdinal<string, string>) => {
+const getSvgSrc = (
+    colorScale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
+) => {
     const svg = select('svg');
 
     const [w, h] = svg
@@ -18,28 +21,30 @@ const getSvgSrc = (colorScale: ScaleOrdinal<string, string>) => {
         .slice(2)
         .map(d => +d);
 
-    svg.select('g.container')
-        .append('g')
-        .attr('transform', `translate(${w / 2 - 150}, ${h / 2})`)
-        .attr('class', 'legend')
-        .selectAll('g.item')
-        .data(colorScale.domain())
-        .join('g')
-        .each(function (_, i) {
-            const g = select<SVGGElement | BaseType, string>(this)
-                .attr('class', 'item')
-                .attr('transform', `translate(0,${i * -15})`);
+    if (!scaleIsLinear(colorScale)) {
+        svg.select('g.container')
+            .append('g')
+            .attr('transform', `translate(${w / 2 - 150}, ${h / 2})`)
+            .attr('class', 'legend')
+            .selectAll('g.item')
+            .data(colorScale.domain())
+            .join('g')
+            .each(function (_, i) {
+                const g = select<SVGGElement | BaseType, string>(this)
+                    .attr('class', 'item')
+                    .attr('transform', `translate(0,${i * -15})`);
 
-            g.append('circle')
-                .text(d => d)
-                .attr('r', 4)
-                .attr('cy', -6)
-                .attr('fill', d => colorScale(d));
+                g.append('circle')
+                    .text(d => d)
+                    .attr('r', 4)
+                    .attr('cy', -6)
+                    .attr('fill', d => colorScale(d));
 
-            g.append('text')
-                .text(d => d)
-                .attr('dx', 5);
-        });
+                g.append('text')
+                    .text(d => d)
+                    .attr('dx', 5);
+            });
+    }
 
     const svgNode = svg
         .attr('xmlns', 'http://www.w3.org/2000/svg')
@@ -53,7 +58,9 @@ const getSvgSrc = (colorScale: ScaleOrdinal<string, string>) => {
 
 const removeLegend = () => select('svg').select('g.legend').remove();
 
-const downloadPng = (colorScale: ScaleOrdinal<string, string>) => {
+const downloadPng = (
+    colorScale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
+) => {
     try {
         const w = (select('svg').node() as Element).clientWidth;
         const h = (select('svg').node() as Element).clientHeight;
@@ -81,7 +88,9 @@ const downloadPng = (colorScale: ScaleOrdinal<string, string>) => {
     }
 };
 
-const downloadSvg = (colorScale: ScaleOrdinal<string, string>) => {
+const downloadSvg = (
+    colorScale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
+) => {
     try {
         const svgSrc = getSvgSrc(colorScale);
         saveAs(svgSrc);
@@ -95,7 +104,7 @@ const TreeControls: React.FC = () => {
 
     return (
         <Column>
-            <Row margin="5px">
+            <Row margin='5px'>
                 <Button horizontal onClick={() => downloadSvg(colorScale!)}>
                     Download SVG
                 </Button>
@@ -103,7 +112,7 @@ const TreeControls: React.FC = () => {
                     Download PNG
                 </Button>
             </Row>
-            <Row margin="5px">
+            <Row margin='5px'>
                 <PruneStatuses />
             </Row>
         </Column>

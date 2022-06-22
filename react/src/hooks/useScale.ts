@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ScaleLinear, scaleLinear, ScaleOrdinal, scaleOrdinal } from 'd3-scale';
+import { ScaleLinear, scaleLinear, scaleOrdinal } from 'd3-scale';
 import { Scales, selectScales } from '../redux/displayConfigSlice';
 import { useAppSelector } from './index';
 
@@ -21,23 +21,22 @@ export const useColorScale = () => {
     const { featureDomain, featureRange, labelDomain, labelRange, variant } =
         useAppSelector(selectScales)['colorScale'];
 
+    /* select the appropriate range and domain */
     const [domain, range] = useMemo(() => {
-        return variant === 'featureCount'
-            ? [featureDomain, featureRange.slice()]
-            : [labelDomain, labelRange];
+        return variant === 'labelCount'
+            ? [labelDomain, labelRange]
+            : [featureDomain, featureRange.slice()];
     }, [variant, featureDomain, featureRange, labelRange, labelDomain]);
 
-    if (variant === 'featureCount') {
-        const allLowIdx = domain.findIndex(item => !item.includes('high'));
-        if (allLowIdx) {
-            range[allLowIdx] = '#D3D3D3';
-        }
-    }
+    const scale =
+        variant == 'featureCount'
+            ? scaleLinear<any, any>(range)
+            : scaleOrdinal(range);
 
     return useMemo(() => {
-        return scaleOrdinal().range(range).domain(domain) as ScaleOrdinal<
-            string,
-            string
-        >;
-    }, [domain, range]);
+        if (variant === 'featureCount') {
+            (scale as ScaleLinear<any, any>).domain(domain as number[]);
+        } else scale.domain(domain as string[]);
+        return scale;
+    }, [domain, range, variant]);
 };

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { bindActionCreators, compose } from 'redux';
-import { HierarchyNode, HierarchyPointNode } from 'd3-hierarchy';
+import { HierarchyNode } from 'd3-hierarchy';
 import { extent, max, median, min, range, sum, ticks } from 'd3-array';
 import { AttributeMap, TMCNode } from '../types';
 import {
@@ -80,7 +80,7 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
 
     const width = useAppSelector(selectWidth);
 
-    /* FEATURE ANNOTATION EFFECTS */
+    /* FEATURE ANNOTATION EFFECTS: */
 
     useEffect(() => {
         if (Object.values(featureMaps).length) {
@@ -90,13 +90,12 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
                 featureMaps
             );
 
-            //const distributions = {} as Record<string, FeatureDistribution>;
             const thresholds = {} as Record<string, number>;
 
-            // calculate new scale thresholds, which will cause next hook to fire, which will
-            // calculate node-level counts with new thresholds
+            // then calculate new scale thresholds, which will cause next hook to fire, which will
+            // calculate node-level counts based on these new thresholds
 
-            getEntries(featureMaps).forEach(([k, v]) => {
+            Object.keys(featureMaps).forEach(k => {
                 const range = treeWithCells
                     .leaves()
                     .flatMap(l =>
@@ -109,23 +108,29 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
                 thresholds[k] = med;
             });
 
-            updateFeatureDistributions(
-                getFeatureDistributions(treeWithCells, activeFeatures)
-            );
-
             updateColorScaleThresholds(thresholds);
             setBaseTree(tree);
             clearFeatureMaps();
         }
     }, [featureMaps]);
 
+    /* when thresholds change or a new feature is added, we need to re-annotate nodes */
     useEffect(() => {
         if (activeFeatures.length || Object.keys(featureThresholds).length) {
-            const annotatedTree = updateFeatureCounts(
+            const annotatedTree = updatefeatureHiLos(
                 tree.copy(),
                 featureThresholds,
                 activeFeatures
             );
+
+            if (activeFeatures.length === 1) {
+                updateFeatureCounts(annotatedTree, activeFeatures[0]);
+            }
+
+            updateFeatureDistributions(
+                getFeatureDistributions(annotatedTree, activeFeatures)
+            );
+
             setBaseTree(annotatedTree);
         }
     }, [activeFeatures, featureThresholds]);
@@ -133,8 +138,9 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
     /* PRUNING EFFECTS */
     useEffect(() => {
         if (pruneStepIsEmpty(step)) {
-            //if this is a new prune or a full revert, i.e., if step is empty recalculate base ditributions from visibleNodes
-            //todo: this should include feature distributions as well
+            // if this is a new prune or a full revert, i.e., if step is empty recalculate base ditributions from visibleNodes
+            // if it is a full revert, we'll recalc layout too (if not, then it's just meta that needs updating, the tree is the same)
+            // todo: this should include feature distributions as well
             compose(
                 updateDistributions,
                 buildPruneMetadata
@@ -146,7 +152,7 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
         }
     }, [step]);
 
-    /* for now rerun all prunes on every prune change and keep an eye on performance */
+    /* for now, when a prune runs, we rerun all prunes -- if performance suffers we can optimize */
     useEffect(() => {
         if (!pruneStepIsEmpty(step)) {
             recalculateLayout();
@@ -420,11 +426,128 @@ const getSizeMadGroups = (tree: HierarchyNode<TMCNode>) => {
     );
 };
 
-const updateFeatureCounts = (
+const getFeatureDistributions = (
+    nodes: HierarchyNode<TMCNode>,
+    activeFeatures: string[]
+) => {
+    const distributions = {} as Record<string, FeatureDistribution>;
+
+    activeFeatures.forEach(f => {
+        const range = nodes
+            .leaves()
+            .flatMap(l =>
+                (l.data.items || []).map(
+                    item => item._barcode._featureCounts![f] || 0
+                )
+            );
+
+        const maxProportion =
+            max(
+                nodes
+                    .descendants()
+                    .map(d => d.data.featureCount[f]?.quantity || 0)
+            ) || 0;
+
+        const med = median(range.filter(Boolean))!;
+
+        const medianWithZeroes = median(range)!;
+
+        const mad = getMAD(range.filter(Boolean)) || 0;
+
+        distributions[f] = {
+            mad,
+            madGroups: getMadFeatureGroups(range.filter(Boolean), mad, med),
+            madWithZeroes: getMAD(range) || 0, //remove 0s
+            max: max(range) || 0,
+            maxProportion,
+            min: min(range) || 0,
+            median: med || 0,
+            medianWithZeroes: medianWithZeroes || 0,
+            plainGroups: getPlainFeatureGroups(range.filter(Boolean)),
+            total: sum(range) || 0,
+        };
+    });
+
+    return distributions;
+};
+
+const getPlainFeatureGroups = (range: number[]) => {
+    const [min, max] = extent(range) as [number, number];
+    const thresholds = ticks(min, max, Math.min(max, 25));
+
+    return thresholds.reduce<Record<number, number>>(
+        (acc, curr) => ({
+            ...acc,
+            [curr]: range.filter(n => n > curr).length,
+        }),
+        {}
+    );
+};
+
+const getMadFeatureGroups = (range: number[], mad: number, median: number) => {
+    const maxVal = max(range) || 0;
+
+    const maxMads = Math.ceil((maxVal - median) / mad);
+
+    const thresholds = ticks(0, maxMads, Math.min(maxMads, 25));
+
+    return thresholds.reduce<Record<number, number>>(
+        (acc, curr) => ({
+            ...acc,
+            [curr]: range.filter(n => n > median + mad * curr).length,
+        }),
+        {}
+    );
+};
+
+/**
+ *
+ * @param nodes the base tree (not a pruned tree)
+ * @param feature the (single) active feature
+ * @returns HierarchyNode<TMCNode> (mutated argument)
+ */
+const updateFeatureCounts = (nodes: HierarchyNode<TMCNode>, feature: string) =>
+    nodes.eachAfter(n => {
+        if (n.data.items) {
+            n.data.featureCount = {
+                [feature]: {
+                    quantity:
+                        n.data.items.reduce(
+                            (acc, curr) =>
+                                (acc +=
+                                    curr._barcode._featureCounts[feature] || 0),
+                            0
+                        ) / n.value!,
+                    scaleKey: feature,
+                },
+            };
+        } else {
+            n.data.featureCount = {
+                [feature]: {
+                    quantity:
+                        (n.children![0].data.featureCount[feature].quantity +
+                            n.children![1].data.featureCount[feature]
+                                .quantity) /
+                            n.descendants().length -
+                        1,
+                    scaleKey: feature,
+                },
+            };
+        }
+    });
+
+/**
+ *
+ * @param nodes the base tree (not a pruned tree)
+ * @param thresholds the cutoff for hi/lo for each feature
+ * @param activeFeatures the features currently visible
+ * @returns HierarchyNode<TMCNode> (mutated argument)
+ */
+const updatefeatureHiLos = (
     nodes: HierarchyNode<TMCNode>,
     thresholds: Record<string, number>,
     activeFeatures: string[]
-) => {
+) =>
     nodes.eachAfter(n => {
         // for the scale to read
         const hilo = {} as AttributeMap;
@@ -452,7 +575,7 @@ const updateFeatureCounts = (
             });
         } else {
             //if node is not a leaf, just add both children
-            n.children!.map(node => node.data.featureCount).forEach(count => {
+            n.children!.map(node => node.data.featureHiLos).forEach(count => {
                 for (const featurekey in count) {
                     if (!hilo[featurekey]) {
                         hilo[featurekey] = count[featurekey];
@@ -462,75 +585,5 @@ const updateFeatureCounts = (
                 }
             });
         }
-        n.data.featureCount = hilo;
-        return n;
+        n.data.featureHiLos = hilo;
     });
-
-    return nodes;
-};
-
-const getFeatureDistributions = (
-    nodes: HierarchyNode<TMCNode>,
-    activeFeatures: string[]
-) => {
-    const distributions = {} as Record<string, FeatureDistribution>;
-
-    activeFeatures.forEach(f => {
-        const range = nodes
-            .leaves()
-            .flatMap(l =>
-                (l.data.items || []).map(
-                    item => item._barcode._featureCounts![f] || 0
-                )
-            );
-
-        const med = median(range.filter(Boolean))!;
-
-        const medianWithZeroes = median(range)!;
-
-        const mad = getMAD(range.filter(Boolean)) || 0;
-
-        distributions[f] = {
-            mad,
-            madGroups: getMadFeatureGroups(range.filter(Boolean), mad, med),
-            madWithZeroes: getMAD(range) || 0, //remove 0s
-            max: max(range) || 0,
-            min: min(range) || 0,
-            median: med || 0,
-            medianWithZeroes: medianWithZeroes || 0,
-            plainGroups: getPlainFeatureGroups(range.filter(Boolean)),
-            total: sum(range) || 0,
-        };
-    });
-
-    return distributions;
-};
-
-const getPlainFeatureGroups = (range: number[]) => {
-    const [min, max] = extent(range);
-    const thresholds = ticks(min!, max!, 25);
-
-    return thresholds.reduce<Record<number, number>>(
-        (acc, curr) => ({
-            ...acc,
-            [curr]: range.filter(n => n > curr).length,
-        }),
-        {}
-    );
-};
-
-const getMadFeatureGroups = (range: number[], mad: number, median: number) => {
-    const [min, max] = extent(range) as [number, number];
-
-    const maxMads = Math.ceil((max - median) / mad);
-
-    const thresholds = ticks(0, maxMads, Math.min(maxMads, 25));
-
-    return thresholds.reduce<Record<number, number>>(
-        (acc, curr) => ({
-            ...acc,
-            [curr]: range.filter(n => n > median + mad * curr).length,
-        }),
-        {}
-    );
-};

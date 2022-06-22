@@ -49,19 +49,19 @@ const Dashboard: React.FC = () => {
 
             <Column>
                 <Main>TooManyCellsJs</Main>
-                <Row alignItems="flex-start" margin="0px">
-                    <Row width="50%">
+                <Row alignItems='flex-start' margin='0px'>
+                    <Row width='50%'>
                         <Column>
                             <TreeControls />
                             {baseTree && <TreeComponent baseTree={baseTree} />}
                         </Column>
                     </Row>
-                    <Row width="50%">
-                        <Column justifyContent="flex-start">
-                            <Row margin="0px">
+                    <Row width='50%'>
+                        <Column justifyContent='flex-start'>
+                            <Row margin='0px'>
                                 <PruneHistory />
                             </Row>
-                            <Row margin="0px" alignItems="flex-start">
+                            <Row margin='0px' alignItems='flex-start'>
                                 <ControlPanel />
                             </Row>
                         </Column>

@@ -4,9 +4,10 @@
   "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
+    "build": "webpack",
+    "format": "prettier --write src",
     "start-cold": "webpack serve --no-hot",
     "start": "webpack serve",
-    "build": "webpack",
     "test": "jest"
   },
   "dependencies": {
@@ -71,6 +72,7 @@
     "eslint-plugin-react-hooks": "^4.5.0",
     "html-webpack-plugin": "^5.5.0",
     "jest": "^27.5.1",
+    "prettier": "^2.7.1",
     "sass": "^1.49.9",
     "sass-loader": "^12.6.0",
     "style-loader": "^3.3.1",

@@ -7,6 +7,7 @@ import { Column } from '../../Layout';
 import { Input } from '../../Input';
 import { useAppDispatch, useColorScale } from '../../../hooks';
 import { updateColorScale } from '../../../redux/displayConfigSlice';
+import { scaleIsLinear } from '../../../types';
 
 const Legend: React.FC = () => {
     const colorScale = useColorScale();
@@ -15,6 +16,7 @@ const Legend: React.FC = () => {
     return (
         <Column>
             {colorScale &&
+                !scaleIsLinear(colorScale) &&
                 colorScale
                     .domain()
                     .sort((a, b) => (a < b ? -1 : 1))

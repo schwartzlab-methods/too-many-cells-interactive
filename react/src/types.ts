@@ -1,4 +1,6 @@
 import { HierarchyPointLink, HierarchyPointNode } from 'd3-hierarchy';
+import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
+import { isNumber } from 'lodash';
 
 export interface RoseNodeItem {
     _barcode: { unCell: string };
@@ -6,13 +8,13 @@ export interface RoseNodeItem {
 }
 
 /* 
-    _featureCount here is raw count for cell, which must persist on object for further processing
-    node.featureCount contains calculated display values that may change according to user interaction
+    _featureCounts here is raw count for cell, which must persist on object for further processing
+    node.featureHiLos contains calculated display values that may change according to user interaction
 */
 export interface TMCNodeItem extends RoseNodeItem {
     _barcode: {
         unCell: string;
-        _featureCounts?: Record<string, number | undefined>;
+        _featureCounts: Record<string, number | undefined>;
     };
 }
 
@@ -35,6 +37,7 @@ export interface TMCFlatNode {
     distance: number | null;
     id: string;
     featureCount: AttributeMap;
+    featureHiLos: AttributeMap;
     items: TMCNodeItem[] | null;
     labelCount?: AttributeMap;
     nodeId?: number;
@@ -51,3 +54,8 @@ export const isLinkNode = (
     item: HierarchyPointLink<TMCNode> | HierarchyPointNode<TMCNode>
 ): item is HierarchyPointLink<TMCNode> =>
     !!(item as HierarchyPointLink<TMCNode>).source;
+
+export const scaleIsLinear = (
+    scale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
+): scale is ScaleLinear<any, any> =>
+    isNumber((scale as ScaleLinear<any, any>).domain()[0]);

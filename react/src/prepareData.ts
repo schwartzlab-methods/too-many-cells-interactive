@@ -83,9 +83,18 @@ const flatten = (
         | RoseNodeObj
         | undefined;
 
-    node.items = meta?._item ?? null;
+    node.items = meta?._item
+        ? meta._item.map(i => ({
+              ...i,
+              _barcode: {
+                  ...i._barcode,
+                  _featureCounts: {},
+              },
+          }))
+        : null;
     node.distance = meta?._distance ?? null;
     node.significance = meta?._significance ?? null;
+    node.featureHiLos = {};
     node.featureCount = {};
     nodes.push(node);
     for (const item of data) {

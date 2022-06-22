@@ -2,9 +2,12 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { DistributionMetadata } from './pruneSlice';
 import type { RootState } from './store';
 
+/* Except maxProportion, these all pertain to hilo counts */
 export interface FeatureDistribution extends DistributionMetadata {
     madWithZeroes: number;
     max: number;
+    //largest cell count with feature divided by total cells
+    maxProportion: number;
     min: number;
     medianWithZeroes: number;
     total: number;

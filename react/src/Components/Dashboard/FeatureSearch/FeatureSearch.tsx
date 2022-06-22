@@ -10,19 +10,15 @@ import React, {
     useState,
 } from 'react';
 import { bindActionCreators } from 'redux';
-import { range } from 'd3-array';
 import styled from 'styled-components';
 import { fetchFeatures, fetchFeatureNames } from '../../../../api';
 import useClickAway from '../../../hooks/useClickAway';
-import { getEntries, interpolateColorScale, levenshtein } from '../../../util';
+import { interpolateColorScale, levenshtein } from '../../../util';
 import Button from '../../Button';
-import { Input, NumberInput } from '../../Input';
+import { Input } from '../../Input';
 import { Column, Row } from '../../Layout';
 import Modal from '../../Modal';
 import { Caption, Title } from '../../Typography';
-import { CloseIcon } from '../../Icons';
-import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
-import Checkbox from '../../Checkbox';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectScales,
@@ -33,10 +29,19 @@ import {
 import {
     addFeature as _addFeature,
     clearActiveFeatures as _clearActiveFeatures,
-    FeatureDistribution,
     removeActiveFeature as _removeActiveFeature,
     selectFeatureSlice,
 } from '../../../redux/featureSlice';
+import { SmartPruner } from '../DisplayControls/PrunerPanel';
+import { CloseIcon } from '../../Icons';
+
+const addGray = (domain: string[], range: string[]) => {
+    const allLowIdx = domain.findIndex(item => !item.includes('high'));
+    if (allLowIdx) {
+        range[allLowIdx] = '#D3D3D3';
+    }
+    return range;
+};
 
 const getScaleCombinations = (featureList: string[]) =>
     featureList
@@ -56,16 +61,12 @@ const getScaleCombinations = (featureList: string[]) =>
             }
         }, []);
 
-/**
- *
- * @param nodes
- * @param thresholds
- * @returns TMCNode: Note that the tree is mutated in place
- */
-
 const FeatureSearch: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [featureList, setFeatureList] = useState<string[]>();
+    const [visibleFeatureControls, setVisibleFeatureControls] = useState<
+        Record<string, boolean>
+    >({});
 
     const {
         colorScale: { featureThresholds },
@@ -97,17 +98,26 @@ const FeatureSearch: React.FC = () => {
 
     const removeFeature = (featureName: string) => {
         removeActiveFeature(featureName);
+
         const domain = getScaleCombinations(
             activeFeatures.filter(f => f !== featureName)
         );
 
-        const range = interpolateColorScale(domain);
+        const range = addGray(domain, interpolateColorScale(domain));
 
         updateColorScale({ range, domain });
 
         if (activeFeatures.length === 1) {
             updateColorScaleType('labelCount');
         }
+
+        setVisibleFeatureControls(
+            Object.fromEntries(
+                Object.entries(visibleFeatureControls).filter(
+                    ([k, _]) => k !== featureName
+                )
+            )
+        );
     };
 
     const getFeature = async (feature: string) => {
@@ -121,17 +131,22 @@ const FeatureSearch: React.FC = () => {
 
         addFeature({ key: feature, map: featureMap });
 
-        updateColorScaleType('featureCount');
+        updateColorScaleType('featureHiLos');
 
         const domain = getScaleCombinations(
             activeFeatures.filter(Boolean).concat(feature)
         );
 
-        const range = interpolateColorScale(domain);
+        const range = addGray(domain, interpolateColorScale(domain));
 
         updateColorScale({ range, domain });
 
         setLoading(false);
+
+        setVisibleFeatureControls({
+            ...visibleFeatureControls,
+            [feature]: true,
+        });
     };
 
     useEffect(() => {
@@ -155,28 +170,64 @@ const FeatureSearch: React.FC = () => {
                     <FeatureListContainer>
                         <FeatureListLabel>Selected Features</FeatureListLabel>
                         <FeatureList>
-                            {getEntries(featureThresholds)
-                                .filter(([k, _]) => activeFeatures.includes(k))
-                                .map(([k, v]) => (
-                                    <FeatureSlider
-                                        key={k}
-                                        featureName={k}
-                                        featureStats={featureDistributions[k]}
-                                        highLowThreshold={v}
-                                        removeFeature={removeFeature}
-                                        updateThreshold={(val: number) =>
-                                            updateColorScaleThresholds({
-                                                [k]: val,
-                                            })
-                                        }
-                                    />
+                            {Object.keys(featureThresholds)
+                                .filter(k => activeFeatures.includes(k))
+                                .map(k => (
+                                    <span key={k}>
+                                        <SmartPruner
+                                            expanded={visibleFeatureControls[k]}
+                                            id={k}
+                                            label={
+                                                <Row margin='0px'>
+                                                    {k}&nbsp;
+                                                    <CloseIcon
+                                                        onClick={removeFeature.bind(
+                                                            null,
+                                                            k
+                                                        )}
+                                                        size='7px'
+                                                        strokeWidth={8}
+                                                    />
+                                                </Row>
+                                            }
+                                            madSize={
+                                                featureDistributions[k].mad
+                                            }
+                                            madValues={
+                                                featureDistributions[k]
+                                                    .madGroups
+                                            }
+                                            median={
+                                                featureDistributions[k].median
+                                            }
+                                            onExpand={() =>
+                                                setVisibleFeatureControls({
+                                                    ...visibleFeatureControls,
+                                                    [k]: !visibleFeatureControls[
+                                                        k
+                                                    ],
+                                                })
+                                            }
+                                            plainValues={
+                                                featureDistributions[k]
+                                                    .plainGroups
+                                            }
+                                            onSubmit={v =>
+                                                updateColorScaleThresholds({
+                                                    [k]: v,
+                                                })
+                                            }
+                                            xLabel='Theshold'
+                                            value={featureThresholds[k]}
+                                        />
+                                    </span>
                                 ))}
                         </FeatureList>
                     </FeatureListContainer>
                 </>
             )}
 
-            <Modal open={loading} message="Loading..." />
+            <Modal open={loading} message='Loading...' />
         </Column>
     );
 };
@@ -202,173 +253,6 @@ const FeatureListLabel = styled(Caption)`
     background-color: white;
     position: absolute;
 `;
-
-interface FeaturePillProps {
-    count: string;
-    name: string;
-    removeFeature: (featureName: string) => void;
-}
-
-const FeaturePill: React.FC<FeaturePillProps> = ({
-    removeFeature,
-    name,
-    count,
-}) => (
-    <FeaturePillContainer>
-        {name}: {count}
-        <RemoveFeatureIcon
-            onClick={removeFeature.bind(null, name)}
-            strokeWidth={10}
-            pointer
-            stroke="white"
-            size="7px"
-        />
-    </FeaturePillContainer>
-);
-
-const RemoveFeatureIcon = styled(CloseIcon)`
-    padding: 3px;
-`;
-
-const FeaturePillContainer = styled.span`
-    align-items: flex-start;
-    background-color: ${props => props.theme.palette.primary};
-    border-radius: 7px;
-    color: white;
-    display: flex;
-    margin: 3px;
-    padding: 4px;
-`;
-
-interface FeatureSliderProps {
-    featureName: string;
-    featureStats: FeatureDistribution;
-    highLowThreshold: number;
-    removeFeature: (featureName: string) => void;
-    updateThreshold: (newThreshold: number) => void;
-}
-
-const FeatureSlider: React.FC<FeatureSliderProps> = ({
-    featureName,
-    featureStats,
-    highLowThreshold,
-    removeFeature,
-    updateThreshold,
-}) => {
-    const [rangeType, setRangeType] = useState<'mad' | 'raw'>('raw');
-    const [includeZeroes, setIncludeZeroes] = useState(false);
-
-    const {
-        mad: _mad,
-        madWithZeroes,
-        max,
-        median: _median,
-        medianWithZeroes,
-    } = featureStats;
-
-    const mad = useMemo(() => {
-        return includeZeroes ? madWithZeroes : _mad;
-    }, [includeZeroes, madWithZeroes, _mad]);
-
-    const median = useMemo(() => {
-        return includeZeroes ? medianWithZeroes : _median;
-    }, [includeZeroes, madWithZeroes, _median]);
-
-    const madRange = useMemo(() => {
-        if (mad !== undefined) {
-            return range(median, max, mad);
-        } else {
-            return [];
-        }
-    }, [featureStats, includeZeroes]);
-
-    return (
-        <Column>
-            <Row margin="2px">
-                <FeaturePill
-                    count={featureStats.total.toString()}
-                    name={featureName}
-                    removeFeature={removeFeature}
-                />
-            </Row>
-            <Row margin="2px">High/Low Threshold: {highLowThreshold}</Row>
-            {rangeType === 'mad' && (
-                <Row alignItems="center" margin="2px">
-                    MAD: {mad}
-                    {rangeType === 'mad' && (
-                        <Checkbox
-                            checked={includeZeroes}
-                            label="Include Zeroes"
-                            onClick={() => setIncludeZeroes(!includeZeroes)}
-                            style={{ marginLeft: '5px' }}
-                        />
-                    )}
-                </Row>
-            )}
-            <Row alignItems="center" margin="2px">
-                <RadioGroup>
-                    <RadioButton
-                        checked={rangeType === 'raw'}
-                        id="rawRange"
-                        name="rawRange"
-                        onChange={() => setRangeType('raw')}
-                        type="radio"
-                    />
-                    <RadioLabel htmlFor="rawRange">Raw</RadioLabel>
-                    <RadioButton
-                        checked={rangeType === 'mad'}
-                        id="madRange"
-                        name="madRange"
-                        onChange={() => setRangeType('mad')}
-                        type="radio"
-                    />
-                    <RadioLabel htmlFor="madRange">MAD</RadioLabel>
-                </RadioGroup>
-            </Row>
-            <Row alignItems="center" margin="2px">
-                <span>{rangeType === 'raw' ? featureStats.min : 0}</span>
-                <input
-                    type="range"
-                    max={
-                        rangeType === 'raw'
-                            ? featureStats.max
-                            : madRange?.length
-                    }
-                    min={rangeType === 'raw' ? featureStats.min : 0}
-                    step={1}
-                    value={
-                        rangeType === 'raw'
-                            ? highLowThreshold
-                            : highLowThreshold / mad - median
-                    }
-                    onChange={v =>
-                        updateThreshold(
-                            rangeType === 'raw'
-                                ? +v.currentTarget.value
-                                : median + +v.currentTarget.value * mad
-                        )
-                    }
-                />
-                <span>
-                    {rangeType === 'raw' ? featureStats.max : madRange?.length}
-                </span>
-                <NumberInput
-                    onChange={v =>
-                        updateThreshold(
-                            rangeType === 'raw' ? +v : median + +v * mad
-                        )
-                    }
-                    style={{ marginLeft: '3px' }}
-                    value={
-                        rangeType === 'raw'
-                            ? highLowThreshold
-                            : (highLowThreshold - median) / mad
-                    }
-                />
-            </Row>
-        </Column>
-    );
-};
 
 interface AutocompleteProps {
     options: string[];
@@ -478,8 +362,8 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
     };
 
     return (
-        <Row alignItems="center" margin="0px" style={{ marginTop: '5px' }}>
-            <AutocompleteContainer width="auto" ref={containerRef}>
+        <Row alignItems='center' margin='0px' style={{ marginTop: '5px' }}>
+            <AutocompleteContainer width='auto' ref={containerRef}>
                 <AutocompleteInput
                     ref={inputRef}
                     handleKeyPress={handleKeyPress}

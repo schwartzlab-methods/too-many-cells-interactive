@@ -61,17 +61,7 @@ async def parse_matrices(root_dir: str):
     #1396 secs w/ 100k chunk size at 117million rows... so no difference there
 
     #it seems that these concurrent writes aren't very effective or much faster (in fact, much slower...)
-    # but first make sure we've got a lock problem to begin with: https://www.mongodb.com/docs/manual/faq/concurrency
-    # in particular this table, which suggests a lock on writes, but use the cli tools to check what locks are there and then see if you can break them....
-    # not clear from the serverStatus() output, but in htop you can see the processes queued up -- probably the overhead slows things down
-        # yup, housing all that data in memory is using up a lot of RAM
-        # better to just enlarge chunk size and see
-    #could try:
-    # 1. sharding (overkill)
-    # 2. chunking in 1gbs and passing it all to write_many (use a generator rather than asyncio)
-    #     - nope, the max batch size is 100k
-    #     - basically already doing that....
-    # is writing the damned csv faster....?
+    # try building the indexes only after importing...
 
 
 

@@ -11,14 +11,14 @@ import Checkbox from '../../Checkbox';
 const DisplayButtons: React.FC = () => {
     return (
         <BoxList>
-            <ToggleCheckbox label="Show Stroke" propName="strokeVisible" />
-            <ToggleCheckbox label="Show Node IDs" propName="nodeIdsVisible" />
+            <ToggleCheckbox label='Show Stroke' propName='strokeVisible' />
+            <ToggleCheckbox label='Show Node IDs' propName='nodeIdsVisible' />
             <ToggleCheckbox
-                label="Show Node Counts"
-                propName="nodeCountsVisible"
+                label='Show Node Counts'
+                propName='nodeCountsVisible'
             />
-            <ToggleCheckbox label="Show Distance" propName="distanceVisible" />
-            <ToggleCheckbox label="Show Pies" propName="piesVisible" />
+            <ToggleCheckbox label='Show Distance' propName='distanceVisible' />
+            <ToggleCheckbox label='Show Pies' propName='piesVisible' />
         </BoxList>
     );
 };

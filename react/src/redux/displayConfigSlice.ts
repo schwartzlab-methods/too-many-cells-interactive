@@ -18,13 +18,16 @@ export interface ToggleableDisplayElements {
     distanceVisible: boolean;
 }
 
+export type ColorScaleVariant = 'labelCount' | 'featureHiLos' | 'featureCount';
+
 export interface ColorScaleConfig {
-    featureDomain: string[];
+    featureDomain: string[] | number[];
     featureRange: string[];
     labelDomain: string[];
     labelRange: string[];
     featureThresholds: Record<string, number>;
-    variant: 'labelCount' | 'featureCount';
+    featureVariant: 'two-color' | 'opacity';
+    variant: ColorScaleVariant;
 }
 
 export interface LinearScaleConfig {
@@ -57,6 +60,7 @@ const initialScales: Scales = {
         labelDomain: [''],
         labelRange: [''],
         variant: 'labelCount',
+        featureVariant: 'two-color',
     },
     pieScale: {
         domain: [0, 0],
@@ -87,6 +91,20 @@ export const displayConfigSlice = createSlice({
     name: 'displayConfig',
     initialState,
     reducers: {
+        activateContinuousFeatureScale: (
+            state,
+            {
+                payload: { max, variant },
+            }: PayloadAction<{ max: number; variant: 'opacity' | 'two-color' }>
+        ) => {
+            state.scales.colorScale.featureDomain = [0, max];
+            state.scales.colorScale.featureVariant = variant;
+            state.scales.colorScale.featureRange =
+                variant === 'opacity'
+                    ? ['#D3D3D3', '#E41A1C']
+                    : ['rgba(228,26,28,0)', 'rgba(228,26,28,1)'];
+            state.scales.colorScale.variant = 'featureCount';
+        },
         toggleDisplayProperty: (
             state,
             { payload }: PayloadAction<keyof ToggleableDisplayElements>
@@ -103,12 +121,12 @@ export const displayConfigSlice = createSlice({
         ) => {
             const { variant } = state.scales.colorScale;
 
-            if (variant === 'featureCount') {
-                state.scales.colorScale.featureDomain = domain;
-                state.scales.colorScale.featureRange = range;
-            } else {
+            if (variant === 'labelCount') {
                 state.scales.colorScale.labelDomain = domain;
                 state.scales.colorScale.labelRange = range;
+            } else {
+                state.scales.colorScale.featureDomain = domain;
+                state.scales.colorScale.featureRange = range;
             }
         },
         updateColorScaleThresholds: (
@@ -122,7 +140,7 @@ export const displayConfigSlice = createSlice({
         },
         updateColorScaleType: (
             state,
-            { payload }: PayloadAction<'featureCount' | 'labelCount'>
+            { payload }: PayloadAction<ColorScaleVariant>
         ) => {
             state.scales.colorScale.variant = payload;
         },
@@ -147,6 +165,7 @@ export const displayConfigSlice = createSlice({
 });
 
 export const {
+    activateContinuousFeatureScale,
     toggleDisplayProperty,
     updateColorScale,
     updateColorScaleThresholds,

@@ -31,9 +31,9 @@ const Checkbox: React.FC<CheckboxProps> = ({
     return (
         <CheckboxContainer style={style} onClick={onClick}>
             {checked ? (
-                <CheckboxCheckedIcon fill="none" />
+                <CheckboxCheckedIcon fill='none' />
             ) : (
-                <CheckboxUncheckedIcon fill="none" />
+                <CheckboxUncheckedIcon fill='none' />
             )}
             <CheckboxLabel>{label}</CheckboxLabel>
         </CheckboxContainer>

@@ -8,6 +8,7 @@ import { selectFeatureSlice } from '../../../redux/featureSlice';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
+    activateContinuousFeatureScale,
     selectScales,
     selectTreeMetadata,
     updateColorScaleType,
@@ -21,12 +22,13 @@ import Legend from './Legend';
 const ControlPanel: React.FC = () => {
     const {
         branchSizeScale,
-        colorScale: { variant: colorScaleType, featureThresholds },
+        colorScale: { variant: colorScaleType, featureVariant },
     } = useAppSelector(selectScales);
 
     const { minValue, maxValue } = useAppSelector(selectTreeMetadata);
 
-    const { activeFeatures } = useAppSelector(selectFeatureSlice);
+    const { activeFeatures, featureDistributions } =
+        useAppSelector(selectFeatureSlice);
 
     const dispatch = useAppDispatch();
 
@@ -36,9 +38,16 @@ const ControlPanel: React.FC = () => {
 
     const featureScaleAvailable = !!activeFeatures.length;
 
-    /* this should just be togglescale type */
-    const toggleScale = (scaleType: typeof colorScaleType) =>
+    const changeScaleType = (scaleType: typeof colorScaleType) =>
         dispatch(updateColorScaleType(scaleType));
+
+    const _activateContinuousFeatureScale = (
+        variant: 'two-color' | 'opacity'
+    ) => {
+        const activeFeature = activeFeatures[0];
+        const max = featureDistributions[activeFeature].maxProportion;
+        dispatch(activateContinuousFeatureScale({ max, variant }));
+    };
 
     return (
         <>
@@ -48,42 +57,81 @@ const ControlPanel: React.FC = () => {
                 {featureScaleAvailable && (
                     <RadioGroup>
                         <RadioButton
-                            checked={colorScaleType === 'featureCount'}
-                            id="featureCount"
-                            name="featureCount"
-                            onChange={toggleScale.bind(null, 'featureCount')}
-                            type="radio"
+                            checked={colorScaleType === 'featureHiLos'}
+                            id='featureHiLos'
+                            name='featureHiLos'
+                            onChange={changeScaleType.bind(
+                                null,
+                                'featureHiLos'
+                            )}
+                            type='radio'
                         />
-                        <RadioLabel htmlFor="featureCount">
+                        <RadioLabel htmlFor='featureHiLos'>
                             Show Features
                         </RadioLabel>
                         <RadioButton
                             checked={colorScaleType === 'labelCount'}
-                            id="labelCount"
-                            name="labelCount"
-                            onChange={toggleScale.bind(null, 'labelCount')}
-                            type="radio"
+                            id='labelCount'
+                            name='labelCount'
+                            onChange={changeScaleType.bind(null, 'labelCount')}
+                            type='radio'
                         />
-                        <RadioLabel htmlFor="labelCount">
+                        <RadioLabel htmlFor='labelCount'>
                             Show Labels
                         </RadioLabel>
+                        {activeFeatures.length === 1 && (
+                            <>
+                                <RadioButton
+                                    checked={
+                                        colorScaleType === 'featureCount' &&
+                                        featureVariant === 'opacity'
+                                    }
+                                    id='featureCount'
+                                    name='featureCount'
+                                    onChange={_activateContinuousFeatureScale.bind(
+                                        null,
+                                        'opacity'
+                                    )}
+                                    type='radio'
+                                />
+                                <RadioLabel htmlFor='featureCount'>
+                                    Color Features
+                                </RadioLabel>
+                                <RadioButton
+                                    checked={
+                                        colorScaleType === 'featureCount' &&
+                                        featureVariant === 'two-color'
+                                    }
+                                    id='two-color'
+                                    name='two-color'
+                                    onChange={_activateContinuousFeatureScale.bind(
+                                        null,
+                                        'two-color'
+                                    )}
+                                    type='radio'
+                                />
+                                <RadioLabel htmlFor='two-color'>
+                                    Show Feature Opacity
+                                </RadioLabel>
+                            </>
+                        )}
                     </RadioGroup>
                 )}
                 <SliderGroup>
                     <Slider
-                        label="Adjust Max Width"
-                        scaleType="branchSizeScale"
+                        label='Adjust Max Width'
+                        scaleType='branchSizeScale'
                         max={50}
                     />
                     <Slider
-                        label="Adjust Max Pie Size"
-                        scaleType="pieScale"
+                        label='Adjust Max Pie Size'
+                        scaleType='pieScale'
                         max={50}
                     />
                 </SliderGroup>
                 <Checkbox
                     checked={branchScalingDisabled}
-                    label="Branch width scaling disabled"
+                    label='Branch width scaling disabled'
                     onClick={() =>
                         dispatch(
                             updateLinearScale({
@@ -97,7 +145,7 @@ const ControlPanel: React.FC = () => {
                     }
                 />
             </Column>
-            <Column width="50%">
+            <Column width='50%'>
                 <PrunerPanel />
                 <FeatureSearch />
             </Column>
@@ -138,7 +186,7 @@ const Slider: React.FC<SliderProps> = ({ scaleType, label, max }) => {
             {scale && (
                 <Row>
                     <input
-                        type="range"
+                        type='range'
                         max={max}
                         min={scale.range[0]}
                         step={1}
