@@ -10,7 +10,12 @@ import {
     HierarchyPointNode,
 } from 'd3-hierarchy';
 import { interpolate } from 'd3-interpolate';
-import { ScaleLinear, scaleLinear, ScaleOrdinal } from 'd3-scale';
+import {
+    ScaleLinear,
+    scaleLinear,
+    ScaleOrdinal,
+    ScaleThreshold,
+} from 'd3-scale';
 import { BaseType, local, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, PieArcDatum, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
@@ -25,7 +30,7 @@ import {
     AttributeMap,
     AttributeMapValue,
     isLinkNode,
-    scaleIsLinear,
+    scaleIsThreshold,
     TMCNode,
 } from '../types';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
@@ -62,7 +67,7 @@ const blendWeighted = (colors: BlendArg[]) => {
 };
 
 function getColor(
-    scale: ScaleOrdinal<string, string> | ScaleLinear<any, any>,
+    scale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>,
     colorScaleKey: ColorScaleVariant,
     node: HierarchyPointNode<TMCNode>
 ) {
@@ -73,15 +78,15 @@ function getColor(
 
 const getBlendedColor = (
     counts: AttributeMap,
-    scale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
+    scale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
 ) => {
     const weightedColors = Object.values(counts).map<BlendArg>(v => ({
         //it's possible for weight to be zero, in which case we'll get black, so well set at one
         //this is mainly for enrichment
 
         //if we have a linear scale then we have at most 1 feature, so everything will get 1 weight
-        weight: scaleIsLinear(scale) ? 1 : v.quantity || 1,
-        color: scaleIsLinear(scale) ? scale(v.quantity) : scale(v.scaleKey),
+        weight: scaleIsThreshold(scale) ? 1 : v.quantity || 1,
+        color: scaleIsThreshold(scale) ? scale(v.quantity) : scale(v.scaleKey),
     }));
     //rgb
     const color = blendWeighted(weightedColors);
@@ -880,7 +885,7 @@ class RadialTree {
                         };
                     })
                     .attr('fill', d =>
-                        scaleIsLinear(colorScale)
+                        scaleIsThreshold(colorScale)
                             ? colorScale(d.data[1].quantity)
                             : colorScale(d.data[1].scaleKey)
                     );

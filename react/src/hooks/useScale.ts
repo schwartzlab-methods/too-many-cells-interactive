@@ -1,5 +1,13 @@
 import { useMemo } from 'react';
-import { ScaleLinear, scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale';
+import { range as d3Range } from 'd3-array';
+import { interpolateRgb } from 'd3-interpolate';
+import {
+    ScaleLinear,
+    scaleLinear,
+    scaleOrdinal,
+    ScaleThreshold,
+    scaleThreshold,
+} from 'd3-scale';
 import { Scales, selectScales } from '../redux/displayConfigSlice';
 import { useAppSelector } from './index';
 
@@ -30,13 +38,46 @@ export const useColorScale = () => {
 
     const scale =
         variant == 'featureCount'
-            ? scaleLog<any, any>(range)
+            ? buildThresholdScale(domain as number[], range as [string, string])
             : scaleOrdinal(range);
 
     return useMemo(() => {
         if (variant === 'featureCount') {
-            (scale as ScaleLinear<any, any>).domain(domain as number[]);
+            scale as ScaleThreshold<any, any>;
         } else scale.domain(domain as string[]);
         return scale;
     }, [domain, range, variant]);
+};
+
+/**
+ *
+ * @param domain
+ * @param _range expected to be 2 colors
+ * @returns threshold scale that bins input values by nearest (down-rounding) power of 2 and returns a corresponding value in the output range
+ */
+const buildThresholdScale = (domain: number[], _range: [string, string]) => {
+    const scaledDomain = [0];
+
+    const BASE = 2;
+
+    let i = 0,
+        j = 0;
+    while (i < domain[1]) {
+        if (BASE ** j < domain[1]) {
+            j++;
+            scaledDomain.push(BASE ** j);
+        }
+        i++;
+    }
+
+    const interpolator = interpolateRgb(..._range);
+
+    const t = scaleThreshold(
+        scaledDomain,
+        d3Range(0.05, 1 + 1 / scaledDomain.length, 1 / scaledDomain.length).map(
+            s => interpolator(s)
+        )
+    );
+
+    return t;
 };

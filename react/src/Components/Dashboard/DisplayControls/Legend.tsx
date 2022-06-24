@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
+import { ScaleLinear, ScaleOrdinal, ScaleThreshold } from 'd3-scale';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
 import useClickAway from '../../../hooks/useClickAway';
@@ -8,7 +8,7 @@ import { Column, Row } from '../../Layout';
 import { Input } from '../../Input';
 import { useAppDispatch, useColorScale } from '../../../hooks';
 import { updateColorScale } from '../../../redux/displayConfigSlice';
-import { scaleIsLinear } from '../../../types';
+import { scaleIsThreshold } from '../../../types';
 import { Text } from '../../Typography';
 
 const Legend: React.FC = () => {
@@ -16,10 +16,12 @@ const Legend: React.FC = () => {
 
     return (
         <Column>
-            {colorScale && !scaleIsLinear(colorScale) && (
-                <OrdinalLegend scale={colorScale} />
+            {colorScale && !scaleIsThreshold(colorScale) && (
+                <OrdinalLegend
+                    scale={colorScale as ScaleOrdinal<string, string>}
+                />
             )}
-            {colorScale && scaleIsLinear(colorScale) && (
+            {colorScale && scaleIsThreshold(colorScale) && (
                 <LinearLegend scale={colorScale} />
             )}
         </Column>
@@ -101,7 +103,7 @@ const LinearLegendContainer = styled.div`
     height: 25px;
 `;
 
-const LinearLegend: React.FC<{ scale: ScaleLinear<any, any> }> = ({
+const LinearLegend: React.FC<{ scale: ScaleThreshold<any, any> }> = ({
     scale,
 }) => {
     return (
@@ -111,7 +113,10 @@ const LinearLegend: React.FC<{ scale: ScaleLinear<any, any> }> = ({
                 <svg viewBox='0 0 200 25'>
                     <linearGradient id='scaleGradient'>
                         <stop offset='5%' stopColor={scale.range()[0]} />
-                        <stop offset='95%' stopColor={scale.range()[1]} />
+                        <stop
+                            offset='95%'
+                            stopColor={scale.range()[scale.range().length - 1]}
+                        />
                     </linearGradient>
 
                     <rect
@@ -121,7 +126,7 @@ const LinearLegend: React.FC<{ scale: ScaleLinear<any, any> }> = ({
                     />
                 </svg>
             </LinearLegendContainer>
-            <Text>{scale.domain()[1].toLocaleString()}</Text>
+            <Text>{scale.domain().slice(-1)[0].toLocaleString()}</Text>
         </Row>
     );
 };
