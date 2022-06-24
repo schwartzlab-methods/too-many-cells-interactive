@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { bindActionCreators } from 'redux';
 import { extent } from 'd3-array';
-import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
+import { ScaleLinear, ScaleOrdinal, ScaleThreshold } from 'd3-scale';
 import { HierarchyPointNode } from 'd3-hierarchy';
 import { Tree as TreeViz } from '../../../Visualizations';
 import { calculateColorScaleRangeAndDomain } from '../../../util';
@@ -33,7 +33,7 @@ import {
 
 interface TreeScales {
     branchSizeScale: ScaleLinear<number, number>;
-    colorScale: ScaleOrdinal<string, string> | ScaleLinear<any, any>;
+    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>;
     pieScale: ScaleLinear<number, number>;
 }
 

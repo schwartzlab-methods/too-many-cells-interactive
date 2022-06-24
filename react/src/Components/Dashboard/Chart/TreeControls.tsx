@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
+import { ScaleLinear, ScaleOrdinal, ScaleThreshold } from 'd3-scale';
 import { BaseType, select } from 'd3-selection';
 import styled from 'styled-components';
 import { saveAs } from 'file-saver';
@@ -8,10 +8,10 @@ import { Column, Row } from '../../Layout';
 import { Bold, Text } from '../../Typography';
 import { useAppSelector, useColorScale } from '../../../hooks';
 import { selectTreeMetadata } from '../../../redux/displayConfigSlice';
-import { scaleIsLinear } from '../../../types';
+import { scaleIsThreshold } from '../../../types';
 
 const getSvgSrc = (
-    colorScale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
+    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
 ) => {
     const svg = select('svg');
 
@@ -21,7 +21,7 @@ const getSvgSrc = (
         .slice(2)
         .map(d => +d);
 
-    if (!scaleIsLinear(colorScale)) {
+    if (!scaleIsThreshold(colorScale)) {
         svg.select('g.container')
             .append('g')
             .attr('transform', `translate(${w / 2 - 150}, ${h / 2})`)
@@ -59,7 +59,7 @@ const getSvgSrc = (
 const removeLegend = () => select('svg').select('g.legend').remove();
 
 const downloadPng = (
-    colorScale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
+    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
 ) => {
     try {
         const w = (select('svg').node() as Element).clientWidth;
@@ -89,7 +89,7 @@ const downloadPng = (
 };
 
 const downloadSvg = (
-    colorScale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
+    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
 ) => {
     try {
         const svgSrc = getSvgSrc(colorScale);

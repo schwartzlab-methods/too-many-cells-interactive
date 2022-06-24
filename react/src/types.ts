@@ -1,5 +1,5 @@
 import { HierarchyPointLink, HierarchyPointNode } from 'd3-hierarchy';
-import { ScaleLinear, ScaleOrdinal } from 'd3-scale';
+import { ScaleLinear, ScaleOrdinal, ScaleThreshold } from 'd3-scale';
 import { isNumber } from 'lodash';
 
 export interface RoseNodeItem {
@@ -55,7 +55,7 @@ export const isLinkNode = (
 ): item is HierarchyPointLink<TMCNode> =>
     !!(item as HierarchyPointLink<TMCNode>).source;
 
-export const scaleIsLinear = (
-    scale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
-): scale is ScaleLinear<any, any> =>
-    isNumber((scale as ScaleLinear<any, any>).domain()[0]);
+export const scaleIsThreshold = (
+    scale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
+): scale is ScaleThreshold<any, any> =>
+    !!(scale as ScaleThreshold<any, any>).invertExtent;
