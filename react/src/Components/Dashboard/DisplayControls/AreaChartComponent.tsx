@@ -46,9 +46,9 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
     useEffect(() => {
         if (Chart) {
             Chart.counts = counts;
-            Chart.render();
+            Chart.render(value);
         }
-    }, [counts]);
+    }, [counts, value]);
 
     return Object.values(counts).length < 3 ? (
         <ErrorContainer>

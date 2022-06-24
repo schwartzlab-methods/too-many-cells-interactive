@@ -127,27 +127,32 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
                 updateFeatureCounts(annotatedTree, activeFeatures[0]);
             }
 
-            updateFeatureDistributions(
-                getFeatureDistributions(annotatedTree, activeFeatures)
-            );
-
             setBaseTree(annotatedTree);
         }
     }, [activeFeatures, featureThresholds]);
+
+    useEffect(() => {
+        updateFeatureDistributions(
+            getFeatureDistributions(tree, activeFeatures)
+        );
+    }, [activeFeatures]);
 
     /* PRUNING EFFECTS */
     useEffect(() => {
         if (pruneStepIsEmpty(step)) {
             // if this is a new prune or a full revert, i.e., if step is empty recalculate base ditributions from visibleNodes
             // if it is a full revert, we'll recalc layout too (if not, then it's just meta that needs updating, the tree is the same)
-            // todo: this should include feature distributions as well
-            compose(
-                updateDistributions,
-                buildPruneMetadata
-            )(activePruneIndex === 0 ? tree.copy() : visibleNodes);
+
+            const _tree = activePruneIndex === 0 ? tree.copy() : visibleNodes;
+
+            compose(updateDistributions, buildPruneMetadata)(_tree);
+
+            updateFeatureDistributions(
+                getFeatureDistributions(_tree, activeFeatures)
+            );
 
             if (activePruneIndex === 0) {
-                setVisibleNodes(calculateTreeLayout(tree.copy(), width));
+                setVisibleNodes(calculateTreeLayout(_tree, width));
             }
         }
     }, [step]);
@@ -472,8 +477,7 @@ const getFeatureDistributions = (
 };
 
 const getPlainFeatureGroups = (range: number[]) => {
-    const [min, max] = extent(range) as [number, number];
-    const thresholds = ticks(min, max, Math.min(max, 25));
+    const thresholds = ticks(0, max(range) || 0, Math.min(max(range) || 0, 25));
 
     return thresholds.reduce<Record<number, number>>(
         (acc, curr) => ({

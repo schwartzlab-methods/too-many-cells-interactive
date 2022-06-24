@@ -188,8 +188,8 @@ const Pruner: React.FC<PrunerProps> = ({
                         <UpdateBox
                             onChange={v => setInputVal(v + '')}
                             onSubmit={() => {
-                                if (value) {
-                                    onSubmit(+value);
+                                if (inputVal) {
+                                    onSubmit(+inputVal);
                                 }
                             }}
                             value={inputVal}
@@ -289,8 +289,8 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                         <UpdateBox
                             onChange={v => setInputVal(v + '')}
                             onSubmit={() => {
-                                if (value) {
-                                    onSubmit(+value);
+                                if (inputVal) {
+                                    onSubmit(+inputVal);
                                 }
                             }}
                             value={inputVal}
@@ -319,17 +319,15 @@ interface UpdateBoxProps {
     value: number | string;
 }
 
-const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => {
-    return (
-        <TextInputGroup
-            onKeyUp={e => {
-                if (e.code === 'Enter') {
-                    onSubmit(value);
-                }
-            }}
-        >
-            <NumberInput onChange={v => onChange(v)} value={value} />
-            <SubmitButton onClick={() => onSubmit(value)}>Update</SubmitButton>
-        </TextInputGroup>
-    );
-};
+const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => (
+    <TextInputGroup
+        onKeyUp={e => {
+            if (e.code === 'Enter') {
+                onSubmit(value);
+            }
+        }}
+    >
+        <NumberInput onChange={v => onChange(v)} value={value} />
+        <SubmitButton onClick={() => onSubmit(value)}>Update</SubmitButton>
+    </TextInputGroup>
+);
