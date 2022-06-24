@@ -30,7 +30,7 @@ export const useColorScale = () => {
 
     const scale =
         variant == 'featureCount'
-            ? scaleLog<any, any>(range)
+            ? scaleLinear<any, any>(range)
             : scaleOrdinal(range);
 
     return useMemo(() => {
