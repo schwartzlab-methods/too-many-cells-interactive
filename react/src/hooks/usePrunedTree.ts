@@ -528,8 +528,7 @@ const updateFeatureCounts = (nodes: HierarchyNode<TMCNode>, feature: string) =>
                         (n.children![0].data.featureCount[feature].quantity +
                             n.children![1].data.featureCount[feature]
                                 .quantity) /
-                            n.descendants().length -
-                        1,
+                        (n.descendants().length - 1),
                     scaleKey: feature,
                 },
             };

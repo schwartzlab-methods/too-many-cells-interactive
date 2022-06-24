@@ -23,7 +23,6 @@ if [[ ! -d $DATA_DIR ]]; then
 fi
 
 
-# this will override volume mount in compose [actually i don't think it will] -- no it won't, so we won't use it in the compose
-# todo: need to get ride of custom internal port, should always be 3000
+# todo: need to get rid of custom internal port, should always be 3000
 # overriding the entrypoint will also be an issue -- will it work here? if we remove from compose local dev will be janky
 docker-compose run -p ${PORT}:4443 -v ${DATA_DIR}:/usr/data --rm node init 

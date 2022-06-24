@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ScaleLinear, scaleLinear, scaleOrdinal } from 'd3-scale';
+import { ScaleLinear, scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale';
 import { Scales, selectScales } from '../redux/displayConfigSlice';
 import { useAppSelector } from './index';
 
@@ -30,7 +30,7 @@ export const useColorScale = () => {
 
     const scale =
         variant == 'featureCount'
-            ? scaleLinear<any, any>(range)
+            ? scaleLog<any, any>(range)
             : scaleOrdinal(range);
 
     return useMemo(() => {
