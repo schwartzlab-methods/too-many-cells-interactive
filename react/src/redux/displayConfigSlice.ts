@@ -53,6 +53,7 @@ const initialScales: Scales = {
         domain: [0, 0],
         range: [0, 0],
     },
+    /* todo: separate feature domains */
     colorScale: {
         featureThresholds: {},
         featureDomain: [''],
@@ -112,8 +113,8 @@ export const displayConfigSlice = createSlice({
             state.toggleableDisplayElements[payload] =
                 !state.toggleableDisplayElements[payload];
         },
-        /* this is mainly used by legend to blindly update colors */
-        updateColorScale: (
+        /* this is used by legend to blindly update colors */
+        updateActiveOrdinalColorScale: (
             state,
             {
                 payload: { domain, range },
@@ -128,6 +129,15 @@ export const displayConfigSlice = createSlice({
                 state.scales.colorScale.featureDomain = domain;
                 state.scales.colorScale.featureRange = range;
             }
+        },
+        updateColorScale: (
+            state,
+            { payload }: PayloadAction<Partial<Scales['colorScale']>>
+        ) => {
+            state.scales.colorScale = {
+                ...state.scales.colorScale,
+                ...payload,
+            };
         },
         updateColorScaleThresholds: (
             state,
@@ -167,8 +177,9 @@ export const displayConfigSlice = createSlice({
 export const {
     activateContinuousFeatureScale,
     toggleDisplayProperty,
-    updateColorScale,
+    updateActiveOrdinalColorScale,
     updateColorScaleThresholds,
+    updateColorScale,
     updateColorScaleType,
     updateLinearScale,
     updateTreeMetadata,

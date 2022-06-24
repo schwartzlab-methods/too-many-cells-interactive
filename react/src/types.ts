@@ -28,7 +28,7 @@ export type RoseNode = [RoseNodeObj, RoseNode[][]] | [][];
 
 export interface AttributeMapValue {
     quantity: number;
-    scaleKey: string;
+    scaleKey: string | number;
 }
 
 export type AttributeMap = Record<string, AttributeMapValue>;

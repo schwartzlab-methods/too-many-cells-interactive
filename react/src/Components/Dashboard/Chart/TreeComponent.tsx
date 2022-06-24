@@ -10,7 +10,7 @@ import { extent } from 'd3-array';
 import { ScaleLinear, ScaleOrdinal, ScaleThreshold } from 'd3-scale';
 import { HierarchyPointNode } from 'd3-hierarchy';
 import { Tree as TreeViz } from '../../../Visualizations';
-import { calculateColorScaleRangeAndDomain } from '../../../util';
+import { calculateOrdinalColorScaleRangeAndDomain } from '../../../util';
 
 import {
     Scales,
@@ -18,7 +18,7 @@ import {
     selectToggleableDisplayElements,
     selectWidth,
     ToggleableDisplayElements,
-    updateColorScale,
+    updateActiveOrdinalColorScale,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
 import { useAppDispatch, useAppSelector, usePrunedTree } from '../../../hooks';
@@ -160,8 +160,8 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
         );
 
         dispatch(
-            updateColorScale(
-                calculateColorScaleRangeAndDomain(
+            updateActiveOrdinalColorScale(
+                calculateOrdinalColorScaleRangeAndDomain(
                     'labelCount',
                     visibleNodes as HierarchyPointNode<TMCNode>
                 )

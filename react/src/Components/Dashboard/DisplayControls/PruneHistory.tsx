@@ -39,10 +39,7 @@ const PruneHistory: React.FC = () => {
     /**
      * Apply button is only enabled if we are on the latest step and that step is not empty
      */
-    const getApplyButtonDisabled = () =>
-        pruneStepIsEmpty(activeStep) ||
-        activePruneIdx !== pruneHistory.length - 1;
-
+    const getApplyButtonDisabled = () => pruneStepIsEmpty(activeStep);
     /**
      * Disable reset button if there is only one step and it is empty
      */

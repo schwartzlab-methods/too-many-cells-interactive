@@ -85,9 +85,12 @@ export const pruneSlice = createSlice({
             ];
         },
         addStep: state => {
-            state.pruneHistory = state.pruneHistory.concat(
-                makeFreshPruneStep()
+            //if we're at an intermediate step, we need to clean out the subsequent steps
+            const newHistory = state.pruneHistory.slice(
+                0,
+                state.currentPruneStep + 1
             );
+            state.pruneHistory = newHistory.concat(makeFreshPruneStep());
             state.currentPruneStep += 1;
         },
         addValuePrune: (

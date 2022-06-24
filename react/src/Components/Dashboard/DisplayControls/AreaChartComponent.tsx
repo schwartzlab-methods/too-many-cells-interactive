@@ -44,21 +44,27 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
     }, []);
 
     useEffect(() => {
-        if (Chart) {
+        if (Chart && Object.values(counts).length >= 3) {
             Chart.counts = counts;
             Chart.render(value);
         }
     }, [counts, value]);
 
-    return Object.values(counts).length < 3 ? (
-        <ErrorContainer>
-            <Text>
-                This filter is incompatible with the current distribution of
-                nodes.
-            </Text>
-        </ErrorContainer>
-    ) : (
-        <div className={selector.current} style={{ width: '100%' }} />
+    return (
+        <>
+            <div
+                className={selector.current}
+                style={{ width: Object.values(counts).length < 3 ? 0 : '100%' }}
+            />
+            {Object.values(counts).length < 3 && (
+                <ErrorContainer>
+                    <Text>
+                        This filter is incompatible with the current
+                        distribution of nodes.
+                    </Text>
+                </ErrorContainer>
+            )}
+        </>
     );
 };
 

@@ -86,7 +86,9 @@ const getBlendedColor = (
 
         //if we have a linear scale then we have at most 1 feature, so everything will get 1 weight
         weight: scaleIsThreshold(scale) ? 1 : v.quantity || 1,
-        color: scaleIsThreshold(scale) ? scale(v.quantity) : scale(v.scaleKey),
+        color: scaleIsThreshold(scale)
+            ? scale(v.scaleKey)
+            : scale(v.scaleKey as string),
     }));
     //rgb
     const color = blendWeighted(weightedColors);
@@ -887,7 +889,7 @@ class RadialTree {
                     .attr('fill', d =>
                         scaleIsThreshold(colorScale)
                             ? colorScale(d.data[1].quantity)
-                            : colorScale(d.data[1].scaleKey)
+                            : colorScale(d.data[1].scaleKey as string)
                     );
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')

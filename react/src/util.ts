@@ -224,7 +224,7 @@ export const interpolateColorScale = (domain: string[]) => {
         });
 };
 
-export const calculateColorScaleRangeAndDomain = (
+export const calculateOrdinalColorScaleRangeAndDomain = (
     colorScaleKey: ColorScaleVariant,
     nodes: HierarchyPointNode<TMCNode>
 ) => {
@@ -238,7 +238,7 @@ export const calculateColorScaleRangeAndDomain = (
                     )
                 )
         ),
-    ].sort((a, b) => (a < b ? -1 : 1));
+    ].sort((a, b) => (a < b ? -1 : 1)) as string[];
 
     const range = interpolateColorScale(domain);
 

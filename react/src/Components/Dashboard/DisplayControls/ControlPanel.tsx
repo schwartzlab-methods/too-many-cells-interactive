@@ -11,7 +11,7 @@ import {
     activateContinuousFeatureScale,
     selectScales,
     selectTreeMetadata,
-    updateColorScale,
+    updateActiveOrdinalColorScale,
     updateColorScaleType,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
@@ -52,7 +52,7 @@ const ControlPanel: React.FC = () => {
         dispatch(updateColorScaleType('featureHiLos'));
         const domain = getScaleCombinations(activeFeatures.filter(Boolean));
         const range = addGray(domain, interpolateColorScale(domain));
-        dispatch(updateColorScale({ range, domain }));
+        dispatch(updateActiveOrdinalColorScale({ range, domain }));
     };
 
     const _activateContinuousFeatureScale = (

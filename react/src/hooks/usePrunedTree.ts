@@ -22,13 +22,13 @@ import {
 } from '../redux/featureSlice';
 import {
     selectScales,
+    updateColorScale as _updateColorScale,
     updateColorScaleThresholds as _updateColorScaleThresholds,
 } from '../redux/displayConfigSlice';
 import {
     calculateTreeLayout,
     getEntries,
     getMAD,
-    pruneStepIsEmpty,
     pruneTreeByMinDistance,
     pruneTreeByMinDistanceSearch,
     pruneTreeByMinValue,
@@ -45,13 +45,15 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
 
     const {
         clearFeatureMaps,
+        updateColorScale,
         updateColorScaleThresholds,
-        updateFeatureDistributions,
         updateDistributions,
+        updateFeatureDistributions,
         updateTreeMetadata,
     } = bindActionCreators(
         {
             clearFeatureMaps: _clearFeatureMaps,
+            updateColorScale: _updateColorScale,
             updateColorScaleThresholds: _updateColorScaleThresholds,
             updateDistributions: _updateDistributions,
             updateFeatureDistributions: _updateFeatureDistributions,
@@ -62,11 +64,12 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
 
     /* recalc layout if base changes (i.e., if nodes are re-annotated) */
     useEffect(() => {
-        recalculateLayout();
+        const newTree = recalculateLayout();
+        setVisibleNodes(calculateTreeLayout(newTree, width));
     }, [baseTree]);
 
     const {
-        colorScale: { featureThresholds },
+        colorScale: { featureThresholds, variant: colorScaleType },
     } = useAppSelector(selectScales);
 
     const { activeFeatures, featureMaps } = useAppSelector(selectFeatureSlice);
@@ -135,48 +138,63 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
         updateFeatureDistributions(
             getFeatureDistributions(tree, activeFeatures)
         );
+        /* todo: we also need to recalculate range and domain for opacity scale */
     }, [activeFeatures]);
 
     /* PRUNING EFFECTS */
     useEffect(() => {
-        if (pruneStepIsEmpty(step)) {
-            // if this is a new prune or a full revert, i.e., if step is empty recalculate base ditributions from visibleNodes
-            // if it is a full revert, we'll recalc layout too (if not, then it's just meta that needs updating, the tree is the same)
+        // if this is a new step, recalculate base ditributions from visibleNodes
+        const _tree = activePruneIndex === 0 ? tree.copy() : visibleNodes;
 
-            const _tree = activePruneIndex === 0 ? tree.copy() : visibleNodes;
+        compose(updateDistributions, buildPruneMetadata)(_tree);
 
-            compose(updateDistributions, buildPruneMetadata)(_tree);
-
-            updateFeatureDistributions(
-                getFeatureDistributions(_tree, activeFeatures)
-            );
-
-            if (activePruneIndex === 0) {
-                setVisibleNodes(calculateTreeLayout(_tree, width));
-            }
-        }
-    }, [step]);
+        updateFeatureDistributions(
+            getFeatureDistributions(_tree, activeFeatures)
+        );
+    }, [activePruneIndex]);
 
     /* for now, when a prune runs, we rerun all prunes -- if performance suffers we can optimize */
     useEffect(() => {
-        if (!pruneStepIsEmpty(step)) {
-            recalculateLayout();
-        }
+        const prunedTree = recalculateLayout();
+        //if there is a singleton feature, we  need to recalculate counts, since we divide by child count
+        //and pruning changes that
+        const withNewFeatureCounts =
+            activeFeatures.length === 1
+                ? updateFeatureCounts(prunedTree, activeFeatures[0])
+                : prunedTree;
+
+        setVisibleNodes(calculateTreeLayout(withNewFeatureCounts, width));
     }, [clickPruneHistory, activePruneIndex]);
 
     /* update base tree meta on all prunes */
     useEffect(() => {
         updateTreeMetadata(buildTreeMetadata(visibleNodes));
+        if (activeFeatures.length === 1) {
+            if (
+                activeFeatures.length === 1 &&
+                /* todo: separate domains */
+                colorScaleType === 'featureCount'
+            ) {
+                updateColorScale({
+                    featureDomain: extent(
+                        visibleNodes
+                            .descendants()
+                            .map(
+                                n =>
+                                    n.data.featureCount[activeFeatures[0]]
+                                        .scaleKey
+                            ) as number[]
+                    ) as [number, number],
+                });
+            }
+            updateFeatureDistributions(
+                getFeatureDistributions(visibleNodes, activeFeatures)
+            );
+        }
     }, [visibleNodes]);
 
-    const recalculateLayout = () => {
-        const prunedNodes = rerunPrunes(
-            activePruneIndex,
-            pruneHistory,
-            tree.copy()
-        );
-        setVisibleNodes(calculateTreeLayout(prunedNodes, width));
-    };
+    const recalculateLayout = () =>
+        rerunPrunes(activePruneIndex, pruneHistory, tree.copy());
 
     return visibleNodes;
 };
@@ -450,7 +468,7 @@ const getFeatureDistributions = (
             max(
                 nodes
                     .descendants()
-                    .map(d => d.data.featureCount[f]?.quantity || 0)
+                    .map(d => (d.data.featureCount[f]?.scaleKey as number) || 0)
             ) || 0;
 
         const med = median(range.filter(Boolean))!;
@@ -513,27 +531,30 @@ const getMadFeatureGroups = (range: number[], mad: number, median: number) => {
 const updateFeatureCounts = (nodes: HierarchyNode<TMCNode>, feature: string) =>
     nodes.eachAfter(n => {
         if (n.data.items) {
+            const quantity =
+                n.data.items.reduce(
+                    (acc, curr) =>
+                        (acc += curr._barcode._featureCounts[feature] || 0),
+                    0
+                ) / n.value!;
+
             n.data.featureCount = {
                 [feature]: {
-                    quantity:
-                        n.data.items.reduce(
-                            (acc, curr) =>
-                                (acc +=
-                                    curr._barcode._featureCounts[feature] || 0),
-                            0
-                        ) / n.value!,
-                    scaleKey: feature,
+                    quantity,
+                    scaleKey: quantity,
                 },
             };
         } else {
+            //if we're dealing with a pruned tree, then quantity will already be calculated and stable
+            const quantity = n.children
+                ? n.children![0].data.featureCount[feature].quantity +
+                  n.children![1].data.featureCount[feature].quantity
+                : n.data.featureCount[feature].quantity;
+
             n.data.featureCount = {
                 [feature]: {
-                    quantity:
-                        (n.children![0].data.featureCount[feature].quantity +
-                            n.children![1].data.featureCount[feature]
-                                .quantity) /
-                        (n.descendants().length - 1),
-                    scaleKey: feature,
+                    quantity,
+                    scaleKey: quantity / n.descendants().length || 1,
                 },
             };
         }

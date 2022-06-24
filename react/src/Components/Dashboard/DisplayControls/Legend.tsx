@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ScaleLinear, ScaleOrdinal, ScaleThreshold } from 'd3-scale';
+import { ScaleOrdinal, ScaleThreshold } from 'd3-scale';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
 import useClickAway from '../../../hooks/useClickAway';
@@ -7,7 +7,7 @@ import { DotIcon } from '../../Icons';
 import { Column, Row } from '../../Layout';
 import { Input } from '../../Input';
 import { useAppDispatch, useColorScale } from '../../../hooks';
-import { updateColorScale } from '../../../redux/displayConfigSlice';
+import { updateActiveOrdinalColorScale } from '../../../redux/displayConfigSlice';
 import { scaleIsThreshold } from '../../../types';
 import { Text } from '../../Typography';
 
@@ -154,7 +154,7 @@ const OrdinalLegend: React.FC<{ scale: ScaleOrdinal<string, string> }> = ({
                             scale?.range(range);
 
                             dispatch(
-                                updateColorScale({
+                                updateActiveOrdinalColorScale({
                                     range,
                                     domain: scale.domain(),
                                 })

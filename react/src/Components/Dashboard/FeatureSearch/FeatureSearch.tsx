@@ -27,7 +27,7 @@ import { Caption, Title } from '../../Typography';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectScales,
-    updateColorScale as _updateColorScale,
+    updateActiveOrdinalColorScale as _updateColorScale,
     updateColorScaleThresholds as _updateColorScaleThresholds,
     updateColorScaleType as _updateColorScaleType,
 } from '../../../redux/displayConfigSlice';
@@ -58,7 +58,7 @@ const FeatureSearch: React.FC = () => {
         addFeature,
         clearActiveFeatures,
         removeActiveFeature,
-        updateColorScale,
+        updateActiveOrdinalColorScale,
         updateColorScaleThresholds,
         updateColorScaleType,
     } = bindActionCreators(
@@ -66,7 +66,7 @@ const FeatureSearch: React.FC = () => {
             addFeature: _addFeature,
             clearActiveFeatures: _clearActiveFeatures,
             removeActiveFeature: _removeActiveFeature,
-            updateColorScale: _updateColorScale,
+            updateActiveOrdinalColorScale: _updateColorScale,
             updateColorScaleThresholds: _updateColorScaleThresholds,
             updateColorScaleType: _updateColorScaleType,
         },
@@ -88,7 +88,7 @@ const FeatureSearch: React.FC = () => {
 
         const range = addGray(domain, interpolateColorScale(domain));
 
-        updateColorScale({ range, domain });
+        updateActiveOrdinalColorScale({ range, domain });
 
         if (activeFeatures.length === 1) {
             updateColorScaleType('labelCount');
@@ -122,7 +122,7 @@ const FeatureSearch: React.FC = () => {
 
         const range = addGray(domain, interpolateColorScale(domain));
 
-        updateColorScale({ range, domain });
+        updateActiveOrdinalColorScale({ range, domain });
 
         setLoading(false);
 
