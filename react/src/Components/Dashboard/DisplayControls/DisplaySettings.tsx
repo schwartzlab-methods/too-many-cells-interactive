@@ -2,13 +2,20 @@ import React from 'react';
 import styled from 'styled-components';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
+    selectScales,
     selectToggleableDisplayElements,
     ToggleableDisplayElements,
     toggleDisplayProperty,
 } from '../../../redux/displayConfigSlice';
+import { selectFeatureSlice } from '../../../redux/featureSlice';
 import Checkbox from '../../Checkbox';
 
-const DisplayButtons: React.FC = () => {
+const DisplaySettings: React.FC = () => {
+    const { activeFeatures } = useAppSelector(selectFeatureSlice);
+    const {
+        colorScale: { variant: colorScaleType },
+    } = useAppSelector(selectScales);
+
     return (
         <BoxList>
             <ToggleCheckbox label='Show Stroke' propName='strokeVisible' />
@@ -19,11 +26,17 @@ const DisplayButtons: React.FC = () => {
             />
             <ToggleCheckbox label='Show Distance' propName='distanceVisible' />
             <ToggleCheckbox label='Show Pies' propName='piesVisible' />
+            {!!activeFeatures.length && colorScaleType === 'labelCount' && (
+                <ToggleCheckbox
+                    label='Show feature opacity'
+                    propName='showFeatureOpacity'
+                />
+            )}
         </BoxList>
     );
 };
 
-export default DisplayButtons;
+export default DisplaySettings;
 
 interface ToggleCheckboxProps {
     propName: keyof ToggleableDisplayElements;

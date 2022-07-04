@@ -11,7 +11,11 @@ import {
     ScaleThreshold,
     scaleThreshold,
 } from 'd3-scale';
-import { Scales, selectScales } from '../redux/displayConfigSlice';
+import {
+    Scales,
+    selectScales,
+    selectToggleableDisplayElements,
+} from '../redux/displayConfigSlice';
 import { AttributeMap, TMCNode } from '../types';
 import { selectFeatureSlice } from '../redux/featureSlice';
 import { useAppSelector } from './index';
@@ -38,33 +42,37 @@ export const useColorScale = (): {
     scaleFunction: (node: HierarchyPointNode<TMCNode>) => string;
 } => {
     const {
+        featureColorBase,
         featureColorDomain,
         featureColorRange,
         featureThresholdDomain,
         featureThresholdRange,
         labelDomain,
         labelRange,
-        showFeatureOpacity,
         variant,
     } = useAppSelector(selectScales)['colorScale'];
 
     const { activeFeatures } = useAppSelector(selectFeatureSlice);
 
+    const { showFeatureOpacity } = useAppSelector(
+        selectToggleableDisplayElements
+    );
+
     /* define the color scales */
 
     const featureOpacityScale = useMemo(() => {
-        return buildFeatureOpacityScale(featureColorDomain);
+        return buildFeatureLinearScale(featureColorDomain);
     }, [featureColorDomain]);
 
     const featureColorScale = useMemo(() => {
         const interpolator = interpolateRgb(
             featureColorRange[0],
-            featureColorRange[1]
+            featureColorBase
         );
         return scaleThreshold<number, string>()
             .domain(featureOpacityScale.domain().slice())
             .range(featureOpacityScale.range().map(v => interpolator(v)));
-    }, [featureOpacityScale, featureColorRange]);
+    }, [featureColorBase, featureColorRange, featureOpacityScale]);
 
     const featureHiLoScale = useMemo(() => {
         return scaleOrdinal(featureThresholdRange).domain(
@@ -203,7 +211,7 @@ const getBlendedColor = (
  * @param domain all feature values (likely the average feature count of each node in the graphic)
  * @returns threshold scale that bins input values by nearest (down-rounding) power of 2 and returns a corresponding value between 0 and 1
  */
-const buildFeatureOpacityScale = (domain: number[]) => {
+const buildFeatureLinearScale = (domain: number[]) => {
     const scaledDomain = [];
 
     const BASE = 2;

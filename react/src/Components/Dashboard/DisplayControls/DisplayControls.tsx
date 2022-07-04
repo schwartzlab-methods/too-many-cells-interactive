@@ -22,14 +22,14 @@ import {
     getScaleCombinations,
     interpolateColorScale,
 } from '../../../util';
-import DisplayButtons from './DisplayButtons';
+import DisplaySettings from './DisplaySettings';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
 
 const DisplayControls: React.FC = () => {
     const {
         branchSizeScale,
-        colorScale: { variant: colorScaleType, showFeatureOpacity },
+        colorScale: { variant: colorScaleType },
     } = useAppSelector(selectScales);
 
     const { minValue, maxValue } = useAppSelector(selectTreeMetadata);
@@ -55,8 +55,6 @@ const DisplayControls: React.FC = () => {
         return branchSizeScale.domain[0] === branchSizeScale.domain[1];
     }, [branchSizeScale]);
 
-    const featureScaleAvailable = !!activeFeatures.length;
-
     const changeScaleType = (scaleType: typeof colorScaleType) => {
         updateColorScaleType(scaleType);
     };
@@ -74,49 +72,47 @@ const DisplayControls: React.FC = () => {
     return (
         <>
             <Column width={'50%'}>
-                <DisplayButtons />
-                {featureScaleAvailable && colorScaleType === 'labelCount' && (
-                    <Checkbox
-                        checked={showFeatureOpacity}
-                        label='Show feature opacity'
-                        onClick={updateColorScale.bind(null, {
-                            showFeatureOpacity: !showFeatureOpacity,
-                        })}
-                    />
-                )}
-                {featureScaleAvailable && (
-                    <RadioGroup>
-                        <RadioButton
-                            checked={colorScaleType === 'featureHiLos'}
-                            id='featureHiLos'
-                            name='featureHiLos'
-                            onChange={activateOrdinalFeatureScale}
-                            type='radio'
-                        />
-                        <RadioLabel htmlFor='featureHiLos'>
-                            Show Features
-                        </RadioLabel>
-                        <RadioButton
-                            checked={colorScaleType === 'labelCount'}
-                            id='labelCount'
-                            name='labelCount'
-                            onChange={changeScaleType.bind(null, 'labelCount')}
-                            type='radio'
-                        />
-                        <RadioLabel htmlFor='labelCount'>
-                            Show Labels
-                        </RadioLabel>
-                        <RadioButton
-                            checked={colorScaleType === 'featureCount'}
-                            id='two-color'
-                            name='two-color'
-                            onChange={() => activateContinuousFeatureScale()}
-                            type='radio'
-                        />
-                        <RadioLabel htmlFor='two-color'>
-                            Show Feature Blend
-                        </RadioLabel>
-                    </RadioGroup>
+                <DisplaySettings />
+                {!!activeFeatures.length && (
+                    <RadioGroupContainer>
+                        <RadioGroup>
+                            <RadioButton
+                                checked={colorScaleType === 'featureHiLos'}
+                                id='featureHiLos'
+                                name='featureHiLos'
+                                onChange={activateOrdinalFeatureScale}
+                                type='radio'
+                            />
+                            <RadioLabel htmlFor='featureHiLos'>
+                                Show Features
+                            </RadioLabel>
+                            <RadioButton
+                                checked={colorScaleType === 'labelCount'}
+                                id='labelCount'
+                                name='labelCount'
+                                onChange={changeScaleType.bind(
+                                    null,
+                                    'labelCount'
+                                )}
+                                type='radio'
+                            />
+                            <RadioLabel htmlFor='labelCount'>
+                                Show Labels
+                            </RadioLabel>
+                            <RadioButton
+                                checked={colorScaleType === 'featureCount'}
+                                id='two-color'
+                                name='two-color'
+                                onChange={() =>
+                                    activateContinuousFeatureScale()
+                                }
+                                type='radio'
+                            />
+                            <RadioLabel htmlFor='two-color'>
+                                Show Feature Blend
+                            </RadioLabel>
+                        </RadioGroup>
+                    </RadioGroupContainer>
                 )}
                 <Legend />
                 <SliderGroup>
@@ -157,6 +153,10 @@ export default DisplayControls;
 
 const SliderGroup = styled(Column)`
     margin-top: 15px;
+`;
+
+const RadioGroupContainer = styled(Row)`
+    margin: 15px 0px;
 `;
 
 interface SliderProps {

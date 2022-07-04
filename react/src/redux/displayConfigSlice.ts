@@ -11,16 +11,19 @@ export interface TreeMetaData {
     nodeCount: number;
 }
 export interface ToggleableDisplayElements {
-    piesVisible: boolean;
-    strokeVisible: boolean;
-    nodeIdsVisible: boolean;
-    nodeCountsVisible: boolean;
     distanceVisible: boolean;
+    nodeCountsVisible: boolean;
+    nodeIdsVisible: boolean;
+    piesVisible: boolean;
+    showFeatureOpacity: boolean;
+    strokeVisible: boolean;
 }
 
 export type ColorScaleVariant = 'labelCount' | 'featureHiLos' | 'featureCount';
 
 export interface ColorScaleConfig {
+    //the base color for the gradient scale
+    featureColorBase: string;
     //average feature counts for each node
     featureColorDomain: number[];
     //the two-color range to interpolate between
@@ -30,7 +33,6 @@ export interface ColorScaleConfig {
     featureThresholds: Record<string, number>;
     labelDomain: string[];
     labelRange: string[];
-    showFeatureOpacity: boolean;
     variant: ColorScaleVariant;
 }
 
@@ -60,12 +62,12 @@ const initialScales: Scales = {
     colorScale: {
         featureColorDomain: [],
         featureColorRange: [],
+        featureColorBase: '#E41A1C',
         featureThresholdDomain: [],
         featureThresholdRange: [],
         featureThresholds: {},
         labelDomain: [],
         labelRange: [],
-        showFeatureOpacity: false,
         variant: 'labelCount',
     },
     pieScale: {
@@ -79,6 +81,7 @@ const initialToggleableValues: ToggleableDisplayElements = {
     nodeCountsVisible: false,
     nodeIdsVisible: false,
     piesVisible: true,
+    showFeatureOpacity: false,
     strokeVisible: false,
 };
 
@@ -98,7 +101,10 @@ export const displayConfigSlice = createSlice({
     initialState,
     reducers: {
         activateFeatureColorScale: state => {
-            state.scales.colorScale.featureColorRange = ['#D3D3D3', '#E41A1C'];
+            state.scales.colorScale.featureColorRange = [
+                '#D3D3D3',
+                state.scales.colorScale.featureColorBase,
+            ];
             state.scales.colorScale.variant = 'featureCount';
         },
         toggleDisplayProperty: (

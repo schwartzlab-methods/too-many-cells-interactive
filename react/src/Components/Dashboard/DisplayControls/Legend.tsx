@@ -6,8 +6,12 @@ import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
 import { Column, Row } from '../../Layout';
 import { Input } from '../../Input';
-import { useAppDispatch, useColorScale } from '../../../hooks';
-import { updateActiveOrdinalColorScale } from '../../../redux/displayConfigSlice';
+import { useAppDispatch, useAppSelector, useColorScale } from '../../../hooks';
+import {
+    selectScales,
+    updateActiveOrdinalColorScale,
+    updateColorScale,
+} from '../../../redux/displayConfigSlice';
 import { scaleIsThreshold } from '../../../types';
 import { Text } from '../../Typography';
 
@@ -49,7 +53,7 @@ const LegendItem: React.FC<LegendItemProps> = ({
     useClickAway(containerRef, () => setPickerOpen(false));
 
     return (
-        <LegendItemContainer>
+        <LegendItemContainer onClick={() => setPickerOpen(true)}>
             <LegendDot
                 fill={color}
                 stroke={color}
@@ -103,13 +107,36 @@ const LinearLegendContainer = styled.div`
     height: 25px;
 `;
 
+const LinearLegendLabel = styled(Text)`
+    margin: 0px 3px;
+`;
+
+const LinearLegendRow = styled(Row)`
+    margin: 0px;
+    position: relative;
+`;
+
 const LinearLegend: React.FC<{ scale: ScaleThreshold<any, any> }> = ({
     scale,
 }) => {
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const containerRef = useRef<any>();
+    const {
+        colorScale: { featureColorBase },
+    } = useAppSelector(selectScales);
+
+    const dispatch = useAppDispatch();
+
+    useClickAway(containerRef, () => setPickerOpen(false));
+
+    const updateColor = (newColor: string) => {
+        dispatch(updateColorScale({ featureColorBase: newColor }));
+    };
+
     return (
-        <Row>
-            <Text>{scale.domain()[0]}</Text>
-            <LinearLegendContainer>
+        <LinearLegendRow margin='0px'>
+            <LinearLegendLabel>{scale.domain()[0]}</LinearLegendLabel>
+            <LinearLegendContainer onClick={() => setPickerOpen(true)}>
                 <svg viewBox='0 0 200 25'>
                     <linearGradient id='scaleGradient'>
                         <stop offset='5%' stopColor={scale.range()[0]} />
@@ -126,8 +153,16 @@ const LinearLegend: React.FC<{ scale: ScaleThreshold<any, any> }> = ({
                     />
                 </svg>
             </LinearLegendContainer>
-            <Text>{scale.domain().slice(-1)[0].toLocaleString()}</Text>
-        </Row>
+            <LinearLegendLabel>
+                {scale.domain().slice(-1)[0].toLocaleString()}
+            </LinearLegendLabel>
+            <Popover ref={containerRef} open={pickerOpen}>
+                <ColorPicker
+                    color={featureColorBase}
+                    updateColor={updateColor}
+                />
+            </Popover>
+        </LinearLegendRow>
     );
 };
 
