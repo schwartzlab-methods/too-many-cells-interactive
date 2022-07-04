@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { bindActionCreators } from 'redux';
 import { extent } from 'd3-array';
-import { ScaleLinear, ScaleOrdinal, ScaleThreshold } from 'd3-scale';
+import { ScaleLinear } from 'd3-scale';
 import { HierarchyPointNode } from 'd3-hierarchy';
 import { Tree as TreeViz } from '../../../Visualizations';
 import { calculateOrdinalColorScaleRangeAndDomain } from '../../../util';
@@ -18,7 +18,7 @@ import {
     selectToggleableDisplayElements,
     selectWidth,
     ToggleableDisplayElements,
-    updateActiveOrdinalColorScale,
+    updateColorScale,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
 import { useAppDispatch, useAppSelector, usePrunedTree } from '../../../hooks';
@@ -33,7 +33,7 @@ import {
 
 interface TreeScales {
     branchSizeScale: ScaleLinear<number, number>;
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>;
+    colorScaleWrapper: (node: HierarchyPointNode<TMCNode>) => string;
     pieScale: ScaleLinear<number, number>;
 }
 
@@ -42,10 +42,9 @@ type ColorScaleKey = Scales['colorScale']['variant'];
 /**
  *  Class for passing context between React and D3.
  *  @method refresh must be used by React (in a useEffect hook) to keep context up to date,
- *      since Tree chart depends on it for accurate rendering and most values are controlled by React components.
+ *      b/c Tree chart depends on it for accurate displayConfig and update callbacks (i.e., click prunes)
  */
 
-//need to pass in: clickPrune history, setters for....
 export class ContextManager {
     addClickPrune!: (pruner: ClickPruner) => void;
     colorScaleKey!: ColorScaleKey;
@@ -104,7 +103,7 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
     const [Tree, setTree] = useState<TreeViz>();
 
     const branchSizeScale = useLinearScale('branchSizeScale');
-    const colorScale = useColorScale();
+    const { scaleFunction: colorScaleWrapper } = useColorScale();
     const pieScale = useLinearScale('pieScale');
 
     const { variant: colorScaleKey } =
@@ -113,10 +112,10 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
     const treeScales = useMemo(
         () => ({
             branchSizeScale,
-            colorScale,
+            colorScaleWrapper,
             pieScale,
         }),
-        [branchSizeScale, colorScale, pieScale]
+        [branchSizeScale, colorScaleWrapper, pieScale]
     );
 
     const toggleableFeatures = useAppSelector(selectToggleableDisplayElements);
@@ -159,14 +158,13 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
             })
         );
 
-        dispatch(
-            updateActiveOrdinalColorScale(
-                calculateOrdinalColorScaleRangeAndDomain(
-                    'labelCount',
-                    visibleNodes as HierarchyPointNode<TMCNode>
-                )
-            )
-        );
+        const { range: labelRange, domain: labelDomain } =
+            calculateOrdinalColorScaleRangeAndDomain(
+                'labelCount',
+                visibleNodes as HierarchyPointNode<TMCNode>
+            );
+
+        dispatch(updateColorScale({ labelRange, labelDomain }));
     }, []);
 
     /* intial render */

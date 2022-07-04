@@ -21,12 +21,16 @@ export interface ToggleableDisplayElements {
 export type ColorScaleVariant = 'labelCount' | 'featureHiLos' | 'featureCount';
 
 export interface ColorScaleConfig {
-    featureDomain: string[] | number[];
-    featureRange: string[];
+    //average feature counts for each node
+    featureColorDomain: number[];
+    //the two-color range to interpolate between
+    featureColorRange: string[];
+    featureThresholdDomain: string[];
+    featureThresholdRange: string[];
+    featureThresholds: Record<string, number>;
     labelDomain: string[];
     labelRange: string[];
-    featureThresholds: Record<string, number>;
-    featureVariant: 'two-color' | 'opacity';
+    showFeatureOpacity: boolean;
     variant: ColorScaleVariant;
 }
 
@@ -53,15 +57,16 @@ const initialScales: Scales = {
         domain: [0, 0],
         range: [0, 0],
     },
-    /* todo: separate feature domains */
     colorScale: {
+        featureColorDomain: [],
+        featureColorRange: [],
+        featureThresholdDomain: [],
+        featureThresholdRange: [],
         featureThresholds: {},
-        featureDomain: [''],
-        featureRange: [''],
-        labelDomain: [''],
-        labelRange: [''],
+        labelDomain: [],
+        labelRange: [],
+        showFeatureOpacity: false,
         variant: 'labelCount',
-        featureVariant: 'two-color',
     },
     pieScale: {
         domain: [0, 0],
@@ -92,18 +97,8 @@ export const displayConfigSlice = createSlice({
     name: 'displayConfig',
     initialState,
     reducers: {
-        activateContinuousFeatureScale: (
-            state,
-            {
-                payload: { max, variant },
-            }: PayloadAction<{ max: number; variant: 'opacity' | 'two-color' }>
-        ) => {
-            state.scales.colorScale.featureDomain = [0, max];
-            state.scales.colorScale.featureVariant = variant;
-            state.scales.colorScale.featureRange =
-                variant === 'opacity'
-                    ? ['#D3D3D3', '#E41A1C']
-                    : ['rgba(228,26,28,0)', 'rgba(228,26,28,1)'];
+        activateFeatureColorScale: state => {
+            state.scales.colorScale.featureColorRange = ['#D3D3D3', '#E41A1C'];
             state.scales.colorScale.variant = 'featureCount';
         },
         toggleDisplayProperty: (
@@ -113,7 +108,7 @@ export const displayConfigSlice = createSlice({
             state.toggleableDisplayElements[payload] =
                 !state.toggleableDisplayElements[payload];
         },
-        /* this is used by legend to blindly update colors */
+        /* this is used by legend to blindly update colors for label and hi/lo scales */
         updateActiveOrdinalColorScale: (
             state,
             {
@@ -126,8 +121,8 @@ export const displayConfigSlice = createSlice({
                 state.scales.colorScale.labelDomain = domain;
                 state.scales.colorScale.labelRange = range;
             } else {
-                state.scales.colorScale.featureDomain = domain;
-                state.scales.colorScale.featureRange = range;
+                state.scales.colorScale.featureThresholdDomain = domain;
+                state.scales.colorScale.featureThresholdRange = range;
             }
         },
         updateColorScale: (
@@ -175,7 +170,7 @@ export const displayConfigSlice = createSlice({
 });
 
 export const {
-    activateContinuousFeatureScale,
+    activateFeatureColorScale,
     toggleDisplayProperty,
     updateActiveOrdinalColorScale,
     updateColorScaleThresholds,

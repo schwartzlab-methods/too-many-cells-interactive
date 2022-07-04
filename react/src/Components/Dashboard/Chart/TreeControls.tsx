@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScaleLinear, ScaleOrdinal, ScaleThreshold } from 'd3-scale';
+import { ScaleOrdinal, ScaleThreshold } from 'd3-scale';
 import { BaseType, select } from 'd3-selection';
 import styled from 'styled-components';
 import { saveAs } from 'file-saver';
@@ -100,7 +100,7 @@ const downloadSvg = (
 };
 
 const TreeControls: React.FC = () => {
-    const colorScale = useColorScale();
+    const { scale: colorScale } = useColorScale();
 
     return (
         <Column>

@@ -10,7 +10,7 @@ import { selectWidth } from '../../redux/displayConfigSlice';
 import { getData } from '../../prepareData';
 import TreeControls from './Chart/TreeControls';
 import PruneHistory from './DisplayControls/PruneHistory';
-import ControlPanel from './DisplayControls/ControlPanel';
+import DisplayControls from './DisplayControls/DisplayControls';
 import TreeComponent from './Chart/TreeComponent';
 
 const theme = {
@@ -62,7 +62,7 @@ const Dashboard: React.FC = () => {
                                 <PruneHistory />
                             </Row>
                             <Row margin='0px' alignItems='flex-start'>
-                                <ControlPanel />
+                                <DisplayControls />
                             </Row>
                         </Column>
                     </Row>

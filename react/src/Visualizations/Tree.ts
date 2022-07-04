@@ -1,7 +1,6 @@
 import 'd3-transition'; // must be imported before selection
 import { extent, sum } from 'd3-array';
 import { dispatch } from 'd3-dispatch';
-import { color, rgb } from 'd3-color';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import { format } from 'd3-format';
 import {
@@ -9,14 +8,8 @@ import {
     HierarchyPointLink,
     HierarchyPointNode,
 } from 'd3-hierarchy';
-import { interpolate } from 'd3-interpolate';
-import {
-    ScaleLinear,
-    scaleLinear,
-    ScaleOrdinal,
-    ScaleThreshold,
-} from 'd3-scale';
-import { BaseType, local, select, selectAll, Selection } from 'd3-selection';
+import { ScaleLinear, scaleLinear } from 'd3-scale';
+import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, PieArcDatum, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
 import {
@@ -26,13 +19,7 @@ import {
     getEntries,
     squared,
 } from '../util';
-import {
-    AttributeMap,
-    AttributeMapValue,
-    isLinkNode,
-    scaleIsThreshold,
-    TMCNode,
-} from '../types';
+import { isLinkNode, TMCNode } from '../types';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
 import { ClickPruner } from '../redux/pruneSlice';
 import { ColorScaleVariant } from '../redux/displayConfigSlice';
@@ -41,59 +28,6 @@ import { ColorScaleVariant } from '../redux/displayConfigSlice';
 (window as any).select = select;
 
 type Point = [number, number];
-
-const blendWeighted = (colors: BlendArg[]) => {
-    const { r, b, g, opacity } = colors.reduce(
-        (acc, curr) => {
-            const { r, g, b, opacity } = curr.color
-                ? color(curr.color)!.rgb()
-                : { r: 0, g: 0, b: 0, opacity: 0 };
-            acc.r += r * curr.weight;
-            acc.g += g * curr.weight;
-            acc.b += b * curr.weight;
-            acc.opacity += opacity * curr.weight;
-            return acc;
-        },
-        { r: 0, g: 0, b: 0, opacity: 0 }
-    );
-    const weightSum = colors.reduce((acc, curr) => (acc += curr.weight), 0);
-
-    return rgb(
-        r / weightSum,
-        g / weightSum,
-        b / weightSum,
-        opacity / weightSum
-    );
-};
-
-function getColor(
-    scale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>,
-    colorScaleKey: ColorScaleVariant,
-    node: HierarchyPointNode<TMCNode>
-) {
-    const colorSource = node.data[colorScaleKey];
-
-    return getBlendedColor(colorSource, scale).toString();
-}
-
-const getBlendedColor = (
-    counts: AttributeMap,
-    scale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
-) => {
-    const weightedColors = Object.values(counts).map<BlendArg>(v => ({
-        //it's possible for weight to be zero, in which case we'll get black, so well set at one
-        //this is mainly for enrichment
-
-        //if we have a linear scale then we have at most 1 feature, so everything will get 1 weight
-        weight: scaleIsThreshold(scale) ? 1 : v.quantity || 1,
-        color: scaleIsThreshold(scale)
-            ? scale(v.scaleKey)
-            : scale(v.scaleKey as string),
-    }));
-    //rgb
-    const color = blendWeighted(weightedColors);
-    return color.toString();
-};
 
 /**
  *
@@ -203,11 +137,19 @@ const arcPath = arc()({
     endAngle: Math.PI * 2,
 });
 
-const makePie = (data: [string, AttributeMapValue][]) =>
-    pie<[string, AttributeMapValue]>().value(d => d[1].quantity || 1)(data);
+/**
+ *
+ * @param data Array of nodes that have been split for each feature label, so there is one node per label/feature
+ *              this is so we can pass each slice to the color function without angering typescript
+ * @param key the field to be passed to the color scale
+ */
+const makePie = (data: HierarchyPointNode<TMCNode>[], key: ColorScaleVariant) =>
+    pie<HierarchyPointNode<TMCNode>>().value(
+        d => Object.values(d.data[key])[0].quantity || 1
+    )(data);
 
 const getPie = (
-    d: PieArcDatum<[string, AttributeMapValue]>,
+    d: PieArcDatum<HierarchyPointNode<TMCNode>>,
     outerRadius: number
 ) =>
     arc()({
@@ -215,8 +157,6 @@ const getPie = (
         outerRadius,
         ...d,
     }) || '';
-
-type BlendArg = { color: string; weight: number };
 
 const showToolTip = (data: TMCNode, e: MouseEvent) => {
     const cellCount = sum(Object.values(data.labelCount).map(v => v.quantity));
@@ -557,16 +497,15 @@ class RadialTree {
             unknown
         >
     ) => {
-        const { branchSizeScale, colorScale } = this.ContextManager.scales;
-
-        const { colorScaleKey } = this.ContextManager;
+        const { branchSizeScale, colorScaleWrapper } =
+            this.ContextManager.scales;
 
         const gradients = this.container
             .selectAll<BaseType, HierarchyPointLink<TMCNode>>('linearGradient')
             .data(
                 this.ContextManager.visibleNodes.links(),
-                // (d: HierarchyPointLink<TMCNode>) =>
-                //     `${makeLinkId(d)}-${this.colorScale.range().join(' ')}`
+                //  (d: HierarchyPointLink<TMCNode>) =>
+                //      `${makeLinkId(d)}-${this.colorScale.range().join(' ')}`
                 () => Math.random()
             )
             .join('linearGradient')
@@ -580,16 +519,12 @@ class RadialTree {
         gradients
             .append('stop')
             .attr('offset', '40%')
-            .attr('stop-color', d =>
-                getColor(colorScale, colorScaleKey, d.source)
-            );
+            .attr('stop-color', d => colorScaleWrapper(d.source));
 
         gradients
             .append('stop')
             .attr('offset', '85%')
-            .attr('stop-color', d =>
-                getColor(colorScale, colorScaleKey, d.target)
-            );
+            .attr('stop-color', d => colorScaleWrapper(d.target));
 
         return selection
             .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
@@ -630,7 +565,6 @@ class RadialTree {
 
                 update =>
                     update
-                        //issue is here too, in fact, this is real source?
                         .transition()
                         .delay(this.transitionTime)
                         .duration(this.transitionTime)
@@ -712,7 +646,7 @@ class RadialTree {
             strokeVisible,
         } = this.ContextManager.toggleableFeatures;
 
-        const { branchSizeScale, colorScale, pieScale } =
+        const { branchSizeScale, colorScaleWrapper, pieScale } =
             this.ContextManager.scales;
 
         const textSizeScale = scaleLinear([10, 40]).domain(
@@ -816,9 +750,7 @@ class RadialTree {
             .join('circle')
             .attr('class', 'node')
             .attr('stroke', strokeVisible ? 'black' : 'none')
-            .attr('fill', d =>
-                d.children ? getColor(colorScale, colorScaleKey, d) : null
-            )
+            .attr('fill', d => (d.children ? colorScaleWrapper(d) : null))
             .attr('r', d => (d.children ? branchSizeScale(d.value || 0) : 0));
 
         /* append node ids */
@@ -850,8 +782,6 @@ class RadialTree {
 
         /* pies */
 
-        const lastVals = local();
-
         this.nodes
             .selectAll('g.pie')
             .data(d => [d])
@@ -863,34 +793,40 @@ class RadialTree {
                     .selectAll('path')
                     .attr('class', 'pie')
                     .data(
-                        makePie(Object.entries(outer.data[colorScaleKey])),
-                        () => `${outer.data.nodeId}-${outer.children}`
+                        makePie(
+                            Object.entries(outer.data[colorScaleKey]).map(
+                                ([k, v]) => ({
+                                    ...outer,
+                                    data: {
+                                        ...outer.data,
+                                        [colorScaleKey]: { [k]: v },
+                                    },
+                                })
+                            ),
+                            colorScaleKey
+                        ),
+
+                        d =>
+                            `${
+                                Object.entries(
+                                    (
+                                        d as PieArcDatum<
+                                            HierarchyPointNode<TMCNode>
+                                        >
+                                    ).data.data[colorScaleKey]
+                                )[0][1].scaleKey
+                            }-${outer.data.nodeId}-${outer.children}`
                     )
                     .join('path')
                     .attr('stroke', 'none')
-                    .each(function (d) {
-                        /*
-                        keep track of previous values for custom tween, which must replace d3's due to performance issues
-                        https://stackoverflow.com/questions/59356095/error-when-transitioning-an-arc-path-attribute-d-expected-arc-flag-0-or 
-                        */
-                        lastVals.set(this as Element, d);
+                    .attr('d', d => {
+                        return !outer.children
+                            ? getPie(d, pieScale(outer.value!))
+                            : '';
                     })
-                    .transition()
-                    .duration(that.transitionTime)
-                    .attrTween('d', function (d) {
-                        const i = interpolate(lastVals.get(this as Element), d);
-                        lastVals.set(this as Element, i(0));
-                        return function (t) {
-                            return !outer.children
-                                ? getPie(i(t), pieScale(outer.value!))
-                                : '';
-                        };
-                    })
-                    .attr('fill', d =>
-                        scaleIsThreshold(colorScale)
-                            ? colorScale(d.data[1].quantity)
-                            : colorScale(d.data[1].scaleKey as string)
-                    );
+                    .attr('fill', d => {
+                        return colorScaleWrapper(d.data);
+                    });
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {

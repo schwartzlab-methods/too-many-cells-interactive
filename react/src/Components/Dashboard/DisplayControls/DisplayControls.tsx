@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import { Input } from '../../Input';
 import Checkbox from '../../Checkbox';
@@ -8,12 +9,12 @@ import { selectFeatureSlice } from '../../../redux/featureSlice';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
-    activateContinuousFeatureScale,
+    activateFeatureColorScale as _activateContinuousFeatureScale,
     selectScales,
     selectTreeMetadata,
-    updateActiveOrdinalColorScale,
-    updateColorScaleType,
-    updateLinearScale,
+    updateColorScale as _updateColorScale,
+    updateColorScaleType as _updateColorScaleType,
+    updateLinearScale as _updateLinearScale,
 } from '../../../redux/displayConfigSlice';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import {
@@ -25,18 +26,30 @@ import DisplayButtons from './DisplayButtons';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
 
-const ControlPanel: React.FC = () => {
+const DisplayControls: React.FC = () => {
     const {
         branchSizeScale,
-        colorScale: { variant: colorScaleType, featureVariant },
+        colorScale: { variant: colorScaleType, showFeatureOpacity },
     } = useAppSelector(selectScales);
 
     const { minValue, maxValue } = useAppSelector(selectTreeMetadata);
 
-    const { activeFeatures, featureDistributions } =
-        useAppSelector(selectFeatureSlice);
+    const { activeFeatures } = useAppSelector(selectFeatureSlice);
 
-    const dispatch = useAppDispatch();
+    const {
+        activateContinuousFeatureScale,
+        updateColorScale,
+        updateColorScaleType,
+        updateLinearScale,
+    } = bindActionCreators(
+        {
+            activateContinuousFeatureScale: _activateContinuousFeatureScale,
+            updateColorScale: _updateColorScale,
+            updateColorScaleType: _updateColorScaleType,
+            updateLinearScale: _updateLinearScale,
+        },
+        useAppDispatch()
+    );
 
     const branchScalingDisabled = useMemo(() => {
         return branchSizeScale.domain[0] === branchSizeScale.domain[1];
@@ -45,29 +58,32 @@ const ControlPanel: React.FC = () => {
     const featureScaleAvailable = !!activeFeatures.length;
 
     const changeScaleType = (scaleType: typeof colorScaleType) => {
-        dispatch(updateColorScaleType(scaleType));
+        updateColorScaleType(scaleType);
     };
 
     const activateOrdinalFeatureScale = () => {
-        dispatch(updateColorScaleType('featureHiLos'));
+        updateColorScaleType('featureHiLos');
         const domain = getScaleCombinations(activeFeatures.filter(Boolean));
         const range = addGray(domain, interpolateColorScale(domain));
-        dispatch(updateActiveOrdinalColorScale({ range, domain }));
-    };
-
-    const _activateContinuousFeatureScale = (
-        variant: 'two-color' | 'opacity'
-    ) => {
-        const activeFeature = activeFeatures[0];
-        const max = featureDistributions[activeFeature].maxProportion;
-        dispatch(activateContinuousFeatureScale({ max, variant }));
+        updateColorScale({
+            featureThresholdDomain: domain,
+            featureColorRange: range,
+        });
     };
 
     return (
         <>
             <Column width={'50%'}>
                 <DisplayButtons />
-                <Legend />
+                {featureScaleAvailable && colorScaleType === 'labelCount' && (
+                    <Checkbox
+                        checked={showFeatureOpacity}
+                        label='Show feature opacity'
+                        onClick={updateColorScale.bind(null, {
+                            showFeatureOpacity: !showFeatureOpacity,
+                        })}
+                    />
+                )}
                 {featureScaleAvailable && (
                     <RadioGroup>
                         <RadioButton
@@ -90,44 +106,19 @@ const ControlPanel: React.FC = () => {
                         <RadioLabel htmlFor='labelCount'>
                             Show Labels
                         </RadioLabel>
-                        {activeFeatures.length === 1 && (
-                            <>
-                                <RadioButton
-                                    checked={
-                                        colorScaleType === 'featureCount' &&
-                                        featureVariant === 'opacity'
-                                    }
-                                    id='featureCount'
-                                    name='featureCount'
-                                    onChange={_activateContinuousFeatureScale.bind(
-                                        null,
-                                        'opacity'
-                                    )}
-                                    type='radio'
-                                />
-                                <RadioLabel htmlFor='featureCount'>
-                                    Color Features
-                                </RadioLabel>
-                                <RadioButton
-                                    checked={
-                                        colorScaleType === 'featureCount' &&
-                                        featureVariant === 'two-color'
-                                    }
-                                    id='two-color'
-                                    name='two-color'
-                                    onChange={_activateContinuousFeatureScale.bind(
-                                        null,
-                                        'two-color'
-                                    )}
-                                    type='radio'
-                                />
-                                <RadioLabel htmlFor='two-color'>
-                                    Show Feature Opacity
-                                </RadioLabel>
-                            </>
-                        )}
+                        <RadioButton
+                            checked={colorScaleType === 'featureCount'}
+                            id='two-color'
+                            name='two-color'
+                            onChange={() => activateContinuousFeatureScale()}
+                            type='radio'
+                        />
+                        <RadioLabel htmlFor='two-color'>
+                            Show Feature Blend
+                        </RadioLabel>
                     </RadioGroup>
                 )}
+                <Legend />
                 <SliderGroup>
                     <Slider
                         label='Adjust Max Width'
@@ -144,15 +135,13 @@ const ControlPanel: React.FC = () => {
                     checked={branchScalingDisabled}
                     label='Branch width scaling disabled'
                     onClick={() =>
-                        dispatch(
-                            updateLinearScale({
-                                branchSizeScale: {
-                                    domain: branchScalingDisabled
-                                        ? [minValue, maxValue]
-                                        : [1, 1],
-                                },
-                            })
-                        )
+                        updateLinearScale({
+                            branchSizeScale: {
+                                domain: branchScalingDisabled
+                                    ? [minValue, maxValue]
+                                    : [1, 1],
+                            },
+                        })
                     }
                 />
             </Column>
@@ -164,7 +153,7 @@ const ControlPanel: React.FC = () => {
     );
 };
 
-export default ControlPanel;
+export default DisplayControls;
 
 const SliderGroup = styled(Column)`
     margin-top: 15px;
@@ -183,7 +172,7 @@ const Slider: React.FC<SliderProps> = ({ scaleType, label, max }) => {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         dispatch(
-            updateLinearScale({
+            _updateLinearScale({
                 [scaleType]: {
                     range: [scale.range[0], +e.currentTarget.value],
                 },

@@ -10,8 +10,11 @@ import {
     updateDistributions as _updateDistributions,
 } from '../redux/pruneSlice';
 import {
+    selectScales,
     selectWidth,
     TreeMetaData,
+    updateColorScale as _updateColorScale,
+    updateColorScaleThresholds as _updateColorScaleThresholds,
     updateTreeMetadata as _updateTreeMetadata,
 } from '../redux/displayConfigSlice';
 import {
@@ -20,11 +23,6 @@ import {
     selectFeatureSlice,
     updateFeatureDistributions as _updateFeatureDistributions,
 } from '../redux/featureSlice';
-import {
-    selectScales,
-    updateColorScale as _updateColorScale,
-    updateColorScaleThresholds as _updateColorScaleThresholds,
-} from '../redux/displayConfigSlice';
 import {
     calculateTreeLayout,
     getEntries,
@@ -138,7 +136,23 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
         updateFeatureDistributions(
             getFeatureDistributions(tree, activeFeatures)
         );
-        /* todo: we also need to recalculate range and domain for opacity scale */
+
+        const activeFeatureCount = activeFeatures.length;
+
+        const featureAverages = extent(
+            visibleNodes
+                .descendants()
+                .map(
+                    d =>
+                        sum(
+                            Object.values(d.data.featureCount).map(
+                                v => v.scaleKey as number
+                            )
+                        ) / activeFeatureCount
+                )
+        ) as [number, number];
+
+        updateColorScale({ featureColorDomain: featureAverages });
     }, [activeFeatures]);
 
     /* PRUNING EFFECTS */
@@ -166,27 +180,19 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
         setVisibleNodes(calculateTreeLayout(withNewFeatureCounts, width));
     }, [clickPruneHistory, activePruneIndex]);
 
-    /* update base tree meta on all prunes */
+    /* update base tree meta and feature scale (if features loaded) on all prunes */
     useEffect(() => {
         updateTreeMetadata(buildTreeMetadata(visibleNodes));
-        if (activeFeatures.length === 1) {
-            if (
-                activeFeatures.length === 1 &&
-                /* todo: separate domains */
-                colorScaleType === 'featureCount'
-            ) {
-                updateColorScale({
-                    featureDomain: extent(
-                        visibleNodes
-                            .descendants()
-                            .map(
-                                n =>
-                                    n.data.featureCount[activeFeatures[0]]
-                                        .scaleKey
-                            ) as number[]
-                    ) as [number, number],
-                });
-            }
+        if (activeFeatures.length) {
+            updateColorScale({
+                featureColorDomain: extent(
+                    visibleNodes
+                        .descendants()
+                        .map(
+                            n => n.data.featureCount[activeFeatures[0]].scaleKey
+                        ) as number[]
+                ) as [number, number],
+            });
             updateFeatureDistributions(
                 getFeatureDistributions(visibleNodes, activeFeatures)
             );
@@ -464,13 +470,6 @@ const getFeatureDistributions = (
                 )
             );
 
-        const maxProportion =
-            max(
-                nodes
-                    .descendants()
-                    .map(d => (d.data.featureCount[f]?.scaleKey as number) || 0)
-            ) || 0;
-
         const med = median(range.filter(Boolean))!;
 
         const medianWithZeroes = median(range)!;
@@ -482,7 +481,6 @@ const getFeatureDistributions = (
             madGroups: getMadFeatureGroups(range.filter(Boolean), mad, med),
             madWithZeroes: getMAD(range) || 0, //remove 0s
             max: max(range) || 0,
-            maxProportion,
             min: min(range) || 0,
             median: med || 0,
             medianWithZeroes: medianWithZeroes || 0,

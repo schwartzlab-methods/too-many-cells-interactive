@@ -27,7 +27,7 @@ import { Caption, Title } from '../../Typography';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectScales,
-    updateActiveOrdinalColorScale as _updateColorScale,
+    updateColorScale as _updateColorScale,
     updateColorScaleThresholds as _updateColorScaleThresholds,
     updateColorScaleType as _updateColorScaleType,
 } from '../../../redux/displayConfigSlice';
@@ -58,7 +58,7 @@ const FeatureSearch: React.FC = () => {
         addFeature,
         clearActiveFeatures,
         removeActiveFeature,
-        updateActiveOrdinalColorScale,
+        updateColorScale,
         updateColorScaleThresholds,
         updateColorScaleType,
     } = bindActionCreators(
@@ -66,7 +66,7 @@ const FeatureSearch: React.FC = () => {
             addFeature: _addFeature,
             clearActiveFeatures: _clearActiveFeatures,
             removeActiveFeature: _removeActiveFeature,
-            updateActiveOrdinalColorScale: _updateColorScale,
+            updateColorScale: _updateColorScale,
             updateColorScaleThresholds: _updateColorScaleThresholds,
             updateColorScaleType: _updateColorScaleType,
         },
@@ -88,7 +88,10 @@ const FeatureSearch: React.FC = () => {
 
         const range = addGray(domain, interpolateColorScale(domain));
 
-        updateActiveOrdinalColorScale({ range, domain });
+        updateColorScale({
+            featureThresholdRange: range,
+            featureThresholdDomain: domain,
+        });
 
         if (activeFeatures.length === 1) {
             updateColorScaleType('labelCount');
@@ -112,9 +115,11 @@ const FeatureSearch: React.FC = () => {
             featureMap[f.id] = f.value;
         });
 
-        addFeature({ key: feature, map: featureMap });
+        if (!activeFeatures) {
+            updateColorScaleType('featureHiLos');
+        }
 
-        updateColorScaleType('featureHiLos');
+        addFeature({ key: feature, map: featureMap });
 
         const domain = getScaleCombinations(
             activeFeatures.filter(Boolean).concat(feature)
@@ -122,7 +127,10 @@ const FeatureSearch: React.FC = () => {
 
         const range = addGray(domain, interpolateColorScale(domain));
 
-        updateActiveOrdinalColorScale({ range, domain });
+        updateColorScale({
+            featureThresholdRange: range,
+            featureThresholdDomain: domain,
+        });
 
         setLoading(false);
 

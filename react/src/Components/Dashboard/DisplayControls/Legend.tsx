@@ -12,7 +12,7 @@ import { scaleIsThreshold } from '../../../types';
 import { Text } from '../../Typography';
 
 const Legend: React.FC = () => {
-    const colorScale = useColorScale();
+    const { scale: colorScale } = useColorScale();
 
     return (
         <Column>
