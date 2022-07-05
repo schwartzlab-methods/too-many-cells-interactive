@@ -115,10 +115,6 @@ const FeatureSearch: React.FC = () => {
             featureMap[f.id] = f.value;
         });
 
-        if (!activeFeatures) {
-            updateColorScaleType('featureHiLos');
-        }
-
         addFeature({ key: feature, map: featureMap });
 
         const domain = getScaleCombinations(
@@ -138,6 +134,10 @@ const FeatureSearch: React.FC = () => {
             ...visibleFeatureControls,
             [feature]: true,
         });
+
+        if (!activeFeatures.length) {
+            updateColorScaleType('featureHiLos');
+        }
     };
 
     return (

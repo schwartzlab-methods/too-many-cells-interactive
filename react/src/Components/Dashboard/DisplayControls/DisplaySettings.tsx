@@ -18,7 +18,7 @@ const DisplaySettings: React.FC = () => {
 
     return (
         <BoxList>
-            <ToggleCheckbox label='Show Stroke' propName='strokeVisible' />
+            <ToggleCheckbox label='Show Strokes' propName='strokeVisible' />
             <ToggleCheckbox label='Show Node IDs' propName='nodeIdsVisible' />
             <ToggleCheckbox
                 label='Show Node Counts'

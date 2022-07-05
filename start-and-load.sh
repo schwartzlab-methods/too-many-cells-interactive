@@ -2,7 +2,12 @@
 
 set -eo pipefail
 
-PORT=8080
+# ./start-and-load.sh --data-dir ~/too-many-cells/data/tabula_muris --port 1234
+
+if [[ $# < 4 ]]; then
+
+    echo >&2 "USAGE: $0 --data-dir /path/to/matrices --port 1234" && exit 1
+fi
 
 while [ ! -z "$1" ]; do
     if [[ "$1" == '--data-dir' ]]; then 
@@ -22,7 +27,10 @@ if [[ ! -d $DATA_DIR ]]; then
     echo >&2 "${DATA_DIR} does not exist!" && exit 1
 fi
 
+if [[ -z $PORT ]]; then
+    echo >&2 "please include --port argument!" && exit 1
+fi
 
-# todo: need to get rid of custom internal port, should always be 3000
-# overriding the entrypoint will also be an issue -- will it work here? if we remove from compose local dev will be janky
-docker-compose run -p ${PORT}:4443 -v ${DATA_DIR}:/usr/data --rm node init 
+docker-compose build
+
+docker-compose run -p ${PORT}:3000 -v ${DATA_DIR}:/usr/data:ro --rm node init

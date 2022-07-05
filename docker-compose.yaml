@@ -6,27 +6,22 @@ services:
       - ./react:/usr/app
     working_dir: /usr/app
     ports:
-      - ${APP_PORT}:${APP_PORT}
+      - ${REACT_PORT:-1212}:${REACT_PORT:-1212}
     environment:
-      - APP_PORT
-      - NODE_PORT
+      - REACT_PORT
     entrypoint: "yarn start"
     networks:
       - tmc-network
   node:
-    image: node:latest
+    image: too-many-cells-js:latest
     build: ./
     volumes:
-      - ./node:/usr/app
-    working_dir: /usr/app
+      - ./node/src:/usr/app/src
     depends_on:
       - mongo
     environment:
-      - NODE_PORT
-      - STATIC_DIR
-      - MONGO_CONNECTION_STRING
-      - MONGO_DB
-    # entrypoint: yarn start
+      - MONGO_CONNECTION_STRING=${MONGO_CONNECTION_STRING:-mongodb://mongo:27017/tmc}
+      - MONGO_DB=${MONGO_DB:-tmc}
     networks:
       - tmc-network
   mongo:
@@ -34,10 +29,6 @@ services:
     volumes:
       - mongo-data:/data/db
       - ./mongo:/opt/appdata
-    environment:
-      - MONGO_DB
-      - MONGO_INITDB_ROOT_PASSWORD
-      - MONGO_INITDB_ROOT_USERNAME
     networks:
       - tmc-network
 

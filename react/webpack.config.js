@@ -37,10 +37,10 @@ module.exports = {
     ],
     devServer: {
         compress: true,
-        port: process.env.APP_PORT,
+        port: process.env.REACT_PORT,
         proxy: {
-            '/api': `http://node:${process.env.NODE_PORT}`,
-            '/files': `http://node:${process.env.NODE_PORT}`,
+            '/api': 'http://node:3000',
+            '/files': 'http://node:3000',
         },
     },
 };

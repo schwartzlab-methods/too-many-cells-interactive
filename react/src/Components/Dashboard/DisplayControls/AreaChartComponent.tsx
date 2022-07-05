@@ -54,7 +54,11 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
         <>
             <div
                 className={selector.current}
-                style={{ width: Object.values(counts).length < 3 ? 0 : '100%' }}
+                style={{
+                    display:
+                        Object.values(counts).length < 3 ? 'none' : 'block',
+                    width: '100%',
+                }}
             />
             {Object.values(counts).length < 3 && (
                 <ErrorContainer>

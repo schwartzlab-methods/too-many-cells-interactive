@@ -5,7 +5,9 @@ const app = express();
 
 mongoose.connect(process.env.MONGO_CONNECTION_STRING!);
 
-app.use('/', express.static(process.env.STATIC_DIR!));
+console.log(process.env.MONGO_CONNECTION_STRING!);
+
+app.use('/', express.static('/usr/app/static'));
 
 app.use('/api/features', async (req, res) => {
     const { q } = req.query;
@@ -27,11 +29,12 @@ app.use('/api/features-set', async (req, res) => {
 });
 
 app.use((req, res) => {
+    console.error(`NOT FOUND ${req.path}`);
     res.status(404).json('Not found');
 });
 
-app.listen(process.env.NODE_PORT, () => {
-    console.log(`The app is listening on port ${process.env.NODE_PORT}`);
+app.listen(3000, () => {
+    console.log(`The app is running!`);
 });
 
 const featureSchema = new mongoose.Schema({
@@ -41,4 +44,4 @@ const featureSchema = new mongoose.Schema({
     value: Number,
 });
 
-const Feature = mongoose.model('matrix', featureSchema, 'matrix');
+const Feature = mongoose.model('features', featureSchema, 'features');
