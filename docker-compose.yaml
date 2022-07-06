@@ -1,0 +1,39 @@
+version: "3.6"
+services:
+  react:
+    image: node:latest
+    volumes:
+      - ./react:/usr/app
+    working_dir: /usr/app
+    ports:
+      - ${REACT_PORT:-1212}:${REACT_PORT:-1212}
+    environment:
+      - REACT_PORT
+    entrypoint: "yarn start"
+    networks:
+      - tmc-network
+  node:
+    image: too-many-cells-js:latest
+    build: ./
+    volumes:
+      - ./node/src:/usr/app/src
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_CONNECTION_STRING=${MONGO_CONNECTION_STRING:-mongodb://mongo:27017/tmc}
+      - MONGO_DB=${MONGO_DB:-tmc}
+    networks:
+      - tmc-network
+  mongo:
+    image: mongo:latest
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo:/opt/appdata
+    networks:
+      - tmc-network
+
+volumes:
+  mongo-data:
+
+networks:
+  tmc-network:
