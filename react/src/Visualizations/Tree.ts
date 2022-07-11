@@ -23,6 +23,7 @@ import { isLinkNode, TMCNode } from '../types';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
 import { ClickPruner } from '../redux/pruneSlice';
 import { ColorScaleVariant } from '../redux/displayConfigSlice';
+import _ from 'lodash';
 
 // for debugging
 (window as any).select = select;
@@ -158,8 +159,10 @@ const getPie = (
         ...d,
     }) || '';
 
-const showToolTip = (data: TMCNode, e: MouseEvent) => {
-    const cellCount = sum(Object.values(data.labelCount).map(v => v.quantity));
+const showToolTip = (data: HierarchyPointNode<TMCNode>, e: MouseEvent) => {
+    const cellCount = sum(
+        Object.values(data.data.labelCount).map(v => v.quantity)
+    );
     const f = format('.1%');
 
     const container = select('.tooltip')
@@ -169,39 +172,59 @@ const showToolTip = (data: TMCNode, e: MouseEvent) => {
 
     const inner = container.select('.inner');
 
-    const tissueContainer = inner.select('div.tissue ul');
+    const detail = container.select('.detail');
 
-    tissueContainer
+    const headingContainer = inner.select('div.heading ul');
+
+    headingContainer
+        .selectAll('li')
+        .data([
+            ['Node Id', data.data.nodeId],
+            [
+                'Distance',
+                data.data.distance
+                    ? formatDistance(data.data.distance)
+                    : 'null',
+            ],
+            ['Node Count', data.value!.toLocaleString()],
+        ])
+        .join('li')
+        .attr('class', 'heading-value')
+        .html(d => `<strong>${d[0]}:&nbsp;</strong> ${d[1]}`);
+
+    const labelContainer = detail.select('div.label ul');
+
+    labelContainer
         .selectAll('li.item')
         .data(
-            getEntries(data.labelCount).sort((a, b) =>
-                a[1].quantity < b[1].quantity ? 1 : -1
+            Object.values(data.data.labelCount).sort((a, b) =>
+                a.quantity < b.quantity ? 1 : -1
             ),
             Math.random
         )
         .join('li')
         .attr('class', 'item')
-        .each(function (d) {
+        .each(function (v) {
             const s = select(this).append('span');
             const strong = s.append('strong');
-            strong.html(`${d[1].scaleKey}: `);
+            strong.html(`${v.scaleKey}: `);
             const val = s.append('span');
-            val.html(f(d[1].quantity / cellCount));
+            val.html(f(v.quantity / cellCount));
         });
 
-    if (Object.keys(data.featureHiLos).length) {
-        tissueContainer.style('border-right', 'thin white solid');
+    if (Object.keys(data.data.featureHiLos).length) {
+        labelContainer.style('border-right', 'thin white solid');
     } else {
-        tissueContainer.style('border-right', 'none');
+        labelContainer.style('border-right', 'none');
     }
 
-    const featuresContainer = inner.select('div.features ul');
+    const featuresContainer = detail.select('div.features ul');
 
     featuresContainer
         .selectAll('li.item')
         .data(
-            getEntries(data.featureHiLos).sort((a, b) =>
-                a[1].quantity < b[1].quantity ? 1 : -1
+            Object.values(data.data.featureHiLos).sort((a, b) =>
+                a.quantity < b.quantity ? 1 : -1
             ),
             Math.random
         )
@@ -210,24 +233,10 @@ const showToolTip = (data: TMCNode, e: MouseEvent) => {
         .each(function (d) {
             const s = select(this).append('span');
             const strong = s.append('strong');
-            strong.html(`${d[1].scaleKey}: `);
+            strong.html(`${d.scaleKey}: `);
             const val = s.append('span');
-            val.html(d[1].quantity.toLocaleString());
+            val.html(d.quantity.toLocaleString());
         });
-
-    container.selectAll('hr').data([1]).join('hr');
-
-    container
-        .selectAll('div.distance')
-        .data([data.distance])
-        .join('div')
-        .attr('class', 'distance')
-        .html(
-            d =>
-                `<strong>Distance:&nbsp;</strong> ${
-                    d ? formatDistance(d) : 'null'
-                }`
-        );
 };
 
 const makeLinkId = (link: HierarchyPointLink<TMCNode>) =>
@@ -315,22 +324,35 @@ class RadialTree {
             .style('font-size', '10px')
             .style('color', 'white')
             .style('border-radius', '5px')
+            .style('visibility', 'hidden')
             .style('padding', '5px');
 
-        const innerContainer = tt
-            .append('div')
-            .attr('class', 'inner')
-            .style('display', 'flex');
+        const innerContainer = tt.append('div').attr('class', 'inner');
 
         innerContainer
             .append('div')
-            .attr('class', 'tissue')
+            .attr('class', 'heading')
+            .style('display', 'block')
+            .append('ul')
+            .style('list-style-type', 'none')
+            .style('margin', '0px')
+            .style('padding', '5px')
+            .style('border-bottom', 'solid white thin');
+
+        const detailContainer = innerContainer
+            .append('div')
+            .attr('class', 'detail')
+            .style('display', 'flex');
+
+        detailContainer
+            .append('div')
+            .attr('class', 'label')
             .append('ul')
             .style('list-style-type', 'none')
             .style('margin', '0px')
             .style('padding', '5px');
 
-        innerContainer
+        detailContainer
             .append('div')
             .attr('class', 'features')
             .append('ul')
@@ -649,10 +671,6 @@ class RadialTree {
         const { branchSizeScale, colorScaleWrapper, pieScale } =
             this.ContextManager.scales;
 
-        const textSizeScale = scaleLinear([10, 40]).domain(
-            extent(visibleNodes.leaves().map(d => d.value!)) as [number, number]
-        );
-
         this.nodes = this.nodeContainer
             .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>('g.node')
             .data(visibleNodes.descendants(), d => d.data.nodeId)
@@ -669,8 +687,10 @@ class RadialTree {
                             )
                             .on(
                                 'mouseover',
-                                (e: MouseEvent, d: HierarchyNode<TMCNode>) =>
-                                    showToolTip(d.data, e)
+                                (
+                                    e: MouseEvent,
+                                    d: HierarchyPointNode<TMCNode>
+                                ) => showToolTip(d, e)
                             )
                             .on('mouseout', () =>
                                 selectAll('.tooltip').style(
@@ -731,7 +751,7 @@ class RadialTree {
                 'polygon'
             )
             .on('mouseover', (e: MouseEvent, d: HierarchyPointLink<TMCNode>) =>
-                showToolTip(d.target.data, e)
+                showToolTip(d.target, e)
             )
             .on('mouseout', () =>
                 selectAll('.tooltip').style('visibility', 'hidden')
@@ -753,32 +773,7 @@ class RadialTree {
             .attr('fill', d => (d.children ? colorScaleWrapper(d) : null))
             .attr('r', d => (d.children ? branchSizeScale(d.value || 0) : 0));
 
-        /* append node ids */
-        this.nodes
-            .selectAll<SVGTextElement, HierarchyPointNode<TMCNode>>(
-                'text.node-id'
-            )
-            .data(d => [d])
-            .join('text')
-            .style('cursor', 'pointer')
-            .attr('class', 'node-id')
-            .text(d => d.data.nodeId)
-            .attr('text-anchor', 'middle')
-            .style('visibility', nodeIdsVisible ? 'visible' : 'hidden');
-
         /* LEAF ADORNMENTS */
-
-        /* item counts */
-        this.nodes
-            .selectAll('text.node-count')
-            .data(d => [d])
-            .join('text')
-            .style('cursor', 'pointer')
-            .style('font-size', d => textSizeScale(d.value!))
-            .attr('class', 'node-count')
-            .text(d => (d.children ? null : d.value!))
-            .attr('text-anchor', 'middle')
-            .style('visibility', nodeCountsVisible ? 'visible' : 'hidden');
 
         /* pies */
 
@@ -825,7 +820,7 @@ class RadialTree {
                             : '';
                     })
                     .attr('fill', d => {
-                        return colorScaleWrapper(d.data);
+                        return !outer.children ? colorScaleWrapper(d.data) : '';
                     });
             })
             .style('visibility', piesVisible ? 'visible' : 'hidden')
@@ -846,30 +841,54 @@ class RadialTree {
             });
 
         /* Append distance arcs --> have to go on top of everything */
-        this.container
+        this.nodes
             .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>(
                 'path.distance'
             )
-            .data(visibleNodes.descendants(), d => d.data.nodeId)
+            .data(
+                d => [d],
+                d => d.data.nodeId
+            )
             .join('path')
-            .on('mouseover', (e: MouseEvent, d: HierarchyNode<TMCNode>) =>
-                showToolTip(d.data, e)
+            .on('mouseover', (e: MouseEvent, d: HierarchyPointNode<TMCNode>) =>
+                showToolTip(d, e)
             )
             .on('mouseout', () =>
                 selectAll('.tooltip').style('visibility', 'hidden')
             )
             .attr('class', 'distance')
             .style('visibility', distanceVisible ? 'visible' : 'hidden')
-            .attr(
-                'transform',
-                d => `translate(${pointRadial(d.x, d.y).toString()})`
-            )
             .attr('d', d => (d.children ? arcPath : null))
             .transition()
             .delay(this.transitionTime)
             .duration(this.transitionTime)
             .attr('stroke', 'black')
             .attr('opacity', d => this.distanceScale(d.data.distance || 0));
+
+        /* item counts */
+
+        this.nodes
+            .selectAll('text.node-count')
+            .data(d => [d])
+            .join('text')
+            .style('cursor', 'pointer')
+            .attr('class', 'node-count')
+            .text(d => d.value!.toLocaleString())
+            .attr('text-anchor', 'middle')
+            .style('visibility', nodeCountsVisible ? 'visible' : 'hidden');
+
+        /* node ids */
+        this.nodes
+            .selectAll<SVGTextElement, HierarchyPointNode<TMCNode>>(
+                'text.node-id'
+            )
+            .data(d => [d])
+            .join('text')
+            .style('cursor', 'pointer')
+            .attr('class', 'node-id')
+            .text(d => d.data.nodeId)
+            .attr('text-anchor', 'middle')
+            .style('visibility', nodeIdsVisible ? 'visible' : 'hidden');
     };
 }
 
