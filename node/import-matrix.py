@@ -3,6 +3,7 @@
 import asyncio
 import csv
 import logging
+from dataclasses import dataclass
 from os import path, walk, environ
 from shutil import copyfile
 from typing import List, Dict, Any
@@ -22,6 +23,29 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
+@dataclass
+class FileSet:
+    matrix_files: bool = False
+    tree: bool = False
+    labels: bool = False
+
+    def all_found(self):
+        return self.matrix_files and self.tree and self.labels
+
+    def __str__(self):
+        if self.all_found():
+            pass
+        else:
+            missing = ''
+            if not self.matrix_files:
+                missing += " \nMatrix files (features.tsv or genes.tsv, barcodes.tsv, matrix.mtx, all in one directory or subdirectory). Do they need to be extracted?"
+            if not self.tree:
+                missing += " \ncluster_tree.json"
+            if not self.labels:
+                missing += "\nlabels.csv"
+
+            return f"The import script failed to find the following files in the data directory: {missing}"
+
 
 async def insert_many(docs: List[Dict[Any, Any]]):
     await features_collection.insert_many(docs)
@@ -33,6 +57,34 @@ async def bootstrap():
 
 start = time.perf_counter()
 
+async def contains_files(files: str):
+    """ returns files if they exist """
+    pass
+
+async def check_for_files(root_dir: str):
+    """ this will run contains_files and die once everything is found """
+    results = FileSet()
+    for root, dirs, files in walk(root_dir):
+        if (
+            "matrix.mtx" in files
+            and "barcodes.tsv" in files
+            and ("genes.tsv" in files or "features.tsv" in files)
+        ):
+            results.matrix_files = True
+
+        if "cluster_tree.json" in files:
+            results.tree = True
+
+        if "labels.csv" in files:
+            results.labels = True
+
+        if results.all_found():
+            break
+
+    if results.all_found():
+        return True
+    else:
+        raise FileNotFoundError(results)
 
 async def parse_matrices(root_dir: str):
     for root, dirs, files in walk(root_dir):
@@ -97,6 +149,9 @@ async def parse_matrices(root_dir: str):
 
 async def insert_features():
     await bootstrap()
+    logger.info("checking that required files are in the data directory...")
+    await check_for_files("/usr/data")
+    logger.info("importing files into mongo...")
     await parse_matrices("/usr/data")
     logger.info("building index...")
     await features_collection.create_index("feature")
