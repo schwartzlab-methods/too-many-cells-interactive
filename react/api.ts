@@ -1,8 +1,7 @@
 export const fetchFeatureNames = async () => {
     const res = await fetch('/api/features-set');
-    const js = (await res.json()) as string[];
-    //todo: this should all be handled by the db
-    return js.map(d => d.toLowerCase()).sort((a, b) => (a < b ? -1 : 1));
+    const features = (await res.json()) as string[];
+    return features.sort((a, b) => (a < b ? -1 : 1));
 };
 
 interface Feature {

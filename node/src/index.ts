@@ -14,11 +14,7 @@ app.use('/api/features', async (req, res) => {
     if (!q) {
         res.status(422).json('no feature sent!');
     }
-    //currently feature names are capitalized in db
-    const feature =
-        q!.toString().charAt(0).toLocaleUpperCase() + q!.toString().slice(1);
-
-    const r = await Feature.find({ feature }).exec();
+    const r = await Feature.find({ feature: q }).exec();
     res.json(r);
 });
 
