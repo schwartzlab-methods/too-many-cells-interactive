@@ -1,5 +1,5 @@
 # too-many-cells-interactive
-![](screenshot.png)
+![](screenshot.gif)
 
 ## About The Project
 
@@ -24,6 +24,10 @@ To run the application, first make sure that you have [Docker](https://www.docke
 All files, including the cluster tree, the labels, and the matrix files, should be located within a single directory on the host machine. too-many-cells-interactive will scan this directory, including subdirectories, and import the files. See [the import script](./node/import-matrix.py) for details.
 
 To build the images, provision the containers, and start the application, run the command `./start-and-load.sh` with the `--data-dir` and `--port` arguments. `--data-dir` should indicate the root directory where the required files are located on your host machine (they will be mounted into the docker container) and `--port` should be the port on which the React app will listen on localhost. Once the build and loading process is complete, you should be able to view the app at this location in a web browser.
+
+Example: `./start-and-load.sh --data-dir /home/data/my-matrices-and-trees --port 1234` 
+
+**WARNING:** your matrix files will be mounted into the container, extracted if necessary, and moved into a mongo database stored in a Docker volume. Depending on the size of your files, this may result in substantial disk usage. To free up space, consider regularly purging unneeded volumes, containers, and/or images using the [docker system prune](https://docs.docker.com/engine/reference/commandline/system_prune/) command. 
 
 ### Building the application for development
 

@@ -124,35 +124,35 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
                 activeFeatures
             );
 
-            if (activeFeatures.length === 1) {
-                updateFeatureCounts(annotatedTree, activeFeatures[0]);
-            }
+            updateFeatureCounts(annotatedTree, activeFeatures[0]);
 
             setBaseTree(annotatedTree);
         }
     }, [activeFeatures, featureThresholds]);
 
     useEffect(() => {
-        updateFeatureDistributions(
-            getFeatureDistributions(tree, activeFeatures)
-        );
+        if (activeFeatures.length) {
+            updateFeatureDistributions(
+                getFeatureDistributions(tree, activeFeatures)
+            );
 
-        const activeFeatureCount = activeFeatures.length;
+            const activeFeatureCount = activeFeatures.length;
 
-        const featureAverages = extent(
-            visibleNodes
-                .descendants()
-                .map(
-                    d =>
-                        sum(
-                            Object.values(d.data.featureCount).map(
-                                v => v.scaleKey as number
-                            )
-                        ) / activeFeatureCount
-                )
-        ) as [number, number];
+            const featureAverages = extent(
+                visibleNodes
+                    .descendants()
+                    .map(
+                        d =>
+                            sum(
+                                Object.values(d.data.featureCount).map(
+                                    v => v.scaleKey as number
+                                )
+                            ) / activeFeatureCount
+                    )
+            ) as [number, number];
 
-        updateColorScale({ featureColorDomain: featureAverages });
+            updateColorScale({ featureColorDomain: featureAverages });
+        }
     }, [activeFeatures]);
 
     /* PRUNING EFFECTS */
