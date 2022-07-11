@@ -9,8 +9,12 @@ RUN wget https://bootstrap.pypa.io/get-pip.py && \
     pip install motor && \ 
     rm get-pip.py
 
-COPY ./react ./react
-COPY ./node ./
+RUN chown -R node:node /usr/app/
+
+COPY --chown=node:node ./react ./react
+COPY --chown=node:node ./node ./
+
+USER node
 
 WORKDIR /usr/app/react
 
@@ -24,9 +28,5 @@ WORKDIR /usr/app
 
 # build node app
 RUN yarn install && yarn run build
-
-RUN chown -R node:node /usr/app/
-
-USER node
 
 ENTRYPOINT ["bash", "entrypoint.sh"]
