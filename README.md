@@ -27,7 +27,7 @@ To build the images, provision the containers, and start the application, run th
 
 Example: `./start-and-load.sh --data-dir /home/data/my-matrices-and-trees --port 1234` 
 
-**WARNING:** your matrix files will be mounted into the container, extracted if necessary, and moved into a mongo database stored in a Docker volume. Depending on the size of your files, this may result in substantial disk usage. To free up space, consider regularly purging unneeded volumes, containers, and/or images using the [docker system prune](https://docs.docker.com/engine/reference/commandline/system_prune/) command. 
+**WARNING:** your matrix files will be mounted into the container, ~~extracted if necessary~~ (coming soon!), and moved into a mongo database stored in a Docker volume on your machine. Depending on the size of your files, this may result in substantial disk usage. To free up space, consider regularly purging unneeded volumes, containers, and/or images using the [docker system prune](https://docs.docker.com/engine/reference/commandline/system_prune/) command. 
 
 ### Building the application for development
 
