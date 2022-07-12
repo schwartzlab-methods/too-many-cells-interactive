@@ -2,9 +2,11 @@
 
 import asyncio
 import csv
+import gzip
 import logging
 from dataclasses import dataclass
 from os import path, walk, environ
+import re
 from shutil import copyfile
 from typing import List, Dict, Any
 import time
@@ -57,19 +59,17 @@ async def bootstrap():
 
 start = time.perf_counter()
 
-async def contains_files(files: str):
-    """ returns files if they exist """
-    pass
+
+ex = re.compile(r"^(features\.tsv|genes\.tsv|barcodes\.tsv|matrix\.mtx)(\.gz)?$")
+async def contains_matrix_files(files: List[str]):
+    """ returns true if matrix files exist in file list """
+    return len(set([f for f in files if ex.match(f)])) == 3
 
 async def check_for_files(root_dir: str):
     """ this will run contains_files and die once everything is found """
     results = FileSet()
     for root, dirs, files in walk(root_dir):
-        if (
-            "matrix.mtx" in files
-            and "barcodes.tsv" in files
-            and ("genes.tsv" in files or "features.tsv" in files)
-        ):
+        if await contains_matrix_files(files):
             results.matrix_files = True
 
         if "cluster_tree.json" in files:
@@ -86,16 +86,20 @@ async def check_for_files(root_dir: str):
     else:
         raise FileNotFoundError(results)
 
+async def open_maybe_compressed(pathname: str):
+    if pathname.endswith('.gz'):
+        return gzip.open(pathname,  mode="rt")
+    else:
+        return open(pathname,  mode="rt")
+
+
 async def parse_matrices(root_dir: str):
     for root, dirs, files in walk(root_dir):
-        if (
-            "matrix.mtx" in files
-            and "barcodes.tsv" in files
-            and ("genes.tsv" in files or "features.tsv" in files)
-        ):
-            with open(path.join(root, "matrix.mtx")) as f:
+        if await contains_matrix_files(files):
+            matrix_file = next(f for f in files if re.match(r"^matrix.mtx",f))
+            with await open_maybe_compressed(path.join(root, matrix_file)) as f:
                 logger.info(f"loading {root}")
-                feature_file = "genes.tsv" if "genes.tsv" in files else "features.tsv"
+                feature_file = next(f for f in files if re.match(r"^(features|genes).tsv",f))
                 features_path = path.join(root, feature_file)
                 feature_ids = {
                     i
@@ -106,14 +110,15 @@ async def parse_matrices(root_dir: str):
                         else "Gene Expression",
                     }
                     for i, row in enumerate(
-                        csv.reader(open(features_path, mode="rt"), delimiter="\t")
+                        csv.reader(await open_maybe_compressed(features_path), delimiter="\t")
                     )
                 }
-                barcodes_path = path.join(root, "barcodes.tsv")
+                barcodes_file = feature_file = next(f for f in files if re.match(r"^barcodes.tsv",f))
+                barcodes_path = path.join(root, barcodes_file)
                 barcodes = {
                     i + 1: row[0]
                     for i, row in enumerate(
-                        csv.reader(open(barcodes_path, mode="rt"), delimiter="\n")
+                        csv.reader(await open_maybe_compressed(barcodes_path), delimiter="\n")
                     )
                 }
                 i = 0
