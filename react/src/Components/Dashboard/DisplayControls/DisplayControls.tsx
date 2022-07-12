@@ -3,7 +3,7 @@ import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import { Input } from '../../Input';
 import Checkbox from '../../Checkbox';
-import { Column, Row } from '../../Layout';
+import { Column, ResponsiveRow, Row } from '../../Layout';
 import { Label } from '../../Typography';
 import { selectFeatureSlice } from '../../../redux/featureSlice';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
@@ -182,9 +182,11 @@ const Slider: React.FC<SliderProps> = ({ scaleType, label, max }) => {
 
     return (
         <Column>
-            <Label>{label}</Label>
+            <Row margin='0px'>
+                <Label>{label}</Label>
+            </Row>
             {scale && (
-                <Row>
+                <ResponsiveRow lgUp>
                     <input
                         type='range'
                         max={max}
@@ -194,7 +196,7 @@ const Slider: React.FC<SliderProps> = ({ scaleType, label, max }) => {
                         onChange={handleChange}
                     />
                     <Input value={scale.range[1]} onChange={handleChange} />
-                </Row>
+                </ResponsiveRow>
             )}
         </Column>
     );

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { HierarchyPointNode } from 'd3-hierarchy';
-import { createGlobalStyle, ThemeProvider } from 'styled-components';
+import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
 import { TMCNode } from '../../types';
-import { Column, Row } from '../Layout';
-import { Main } from '../Typography';
+import { Column, ResponsiveRow, Row } from '../Layout';
+import { Accent, Main, Primary } from '../Typography';
 import { calculateTreeLayout } from '../../util';
 import { useAppSelector } from '../../hooks';
 import { selectWidth } from '../../redux/displayConfigSlice';
@@ -13,13 +13,17 @@ import PruneHistory from './DisplayControls/PruneHistory';
 import DisplayControls from './DisplayControls/DisplayControls';
 import TreeComponent from './Chart/TreeComponent';
 
-const theme = {
+export const theme = {
     palette: {
-        white: '#ffffff',
-        primary: '#009FFD',
         grey: '#5e6365',
         lightGrey: '#d1d9dd',
-        secondary: '#FFA400',
+        primary: '#009FFD',
+        text: '#000000',
+        white: '#ffffff',
+    },
+    breakpoints: {
+        lg: '1200px',
+        md: '900px',
     },
 };
 
@@ -27,6 +31,10 @@ const GlobalStyle = createGlobalStyle`
     body {
         font-family: Arial;
     }
+`;
+
+const Container = styled(Column)`
+    max-width: 1800px;
 `;
 
 const Dashboard: React.FC = () => {
@@ -46,27 +54,35 @@ const Dashboard: React.FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <GlobalStyle />
-
-            <Column>
-                <Main>TooManyCellsJs</Main>
-                <Row alignItems='flex-start' margin='0px'>
-                    <Row width='50%'>
-                        <Column>
-                            <TreeControls />
-                            {baseTree && <TreeComponent baseTree={baseTree} />}
-                        </Column>
+            <Column alignItems='center'>
+                <Container>
+                    <Row>
+                        <Main>
+                            <Primary>TooManyCells</Primary>
+                            <Accent>Interactive</Accent>
+                        </Main>
                     </Row>
-                    <Row width='50%'>
-                        <Column justifyContent='flex-start'>
-                            <Row margin='0px'>
-                                <PruneHistory />
-                            </Row>
-                            <Row margin='0px' alignItems='flex-start'>
-                                <DisplayControls />
-                            </Row>
-                        </Column>
-                    </Row>
-                </Row>
+                    <ResponsiveRow mdUp alignItems='flex-start' margin='0px'>
+                        <Row>
+                            <Column>
+                                <TreeControls />
+                                {baseTree && (
+                                    <TreeComponent baseTree={baseTree} />
+                                )}
+                            </Column>
+                        </Row>
+                        <Row>
+                            <Column justifyContent='flex-start'>
+                                <Row margin='0px'>
+                                    <PruneHistory />
+                                </Row>
+                                <Row margin='0px' alignItems='flex-start'>
+                                    <DisplayControls />
+                                </Row>
+                            </Column>
+                        </Row>
+                    </ResponsiveRow>
+                </Container>
             </Column>
         </ThemeProvider>
     );

@@ -9,9 +9,17 @@ export const Bold = styled.span`
     font-weight: bold;
 `;
 
+export const Primary = styled.span`
+    color: ${props => props.theme.palette.primary};
+`;
+
+export const Accent = styled.span`
+    color: ${props => props.theme.palette.secondary};
+`;
+
 export const Main = styled.h2`
-    margin: 5px;
     font-size: 32px;
+    margin: 5px;
 `;
 
 export const Title = styled.h3`

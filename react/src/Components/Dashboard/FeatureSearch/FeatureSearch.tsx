@@ -158,54 +158,45 @@ const FeatureSearch: React.FC = () => {
                             {Object.keys(featureThresholds)
                                 .filter(k => activeFeatures.includes(k))
                                 .map(k => (
-                                    <span key={k}>
-                                        <SmartPruner
-                                            expanded={visibleFeatureControls[k]}
-                                            id={k}
-                                            label={
-                                                <Row margin='0px'>
-                                                    {k}&nbsp;
-                                                    <CloseIcon
-                                                        onClick={removeFeature.bind(
-                                                            null,
-                                                            k
-                                                        )}
-                                                        size='7px'
-                                                        strokeWidth={8}
-                                                    />
-                                                </Row>
-                                            }
-                                            madSize={
-                                                featureDistributions[k].mad
-                                            }
-                                            madValues={
-                                                featureDistributions[k]
-                                                    .madGroups
-                                            }
-                                            median={
-                                                featureDistributions[k].median
-                                            }
-                                            onExpand={() =>
-                                                setVisibleFeatureControls({
-                                                    ...visibleFeatureControls,
-                                                    [k]: !visibleFeatureControls[
+                                    <SmartPruner
+                                        key={k}
+                                        expanded={visibleFeatureControls[k]}
+                                        id={k}
+                                        label={
+                                            <Row margin='0px'>
+                                                {k}&nbsp;
+                                                <CloseIcon
+                                                    onClick={removeFeature.bind(
+                                                        null,
                                                         k
-                                                    ],
-                                                })
-                                            }
-                                            plainValues={
-                                                featureDistributions[k]
-                                                    .plainGroups
-                                            }
-                                            onSubmit={v =>
-                                                updateColorScaleThresholds({
-                                                    [k]: v,
-                                                })
-                                            }
-                                            xLabel='Theshold'
-                                            value={featureThresholds[k]}
-                                        />
-                                    </span>
+                                                    )}
+                                                    size='7px'
+                                                    strokeWidth={8}
+                                                />
+                                            </Row>
+                                        }
+                                        madSize={featureDistributions[k].mad}
+                                        madValues={
+                                            featureDistributions[k].madGroups
+                                        }
+                                        median={featureDistributions[k].median}
+                                        onExpand={() =>
+                                            setVisibleFeatureControls({
+                                                ...visibleFeatureControls,
+                                                [k]: !visibleFeatureControls[k],
+                                            })
+                                        }
+                                        plainValues={
+                                            featureDistributions[k].plainGroups
+                                        }
+                                        onSubmit={v =>
+                                            updateColorScaleThresholds({
+                                                [k]: v,
+                                            })
+                                        }
+                                        xLabel='Theshold'
+                                        value={featureThresholds[k]}
+                                    />
                                 ))}
                         </FeatureList>
                     </FeatureListContainer>
@@ -227,8 +218,6 @@ const FeatureListContainer = styled(Column)`
 `;
 
 const FeatureList = styled(Row)`
-    border: thin black solid;
-    border-radius: 3px;
     flex-wrap: wrap;
     padding: 8px;
     margin: 5px 0px;

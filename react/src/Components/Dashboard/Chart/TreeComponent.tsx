@@ -225,7 +225,7 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
     return (
         <div
             className={selector.current}
-            style={{ border: 'thin gray solid', width: '100%' }}
+            style={{ border: 'thin gray solid', width: '90%' }}
         />
     );
 };

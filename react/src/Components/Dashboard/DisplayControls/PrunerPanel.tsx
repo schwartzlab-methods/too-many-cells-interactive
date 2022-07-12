@@ -35,7 +35,8 @@ const PrunerContainer = styled.div<{ expanded: boolean }>`
         margin-bottom: 10px;
     }
     transition: 0.25s height cubic-bezier(.73,.32,.34,1.5);
-    width: 320px;
+    width: 100%;
+    max-width: 320px;
 `;
 
 const PrunerLabelContainer = styled(Row)`
