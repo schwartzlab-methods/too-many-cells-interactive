@@ -18,6 +18,7 @@ export const theme = {
         grey: '#5e6365',
         lightGrey: '#d1d9dd',
         primary: '#009FFD',
+        secondary: '#FFA400',
         text: '#000000',
         white: '#ffffff',
     },
