@@ -67,7 +67,7 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
     }, [baseTree]);
 
     const {
-        colorScale: { featureThresholds, variant: colorScaleType },
+        colorScale: { featureThresholds },
     } = useAppSelector(selectScales);
 
     const { activeFeatures, featureMaps } = useAppSelector(selectFeatureSlice);
@@ -124,7 +124,7 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
                 activeFeatures
             );
 
-            updateFeatureCounts(annotatedTree, activeFeatures[0]);
+            updateFeatureCounts(annotatedTree, activeFeatures);
 
             setBaseTree(annotatedTree);
         }
@@ -170,12 +170,10 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
     /* for now, when a prune runs, we rerun all prunes -- if performance suffers we can optimize */
     useEffect(() => {
         const prunedTree = recalculateLayout();
-        //if there is a singleton feature, we  need to recalculate counts, since we divide by child count
-        //and pruning changes that
-        const withNewFeatureCounts =
-            activeFeatures.length === 1
-                ? updateFeatureCounts(prunedTree, activeFeatures[0])
-                : prunedTree;
+        const withNewFeatureCounts = updateFeatureCounts(
+            prunedTree,
+            activeFeatures
+        );
 
         setVisibleNodes(calculateTreeLayout(withNewFeatureCounts, width));
     }, [clickPruneHistory, activePruneIndex]);
@@ -523,38 +521,45 @@ const getMadFeatureGroups = (range: number[], mad: number, median: number) => {
 /**
  *
  * @param nodes the base tree (not a pruned tree)
- * @param feature the (single) active feature
+ * @param features the active features
  * @returns HierarchyNode<TMCNode> (mutated argument)
  */
-const updateFeatureCounts = (nodes: HierarchyNode<TMCNode>, feature: string) =>
+const updateFeatureCounts = (
+    nodes: HierarchyNode<TMCNode>,
+    features: string[]
+) =>
     nodes.eachAfter(n => {
         if (n.data.items) {
-            const quantity =
-                n.data.items.reduce(
-                    (acc, curr) =>
-                        (acc += curr._barcode._featureCounts[feature] || 0),
-                    0
-                ) / n.value!;
+            features.forEach(f => {
+                const quantity =
+                    n.data.items!.reduce(
+                        (acc, curr) =>
+                            (acc += curr._barcode._featureCounts[f] || 0),
+                        0
+                    ) / n.value!;
 
-            n.data.featureCount = {
-                [feature]: {
-                    quantity,
-                    scaleKey: quantity,
-                },
-            };
+                n.data.featureCount = {
+                    [f]: {
+                        quantity,
+                        scaleKey: quantity,
+                    },
+                };
+            });
         } else {
-            //if we're dealing with a pruned tree, then quantity will already be calculated and stable
-            const quantity = n.children
-                ? n.children![0].data.featureCount[feature].quantity +
-                  n.children![1].data.featureCount[feature].quantity
-                : n.data.featureCount[feature].quantity;
+            features.forEach(f => {
+                //if we're dealing with a pruned tree, then quantity will already be calculated and stable
+                const quantity = n.children
+                    ? n.children![0].data.featureCount[f].quantity +
+                      n.children![1].data.featureCount[f].quantity
+                    : n.data.featureCount[f].quantity;
 
-            n.data.featureCount = {
-                [feature]: {
-                    quantity,
-                    scaleKey: quantity / n.descendants().length || 1,
-                },
-            };
+                n.data.featureCount = {
+                    [f]: {
+                        quantity,
+                        scaleKey: quantity / n.descendants().length || 1,
+                    },
+                };
+            });
         }
     });
 
