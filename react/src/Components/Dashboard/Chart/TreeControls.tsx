@@ -1,103 +1,11 @@
 import React from 'react';
-import { ScaleOrdinal, ScaleThreshold } from 'd3-scale';
-import { BaseType, select } from 'd3-selection';
 import styled from 'styled-components';
-import { saveAs } from 'file-saver';
 import Button from '../../Button';
 import { Column, Row } from '../../Layout';
 import { Bold, Text } from '../../Typography';
 import { useAppSelector, useColorScale } from '../../../hooks';
 import { selectTreeMetadata } from '../../../redux/displayConfigSlice';
-import { scaleIsThreshold } from '../../../types';
-
-const getSvgSrc = (
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
-) => {
-    const svg = select('svg');
-
-    const [w, h] = svg
-        .attr('viewBox')
-        .split(',')
-        .slice(2)
-        .map(d => +d);
-
-    if (!scaleIsThreshold(colorScale)) {
-        svg.select('g.container')
-            .append('g')
-            .attr('transform', `translate(${w / 2 - 150}, ${h / 2})`)
-            .attr('class', 'legend')
-            .selectAll('g.item')
-            .data(colorScale.domain())
-            .join('g')
-            .each(function (_, i) {
-                const g = select<SVGGElement | BaseType, string>(this)
-                    .attr('class', 'item')
-                    .attr('transform', `translate(0,${i * -15})`);
-
-                g.append('circle')
-                    .text(d => d)
-                    .attr('r', 4)
-                    .attr('cy', -6)
-                    .attr('fill', d => colorScale(d));
-
-                g.append('text')
-                    .text(d => d)
-                    .attr('dx', 5);
-            });
-    }
-
-    const svgNode = svg
-        .attr('xmlns', 'http://www.w3.org/2000/svg')
-        .attr('version', 1.1)
-        .node() as Element;
-
-    const inner = svgNode.parentElement!.innerHTML;
-
-    return `data:image/svg+xml;base64,\n${window.btoa(inner)}`;
-};
-
-const removeLegend = () => select('svg').select('g.legend').remove();
-
-const downloadPng = (
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
-) => {
-    try {
-        const w = (select('svg').node() as Element).clientWidth;
-        const h = (select('svg').node() as Element).clientHeight;
-
-        const src = getSvgSrc(colorScale);
-
-        const canvas = document.createElement('canvas')!;
-        const context = canvas.getContext('2d')!;
-
-        canvas.width = w;
-        canvas.height = h;
-
-        const image = new Image();
-        image.src = src;
-        image.onload = function () {
-            context.clearRect(0, 0, w, h);
-            context.drawImage(image, 0, 0, w, h);
-
-            canvas.toBlob(function (blob) {
-                saveAs(blob!, 'my-tree.png');
-            });
-        };
-    } finally {
-        removeLegend();
-    }
-};
-
-const downloadSvg = (
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
-) => {
-    try {
-        const svgSrc = getSvgSrc(colorScale);
-        saveAs(svgSrc);
-    } finally {
-        removeLegend();
-    }
-};
+import { downloadPng, downloadSvg } from '../../../downloadImage';
 
 const TreeControls: React.FC = () => {
     const { scale: colorScale } = useColorScale();
@@ -126,7 +34,7 @@ const PruneStatuses: React.FC = () => {
     return (
         <StatusContainer>
             <Text>
-                <Bold>Node count:</Bold> {nodeCount}
+                <Bold>Observation count:</Bold> {nodeCount}
             </Text>
             <Text>
                 <Bold>Leaf count:</Bold> {leafCount}

@@ -1,6 +1,5 @@
 import { HierarchyPointLink, HierarchyPointNode } from 'd3-hierarchy';
-import { ScaleLinear, ScaleOrdinal, ScaleThreshold } from 'd3-scale';
-import { isNumber } from 'lodash';
+import { ScaleOrdinal, ScaleThreshold } from 'd3-scale';
 
 export interface RoseNodeItem {
     _barcode: { unCell: string };

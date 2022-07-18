@@ -186,7 +186,7 @@ const showToolTip = (data: HierarchyPointNode<TMCNode>, e: MouseEvent) => {
                     ? formatDistance(data.data.distance)
                     : 'null',
             ],
-            ['Node Count', data.value!.toLocaleString()],
+            ['Observation Count', data.value!.toLocaleString()],
         ])
         .join('li')
         .attr('class', 'heading-value')

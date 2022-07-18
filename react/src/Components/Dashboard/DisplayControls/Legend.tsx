@@ -19,7 +19,7 @@ const Legend: React.FC = () => {
     const { scale: colorScale } = useColorScale();
 
     return (
-        <Column>
+        <LegendContainer className='legend'>
             {colorScale && !scaleIsThreshold(colorScale) && (
                 <OrdinalLegend
                     scale={colorScale as ScaleOrdinal<string, string>}
@@ -28,9 +28,13 @@ const Legend: React.FC = () => {
             {colorScale && scaleIsThreshold(colorScale) && (
                 <LinearLegend scale={colorScale} />
             )}
-        </Column>
+        </LegendContainer>
     );
 };
+
+const LegendContainer = styled(Column)`
+    margin-top: 5px;
+`;
 
 const LegendDot = styled(DotIcon)`
     cursor: pointer;

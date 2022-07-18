@@ -85,7 +85,6 @@ export const useColorScale = (): {
     }, [labelDomain, labelRange]);
 
     /* return the active scale with wrapper function to handle node-level blending/opacity logic */
-
     return useMemo(() => {
         let scale:
             | ScaleOrdinal<string, string>
