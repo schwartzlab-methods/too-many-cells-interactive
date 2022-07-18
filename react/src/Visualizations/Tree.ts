@@ -240,7 +240,6 @@ class RadialTree {
     ContextManager: ContextManager;
     distanceScale: ScaleLinear<number, number>;
     h = 1000;
-    legendSelector: string;
     linkContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
     links?: Selection<SVGGElement, HierarchyPointLink<TMCNode>, any, any>;
     nodeDragBehavior: DragBehavior<
@@ -253,15 +252,10 @@ class RadialTree {
     selector: string;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
     transitionTime = 250;
-    constructor(
-        ContextManager: ContextManager,
-        legendSelector: string,
-        selector: string
-    ) {
+    constructor(ContextManager: ContextManager, selector: string) {
         const that = this;
 
         this.selector = selector;
-        this.legendSelector = legendSelector;
 
         this.ContextManager = ContextManager;
 

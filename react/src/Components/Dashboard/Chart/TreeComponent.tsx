@@ -179,7 +179,7 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
             visibleNodes as HierarchyPointNode<TMCNode>,
             width
         );
-        const _Tree = new TreeViz(Manager, '.legend', `.${selector.current}`);
+        const _Tree = new TreeViz(Manager, `.${selector.current}`);
         setTree(_Tree);
         _Tree.render();
     }, []);
