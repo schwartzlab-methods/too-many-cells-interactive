@@ -30,7 +30,6 @@ import {
     removeClickPrune as _removeClickPrune,
     selectActivePruneStep,
 } from '../../../redux/pruneSlice';
-import styled from 'styled-components';
 
 interface TreeScales {
     branchSizeScale: ScaleLinear<number, number>;
@@ -225,7 +224,7 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
     return (
         <div
             className={selector.current}
-            style={{ border: 'thin gray solid', width: '90%' }}
+            style={{ border: 'thin gray solid', width: '100%' }}
         />
     );
 };

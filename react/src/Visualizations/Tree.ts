@@ -3,27 +3,16 @@ import { extent, sum } from 'd3-array';
 import { dispatch } from 'd3-dispatch';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import { format } from 'd3-format';
-import {
-    HierarchyNode,
-    HierarchyPointLink,
-    HierarchyPointNode,
-} from 'd3-hierarchy';
+import { HierarchyPointLink, HierarchyPointNode } from 'd3-hierarchy';
 import { ScaleLinear, scaleLinear } from 'd3-scale';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, PieArcDatum, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
-import {
-    carToRadius,
-    carToTheta,
-    formatDistance,
-    getEntries,
-    squared,
-} from '../util';
+import { carToRadius, carToTheta, formatDistance, squared } from '../util';
 import { isLinkNode, TMCNode } from '../types';
 import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
 import { ClickPruner } from '../redux/pruneSlice';
 import { ColorScaleVariant } from '../redux/displayConfigSlice';
-import _ from 'lodash';
 
 // for debugging
 (window as any).select = select;
