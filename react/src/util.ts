@@ -1,24 +1,25 @@
-import { median } from 'd3-array';
+import { extent, median } from 'd3-array';
 import { color } from 'd3-color';
 import { format } from 'd3-format';
-import { HierarchyNode, HierarchyPointNode, tree } from 'd3-hierarchy';
+import { HierarchyNode, tree } from 'd3-hierarchy';
 import { interpolate } from 'd3-interpolate';
-import { scaleOrdinal } from 'd3-scale';
 import { schemeSet1 } from 'd3-scale-chromatic';
 import { ColorScaleVariant } from './redux/displayConfigSlice';
 import {
     AllPruner,
     ClickPruner,
     ClickPruneType,
-    PruneHistory,
     PruneStep,
     ValuePruneType,
 } from './redux/pruneSlice';
-import { AttributeMap, TMCNode } from './types';
+import { AttributeMap, TMCHierarchyDataNode, TMCNode } from './types';
 
 /* typescript-friendly */
 export const getEntries = <T>(obj: T) =>
     Object.entries(obj) as [keyof T, T[keyof T]][];
+
+/* typescript-friendly */
+export const getKeys = <T>(obj: T) => Object.keys(obj) as (keyof T)[];
 
 /**
  * Calculate the distance from the origin, used to get radius value for polar coordinates
@@ -58,11 +59,18 @@ export const getMAD = (values: number[]) => {
     return median(distances);
 };
 
+/* this is mainly for exporting to backend to avoid 2 d3 dependencies */
+export const getMedian = (values: number[]) => median(values) || 0;
+
+/* this is mainly for exporting to backend to avoid 2 d3 dependencies */
+export const getExtent = (values: number[]) =>
+    (values.length ? extent(values) : [0, 0]) as [number, number];
+
 /**
  * @param minSize Minimum value for node (and therefore all children) in order to remain in the graphic
  */
 export const getSizePrunedRemainder = (
-    tree: HierarchyNode<TMCNode>,
+    tree: TMCHierarchyDataNode,
     minSize: number
 ) => {
     const pruned = pruneTreeByMinValue(tree, minSize);
@@ -75,7 +83,7 @@ export const getSizePrunedRemainder = (
  * @returns tree pruned of nodes (and siblings) that did not meet {@code minSize}
  */
 export const pruneTreeByMinValue = (
-    tree: HierarchyNode<TMCNode>,
+    tree: TMCHierarchyDataNode,
     minSize: number
 ) => {
     const newTree = tree.copy().eachBefore(d => {
@@ -88,7 +96,7 @@ export const pruneTreeByMinValue = (
     return newTree;
 };
 
-export const pruneTreeByDepth = (tree: HierarchyNode<TMCNode>, depth: number) =>
+export const pruneTreeByDepth = (tree: TMCHierarchyDataNode, depth: number) =>
     tree.copy().eachAfter(d => {
         if (d.depth > depth && d.parent) {
             d.parent!.children = undefined;
@@ -103,7 +111,7 @@ export const pruneTreeByDepth = (tree: HierarchyNode<TMCNode>, depth: number) =>
  * https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
  */
 export const pruneTreeByMinDistance = (
-    tree: HierarchyNode<TMCNode>,
+    tree: TMCHierarchyDataNode,
     distance: number
 ) =>
     tree.copy().eachBefore(d => {
@@ -119,7 +127,7 @@ export const pruneTreeByMinDistance = (
     https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L44
     */
 export const pruneTreeByMinDistanceSearch = (
-    tree: HierarchyNode<TMCNode>,
+    tree: TMCHierarchyDataNode,
     distance: number
 ) =>
     tree.copy().eachAfter(d => {
@@ -130,7 +138,7 @@ export const pruneTreeByMinDistanceSearch = (
         }
     });
 
-export const setRootNode = (tree: HierarchyNode<TMCNode>, nodeId: string) => {
+export const setRootNode = (tree: TMCHierarchyDataNode, nodeId: string) => {
     const targetNode = tree.find(n => n.data.id === nodeId)!.copy();
     // if we reinstate, stratify() will fail if
     // root node data has a parent
@@ -139,7 +147,7 @@ export const setRootNode = (tree: HierarchyNode<TMCNode>, nodeId: string) => {
     return targetNode;
 };
 
-export const collapseNode = (tree: HierarchyNode<TMCNode>, nodeId: string) =>
+export const collapseNode = (tree: TMCHierarchyDataNode, nodeId: string) =>
     tree.copy().eachAfter(n => {
         if (n.data.id === nodeId) {
             n.children = undefined;
@@ -152,7 +160,10 @@ export const collapseNode = (tree: HierarchyNode<TMCNode>, nodeId: string) =>
  * @param w width of the viewport
  * @returns Hierarchy point node (i.e., tree structure with polar position coordinates bound)
  */
-export const calculateTreeLayout = (nodes: HierarchyNode<TMCNode>, w: number) =>
+export const calculateTreeLayout = (
+    nodes: TMCHierarchyDataNode | HierarchyNode<TMCNode>,
+    w: number
+) =>
     tree<TMCNode>()
         .size([2 * Math.PI, (w / 2) * 0.9])
         .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
@@ -226,7 +237,7 @@ export const interpolateColorScale = (domain: string[]) => {
 
 export const calculateOrdinalColorScaleRangeAndDomain = (
     colorScaleKey: ColorScaleVariant,
-    nodes: HierarchyPointNode<TMCNode>
+    nodes: TMCHierarchyDataNode
 ) => {
     const domain = [
         ...new Set(
@@ -245,20 +256,25 @@ export const calculateOrdinalColorScaleRangeAndDomain = (
     return { range, domain };
 };
 
-export const rerunPrunes = (
+export type AnyPruneHistory = Partial<PruneStep> &
+    Omit<PruneStep, 'clickPruneHistory'>;
+
+export const runPrunes = (
     activeStepIdx: number,
-    pruneHistory: PruneHistory,
-    tree: HierarchyNode<TMCNode>
+    pruneHistory: AnyPruneHistory[],
+    tree: TMCHierarchyDataNode
 ) => {
     let i = 0;
     let _prunedNodes = tree;
     while (i <= activeStepIdx) {
         _prunedNodes = runPrune(pruneHistory[i].valuePruner, _prunedNodes);
 
-        _prunedNodes = runClickPrunes(
-            pruneHistory[i].clickPruneHistory,
-            _prunedNodes
-        );
+        if (pruneHistory[i].clickPruneHistory) {
+            _prunedNodes = runClickPrunes(
+                pruneHistory[i].clickPruneHistory as ClickPruner[],
+                _prunedNodes
+            );
+        }
         i++;
     }
     return _prunedNodes;
@@ -270,7 +286,7 @@ const isClickPruner = (pruner: ClickPruner | any): pruner is ClickPruner => {
 
 export const runClickPrunes = (
     clickPruneHistory: ClickPruner[],
-    tree: HierarchyNode<TMCNode>
+    tree: TMCHierarchyDataNode
 ) => {
     let i = 0;
     let _tree = tree.copy();
@@ -290,7 +306,7 @@ const pruners = {
     setRootNode: setRootNode,
 };
 
-export const runPrune = (arg: AllPruner, tree: HierarchyNode<TMCNode>) => {
+export const runPrune = (arg: AllPruner, tree: TMCHierarchyDataNode) => {
     if (!arg.key) return tree;
     if (isClickPruner(arg)) {
         return pruners[arg.key as ClickPruneType](tree, arg.value!);

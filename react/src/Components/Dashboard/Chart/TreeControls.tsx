@@ -1,14 +1,17 @@
 import React from 'react';
 import styled from 'styled-components';
+import { saveAs } from 'file-saver';
 import Button from '../../Button';
 import { Column, Row } from '../../Layout';
 import { Bold, Text } from '../../Typography';
-import { useAppSelector, useColorScale } from '../../../hooks';
-import { selectTreeMetadata } from '../../../redux/displayConfigSlice';
+import { useAppSelector, useColorScale, useExportState } from '../../../hooks';
+import { selectDisplayConfig } from '../../../redux/displayConfigSlice';
 import { downloadPng, downloadSvg } from '../../../downloadImage';
 
 const TreeControls: React.FC = () => {
     const { scale: colorScale } = useColorScale();
+
+    const state = useExportState();
 
     return (
         <Column>
@@ -19,6 +22,19 @@ const TreeControls: React.FC = () => {
                 <Button horizontal onClick={() => downloadPng(colorScale!)}>
                     Download PNG
                 </Button>
+                <Button
+                    horizontal
+                    onClick={() => {
+                        saveAs(
+                            `data:text/json,${encodeURIComponent(
+                                JSON.stringify(state)
+                            )}`,
+                            'tmc-state-export.json'
+                        );
+                    }}
+                >
+                    Export State
+                </Button>
             </Row>
             <Row margin='5px'>
                 <PruneStatuses />
@@ -28,8 +44,9 @@ const TreeControls: React.FC = () => {
 };
 
 const PruneStatuses: React.FC = () => {
-    const { leafCount, minValue, maxValue, nodeCount } =
-        useAppSelector(selectTreeMetadata);
+    const {
+        treeMetadata: { leafCount, minValue, maxValue, nodeCount },
+    } = useAppSelector(selectDisplayConfig);
 
     return (
         <StatusContainer>

@@ -1,4 +1,8 @@
-import { HierarchyPointLink, HierarchyPointNode } from 'd3-hierarchy';
+import {
+    HierarchyNode,
+    HierarchyPointLink,
+    HierarchyPointNode,
+} from 'd3-hierarchy';
 import { ScaleOrdinal, ScaleThreshold } from 'd3-scale';
 
 export interface RoseNodeItem {
@@ -50,11 +54,18 @@ export interface TMCNode extends TMCFlatNode {
 }
 
 export const isLinkNode = (
-    item: HierarchyPointLink<TMCNode> | HierarchyPointNode<TMCNode>
-): item is HierarchyPointLink<TMCNode> =>
-    !!(item as HierarchyPointLink<TMCNode>).source;
+    item: TMCHiearchyNode | TMCHiearchyLink
+): item is TMCHiearchyLink => !!(item as TMCHiearchyLink).source;
 
 export const scaleIsThreshold = (
     scale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
 ): scale is ScaleThreshold<any, any> =>
     !!(scale as ScaleThreshold<any, any>).invertExtent;
+
+/* Tree without layout calculated (i.e., no x or y values attached) */
+export type TMCHiearchyNode = HierarchyNode<TMCNode>;
+/* Tree with layout calcaulated */
+export type TMCHierarchyPointNode = HierarchyPointNode<TMCNode>;
+/* Basic tree whose use has to do with data and doesn't depend on having coordinates set */
+export type TMCHierarchyDataNode = TMCHierarchyPointNode | TMCHiearchyNode;
+export type TMCHiearchyLink = HierarchyPointLink<TMCNode>;

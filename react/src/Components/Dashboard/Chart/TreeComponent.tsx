@@ -7,97 +7,26 @@ import React, {
 } from 'react';
 import { bindActionCreators } from 'redux';
 import { extent } from 'd3-array';
-import { ScaleLinear } from 'd3-scale';
-import { HierarchyPointNode } from 'd3-hierarchy';
+import { select } from 'd3-selection';
 import { Tree as TreeViz } from '../../../Visualizations';
 import { calculateOrdinalColorScaleRangeAndDomain } from '../../../util';
 
 import {
-    Scales,
-    selectScales,
-    selectToggleableDisplayElements,
-    selectWidth,
-    ToggleableDisplayElements,
+    selectDisplayConfig,
     updateColorScale,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
+import { TreeContext } from '../../../Visualizations/Tree';
 import { useAppDispatch, useAppSelector, usePrunedTree } from '../../../hooks';
 import { useColorScale, useLinearScale } from '../../../hooks/useScale';
-import { TMCNode } from '../../../types';
+import { TMCHiearchyNode, TMCHierarchyPointNode } from '../../../types';
 import {
     addClickPrune as _addClickPrune,
-    ClickPruner,
     removeClickPrune as _removeClickPrune,
     selectActivePruneStep,
 } from '../../../redux/pruneSlice';
 
-interface TreeScales {
-    branchSizeScale: ScaleLinear<number, number>;
-    colorScaleWrapper: (node: HierarchyPointNode<TMCNode>) => string;
-    pieScale: ScaleLinear<number, number>;
-}
-
-type ColorScaleKey = Scales['colorScale']['variant'];
-
-/**
- *  Class for passing context between React and D3.
- *  @method refresh must be used by React (in a useEffect hook) to keep context up to date,
- *      b/c Tree chart depends on it for accurate displayConfig and update callbacks (i.e., click prunes)
- */
-
-export class ContextManager {
-    addClickPrune!: (pruner: ClickPruner) => void;
-    colorScaleKey!: ColorScaleKey;
-    clickPruneHistory!: ClickPruner[];
-    removeClickPrune!: (purner: ClickPruner) => void;
-    scales!: TreeScales;
-    toggleableFeatures!: ToggleableDisplayElements;
-    visibleNodes!: HierarchyPointNode<TMCNode>;
-    width!: number;
-    constructor(
-        addClickPrune: (pruner: ClickPruner) => void,
-        clickPruneHistory: ClickPruner[],
-        colorScaleKey: ColorScaleKey,
-        removeClickPrune: (pruner: ClickPruner) => void,
-        scales: TreeScales,
-        toggleableFeatures: ToggleableDisplayElements,
-        visibleNodes: HierarchyPointNode<TMCNode>,
-        width: number
-    ) {
-        this.refresh(
-            addClickPrune,
-            clickPruneHistory,
-            colorScaleKey,
-            removeClickPrune,
-            scales,
-            toggleableFeatures,
-            visibleNodes,
-            width
-        );
-    }
-
-    refresh = (
-        addClickPrune: (pruner: ClickPruner) => void,
-        clickPruneHistory: ClickPruner[],
-        colorScaleKey: ColorScaleKey,
-        removeClickPrune: (pruner: ClickPruner) => void,
-        scales: TreeScales,
-        toggleableFeatures: ToggleableDisplayElements,
-        visibleNodes: HierarchyPointNode<TMCNode>,
-        width: number
-    ) => {
-        this.addClickPrune = addClickPrune;
-        this.clickPruneHistory = clickPruneHistory;
-        this.colorScaleKey = colorScaleKey;
-        this.removeClickPrune = removeClickPrune;
-        this.scales = scales;
-        this.toggleableFeatures = toggleableFeatures;
-        this.visibleNodes = visibleNodes;
-        this.width = width;
-    };
-}
-
-const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
+const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
     baseTree,
 }) => {
     const [Tree, setTree] = useState<TreeViz>();
@@ -105,9 +34,6 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
     const branchSizeScale = useLinearScale('branchSizeScale');
     const { scaleFunction: colorScaleWrapper } = useColorScale();
     const pieScale = useLinearScale('pieScale');
-
-    const { variant: colorScaleKey } =
-        useAppSelector(selectScales)['colorScale'];
 
     const treeScales = useMemo(
         () => ({
@@ -118,13 +44,21 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
         [branchSizeScale, colorScaleWrapper, pieScale]
     );
 
-    const toggleableFeatures = useAppSelector(selectToggleableDisplayElements);
-    const width = useAppSelector(selectWidth);
+    const {
+        toggleableFeatures,
+        width,
+        scales: {
+            colorScale: { variant: colorScaleKey },
+        },
+    } = useAppSelector(selectDisplayConfig);
+
     const {
         step: { clickPruneHistory },
     } = useAppSelector(selectActivePruneStep);
 
     const dispatch = useAppDispatch();
+
+    const visibleNodes = usePrunedTree(baseTree);
 
     const { addClickPrune, removeClickPrune } = bindActionCreators(
         {
@@ -134,8 +68,34 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
         dispatch
     );
 
-    const visibleNodes = usePrunedTree(baseTree);
+    const context: TreeContext = React.useMemo(
+        () => ({
+            clickPruneCallbacks: {
+                addClickPrune,
+                removeClickPrune,
+            },
+            displayContext: {
+                clickPruneHistory,
+                colorScaleKey,
+                scales: treeScales,
+                toggleableFeatures,
+                visibleNodes,
+                width,
+            },
+        }),
+        [
+            addClickPrune,
+            clickPruneHistory,
+            colorScaleKey,
+            removeClickPrune,
+            toggleableFeatures,
+            treeScales,
+            visibleNodes,
+            width,
+        ]
+    );
 
+    /* initial scales */
     useEffect(() => {
         dispatch(
             updateLinearScale({
@@ -161,7 +121,7 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
         const { range: labelRange, domain: labelDomain } =
             calculateOrdinalColorScaleRangeAndDomain(
                 'labelCount',
-                visibleNodes as HierarchyPointNode<TMCNode>
+                visibleNodes as TMCHiearchyNode
             );
 
         dispatch(updateColorScale({ labelRange, labelDomain }));
@@ -169,17 +129,8 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
 
     /* intial render */
     useLayoutEffect(() => {
-        const Manager = new ContextManager(
-            addClickPrune,
-            clickPruneHistory,
-            colorScaleKey,
-            removeClickPrune,
-            treeScales,
-            toggleableFeatures,
-            visibleNodes as HierarchyPointNode<TMCNode>,
-            width
-        );
-        const _Tree = new TreeViz(Manager, '.legend', `.${selector.current}`);
+        const selection = select(`.${selector.current}`);
+        const _Tree = new TreeViz(context, selection);
         setTree(_Tree);
         _Tree.render();
     }, []);
@@ -187,37 +138,10 @@ const TreeComponent: React.FC<{ baseTree: HierarchyPointNode<TMCNode> }> = ({
     useEffect(() => {
         /* we have to keep this callback updated with the latest context manually b/c d3 isn't part of React */
         if (Tree) {
-            Tree.ContextManager.refresh(
-                addClickPrune,
-                clickPruneHistory,
-                colorScaleKey,
-                removeClickPrune,
-                treeScales,
-                toggleableFeatures,
-                visibleNodes as HierarchyPointNode<TMCNode>,
-                width
-            );
-        }
-    }, [
-        clickPruneHistory,
-        colorScaleKey,
-        toggleableFeatures,
-        treeScales,
-        visibleNodes,
-    ]);
-
-    /* React executes effects in order: this must follow previous so that tree has correct context when rendering */
-    useEffect(() => {
-        if (Tree) {
+            Tree.context = context;
             Tree.render();
         }
-    }, [
-        clickPruneHistory,
-        colorScaleKey,
-        toggleableFeatures,
-        treeScales,
-        visibleNodes,
-    ]);
+    }, [context]);
 
     const selector = useRef<string>('tree');
 

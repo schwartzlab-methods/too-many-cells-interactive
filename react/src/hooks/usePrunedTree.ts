@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react';
 import { bindActionCreators, compose } from 'redux';
-import { HierarchyNode } from 'd3-hierarchy';
 import { extent, max, median, min, range, sum, ticks } from 'd3-array';
-import { AttributeMap, TMCNode } from '../types';
+import { AttributeMap, TMCHiearchyNode, TMCHierarchyDataNode } from '../types';
 import {
     Distributions,
     selectActivePruneStep,
-    selectPruneHistory,
+    selectPruneSlice,
     updateDistributions as _updateDistributions,
 } from '../redux/pruneSlice';
 import {
-    selectScales,
-    selectWidth,
+    selectDisplayConfig,
     TreeMetaData,
     updateColorScale as _updateColorScale,
     updateColorScaleThresholds as _updateColorScaleThresholds,
@@ -30,14 +28,13 @@ import {
     pruneTreeByMinDistance,
     pruneTreeByMinDistanceSearch,
     pruneTreeByMinValue,
-    rerunPrunes,
+    runPrunes,
 } from '../util';
 import useAppSelector from './useAppSelector';
 import useAppDispatch from './useAppDispatch';
 
-const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
+const usePrunedTree = (tree: TMCHierarchyDataNode) => {
     const [baseTree, setBaseTree] = useState(tree);
-    const [visibleNodes, setVisibleNodes] = useState(tree);
 
     /* action creators */
 
@@ -60,15 +57,22 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
         useAppDispatch()
     );
 
+    const {
+        scales: {
+            colorScale: { featureHiLoThresholds },
+        },
+        width,
+    } = useAppSelector(selectDisplayConfig);
+
+    const [visibleNodes, setVisibleNodes] = useState(
+        calculateTreeLayout(tree, width)
+    );
+
     /* recalc layout if base changes (i.e., if nodes are re-annotated) */
     useEffect(() => {
         const newTree = recalculateLayout();
         setVisibleNodes(calculateTreeLayout(newTree, width));
     }, [baseTree]);
-
-    const {
-        colorScale: { featureThresholds },
-    } = useAppSelector(selectScales);
 
     const { activeFeatures, featureMaps } = useAppSelector(selectFeatureSlice);
 
@@ -77,9 +81,7 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
     );
     const { clickPruneHistory } = step;
 
-    const pruneHistory = useAppSelector(selectPruneHistory);
-
-    const width = useAppSelector(selectWidth);
+    const { pruneHistory } = useAppSelector(selectPruneSlice);
 
     /* FEATURE ANNOTATION EFFECTS: */
 
@@ -89,7 +91,7 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
             const treeWithCells = addFeaturesToCells(
                 baseTree.copy(),
                 featureMaps
-            );
+            ) as TMCHiearchyNode;
 
             const thresholds = {} as Record<string, number>;
 
@@ -110,17 +112,20 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
             });
 
             updateColorScaleThresholds(thresholds);
-            setBaseTree(tree);
+            setBaseTree(treeWithCells);
             clearFeatureMaps();
         }
     }, [featureMaps]);
 
     /* when thresholds change or a new feature is added, we need to re-annotate nodes */
     useEffect(() => {
-        if (activeFeatures.length || Object.keys(featureThresholds).length) {
+        if (
+            activeFeatures.length ||
+            Object.keys(featureHiLoThresholds).length
+        ) {
             const annotatedTree = updatefeatureHiLos(
                 tree.copy(),
-                featureThresholds,
+                featureHiLoThresholds,
                 activeFeatures
             );
 
@@ -128,7 +133,7 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
 
             setBaseTree(annotatedTree);
         }
-    }, [activeFeatures, featureThresholds]);
+    }, [featureHiLoThresholds]);
 
     useEffect(() => {
         if (activeFeatures.length) {
@@ -136,22 +141,12 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
                 getFeatureDistributions(tree, activeFeatures)
             );
 
-            const activeFeatureCount = activeFeatures.length;
+            const featureAverages = getFeatureGradientDomain(
+                visibleNodes,
+                activeFeatures
+            );
 
-            const featureAverages = extent(
-                visibleNodes
-                    .descendants()
-                    .map(
-                        d =>
-                            sum(
-                                Object.values(d.data.featureCount).map(
-                                    v => v.scaleKey as number
-                                )
-                            ) / activeFeatureCount
-                    )
-            ) as [number, number];
-
-            updateColorScale({ featureColorDomain: featureAverages });
+            updateColorScale({ featureGradientDomain: featureAverages });
         }
     }, [activeFeatures]);
 
@@ -183,13 +178,10 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
         updateTreeMetadata(buildTreeMetadata(visibleNodes));
         if (activeFeatures.length) {
             updateColorScale({
-                featureColorDomain: extent(
-                    visibleNodes
-                        .descendants()
-                        .map(
-                            n => n.data.featureCount[activeFeatures[0]].scaleKey
-                        ) as number[]
-                ) as [number, number],
+                featureGradientDomain: getFeatureGradientDomain(
+                    visibleNodes,
+                    activeFeatures
+                ),
             });
             updateFeatureDistributions(
                 getFeatureDistributions(visibleNodes, activeFeatures)
@@ -198,15 +190,32 @@ const usePrunedTree = (tree: HierarchyNode<TMCNode>) => {
     }, [visibleNodes]);
 
     const recalculateLayout = () =>
-        rerunPrunes(activePruneIndex, pruneHistory, tree.copy());
+        runPrunes(activePruneIndex, pruneHistory, tree.copy());
 
     return visibleNodes;
 };
 
 export default usePrunedTree;
 
-const addFeaturesToCells = (
-    tree: HierarchyNode<TMCNode>,
+export const getFeatureGradientDomain = (
+    tree: TMCHierarchyDataNode,
+    activeFeatures: string[]
+) =>
+    extent(
+        tree
+            .descendants()
+            .map(
+                d =>
+                    sum(
+                        Object.values(d.data.featureCount).map(
+                            v => v.scaleKey as number
+                        )
+                    ) / activeFeatures.length
+            )
+    ) as [number, number];
+
+export const addFeaturesToCells = (
+    tree: TMCHierarchyDataNode,
     featureMaps: Record<string, Record<string, number>>
 ) => {
     getEntries(featureMaps).map(([feature, featureMap]) => {
@@ -229,7 +238,7 @@ const addFeaturesToCells = (
     return tree;
 };
 
-const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
+const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
     depthGroups: getDepthGroups(nodes),
     distance: {
         mad: getMAD(
@@ -287,7 +296,7 @@ const buildPruneMetadata = (nodes: HierarchyNode<TMCNode>): Distributions => ({
     },
 });
 
-const buildTreeMetadata = (nodes: HierarchyNode<TMCNode>): TreeMetaData => ({
+const buildTreeMetadata = (nodes: TMCHierarchyDataNode): TreeMetaData => ({
     leafCount: nodes.leaves().length,
     maxDistance: max(nodes.descendants().map(n => n.data.distance!)) || 0,
     minDistance: min(nodes.descendants().map(n => n.data.distance!)) || 0,
@@ -299,7 +308,7 @@ const buildTreeMetadata = (nodes: HierarchyNode<TMCNode>): TreeMetaData => ({
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `depth` <= n
  */
-const getDepthGroups = (tree: HierarchyNode<TMCNode>) => {
+const getDepthGroups = (tree: TMCHierarchyDataNode) => {
     const maxSize = max(tree.descendants().map(n => n.depth))!;
 
     return range(0, maxSize + 1)
@@ -317,12 +326,9 @@ const getDepthGroups = (tree: HierarchyNode<TMCNode>) => {
  * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
  */
 const getDistanceGroups = (
-    tree: HierarchyNode<TMCNode>,
+    tree: TMCHierarchyDataNode,
     cutoffDistance: number,
-    pruneFn: (
-        tree: HierarchyNode<TMCNode>,
-        size: number
-    ) => HierarchyNode<TMCNode>,
+    pruneFn: (tree: TMCHierarchyDataNode, size: number) => TMCHierarchyDataNode,
     binCount = 50
 ) => {
     const bounds = ticks(0, cutoffDistance, binCount);
@@ -340,12 +346,9 @@ const getDistanceGroups = (
  * @returns object keyed by integer `n` whose value is count of nodes with `distance` >= median + (n * MAD) in tree
  */
 const getDistanceMadGroups = (
-    tree: HierarchyNode<TMCNode>,
+    tree: TMCHierarchyDataNode,
     cutoffDistance: number,
-    pruneFn: (
-        tree: HierarchyNode<TMCNode>,
-        size: number
-    ) => HierarchyNode<TMCNode>
+    pruneFn: (tree: TMCHierarchyDataNode, size: number) => TMCHierarchyDataNode
 ) => {
     const values = tree
         .descendants()
@@ -375,7 +378,7 @@ const getDistanceMadGroups = (
  * Find the minimum size-cutoff value needed to display at least one generation of the tree
  * This ends up being the smallest grandchild of the root
  */
-const getMaxCutoffDistance = (tree: HierarchyNode<TMCNode>) => {
+const getMaxCutoffDistance = (tree: TMCHierarchyDataNode) => {
     if (tree.children) {
         return min(
             tree.children.flatMap(d =>
@@ -389,7 +392,7 @@ const getMaxCutoffDistance = (tree: HierarchyNode<TMCNode>) => {
  * Find the minimum size-cutoff value needed to display at least one generation of the tree
  * This ends up being the smallest child of the root
  */
-const getMaxCutoffDistanceSearch = (tree: HierarchyNode<TMCNode>) => {
+const getMaxCutoffDistanceSearch = (tree: TMCHierarchyDataNode) => {
     if (tree.children) {
         return min(tree.children.map(d => d.data.distance || 0))!;
     } else return 0;
@@ -399,7 +402,7 @@ const getMaxCutoffDistanceSearch = (tree: HierarchyNode<TMCNode>) => {
  * Find the minimum size-cutoff value needed to display at least one generation of the tree
  * This ends up being the smallest child of the root
  */
-const getMaxCutoffNodeSize = (tree: HierarchyNode<TMCNode>) => {
+const getMaxCutoffNodeSize = (tree: TMCHierarchyDataNode) => {
     if (tree.children) {
         return min(tree.children.map(d => d.value || 0));
     } else return 0;
@@ -408,7 +411,7 @@ const getMaxCutoffNodeSize = (tree: HierarchyNode<TMCNode>) => {
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
  */
-const getSizeGroups = (tree: HierarchyNode<TMCNode>, binCount = 50) => {
+const getSizeGroups = (tree: TMCHierarchyDataNode, binCount = 50) => {
     const maxSize = getMaxCutoffNodeSize(tree)!;
 
     const bounds = ticks(0, maxSize, binCount);
@@ -425,7 +428,7 @@ const getSizeGroups = (tree: HierarchyNode<TMCNode>, binCount = 50) => {
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `value` >= median + (n * MAD) in tree
  */
-const getSizeMadGroups = (tree: HierarchyNode<TMCNode>) => {
+const getSizeMadGroups = (tree: TMCHierarchyDataNode) => {
     const maxSize = getMaxCutoffNodeSize(tree)!;
 
     const values = tree
@@ -454,7 +457,7 @@ const getSizeMadGroups = (tree: HierarchyNode<TMCNode>) => {
 };
 
 const getFeatureDistributions = (
-    nodes: HierarchyNode<TMCNode>,
+    nodes: TMCHierarchyDataNode,
     activeFeatures: string[]
 ) => {
     const distributions = {} as Record<string, FeatureDistribution>;
@@ -522,10 +525,10 @@ const getMadFeatureGroups = (range: number[], mad: number, median: number) => {
  *
  * @param nodes the base tree (not a pruned tree)
  * @param features the active features
- * @returns HierarchyNode<TMCNode> (mutated argument)
+ * @returns TMCHierarchyDataNode (mutated argument)
  */
-const updateFeatureCounts = (
-    nodes: HierarchyNode<TMCNode>,
+export const updateFeatureCounts = (
+    nodes: TMCHierarchyDataNode,
     features: string[]
 ) =>
     nodes.eachAfter(n => {
@@ -538,26 +541,21 @@ const updateFeatureCounts = (
                         0
                     ) / n.value!;
 
-                n.data.featureCount = {
-                    [f]: {
-                        quantity,
-                        scaleKey: quantity,
-                    },
+                n.data.featureCount[f] = {
+                    quantity,
+                    scaleKey: quantity,
                 };
             });
         } else {
             features.forEach(f => {
-                //if we're dealing with a pruned tree, then quantity will already be calculated and stable
                 const quantity = n.children
                     ? n.children![0].data.featureCount[f].quantity +
                       n.children![1].data.featureCount[f].quantity
                     : n.data.featureCount[f].quantity;
 
-                n.data.featureCount = {
-                    [f]: {
-                        quantity,
-                        scaleKey: quantity / n.descendants().length || 1,
-                    },
+                n.data.featureCount[f] = {
+                    quantity,
+                    scaleKey: quantity / n.descendants().length || 1,
                 };
             });
         }
@@ -568,10 +566,10 @@ const updateFeatureCounts = (
  * @param nodes the base tree (not a pruned tree)
  * @param thresholds the cutoff for hi/lo for each feature
  * @param activeFeatures the features currently visible
- * @returns HierarchyNode<TMCNode> (mutated argument)
+ * @returns TMCHierarchyDataNode (mutated argument)
  */
-const updatefeatureHiLos = (
-    nodes: HierarchyNode<TMCNode>,
+export const updatefeatureHiLos = (
+    nodes: TMCHierarchyDataNode,
     thresholds: Record<string, number>,
     activeFeatures: string[]
 ) =>

@@ -11,7 +11,7 @@ import {
     resetHistory as _resestHistory,
     revertToStep as _revertToStep,
     selectActivePruneStep,
-    selectPruneHistory,
+    selectPruneSlice,
 } from '../../../redux/pruneSlice';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 
@@ -29,7 +29,7 @@ const PruneHistory: React.FC = () => {
         selectActivePruneStep
     );
 
-    const pruneHistory = useAppSelector(selectPruneHistory);
+    const { pruneHistory } = useAppSelector(selectPruneSlice);
 
     /**
      * Apply current step by pushing in new context and setting it active

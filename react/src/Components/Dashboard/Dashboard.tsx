@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { HierarchyPointNode } from 'd3-hierarchy';
 import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
-import { TMCNode } from '../../types';
 import { Column, ResponsiveRow, Row } from '../Layout';
 import { Accent, Main, Primary } from '../Typography';
 import { calculateTreeLayout } from '../../util';
 import { useAppSelector } from '../../hooks';
-import { selectWidth } from '../../redux/displayConfigSlice';
+import { selectDisplayConfig } from '../../redux/displayConfigSlice';
 import { getData } from '../../prepareData';
+import { TMCHierarchyPointNode } from '../../types';
 import TreeControls from './Chart/TreeControls';
 import PruneHistory from './DisplayControls/PruneHistory';
 import DisplayControls from './DisplayControls/DisplayControls';
@@ -39,11 +38,10 @@ const Container = styled(Column)`
 `;
 
 const Dashboard: React.FC = () => {
-    const [baseTree, setBaseTree] = useState<HierarchyPointNode<TMCNode>>();
+    const [baseTree, setBaseTree] = useState<TMCHierarchyPointNode>();
 
-    const width = useAppSelector(selectWidth);
+    const { width } = useAppSelector(selectDisplayConfig);
 
-    /* Initialize tree context on first load --nope! this needs to move up a component -- this component should not render without a tree */
     useEffect(() => {
         const cb = async () => {
             const data = await getData();

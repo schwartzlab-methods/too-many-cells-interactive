@@ -10,8 +10,7 @@ import FeatureSearch from '../FeatureSearch/FeatureSearch';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     activateFeatureColorScale as _activateContinuousFeatureScale,
-    selectScales,
-    selectTreeMetadata,
+    selectDisplayConfig,
     updateColorScale as _updateColorScale,
     updateColorScaleType as _updateColorScaleType,
     updateLinearScale as _updateLinearScale,
@@ -28,11 +27,12 @@ import Legend from './Legend';
 
 const DisplayControls: React.FC = () => {
     const {
-        branchSizeScale,
-        colorScale: { variant: colorScaleType },
-    } = useAppSelector(selectScales);
-
-    const { minValue, maxValue } = useAppSelector(selectTreeMetadata);
+        scales: {
+            branchSizeScale,
+            colorScale: { variant: colorScaleType },
+        },
+        treeMetadata: { minValue, maxValue },
+    } = useAppSelector(selectDisplayConfig);
 
     const { activeFeatures } = useAppSelector(selectFeatureSlice);
 
@@ -61,11 +61,16 @@ const DisplayControls: React.FC = () => {
 
     const activateOrdinalFeatureScale = () => {
         updateColorScaleType('featureHiLos');
-        const domain = getScaleCombinations(activeFeatures.filter(Boolean));
-        const range = addGray(domain, interpolateColorScale(domain));
+        const featureHiLoDomain = getScaleCombinations(
+            activeFeatures.filter(Boolean)
+        );
+        const featureHiLoRange = addGray(
+            featureHiLoDomain,
+            interpolateColorScale(featureHiLoDomain)
+        );
         updateColorScale({
-            featureThresholdDomain: domain,
-            featureColorRange: range,
+            featureHiLoDomain,
+            featureHiLoRange,
         });
     };
 
@@ -166,7 +171,8 @@ interface SliderProps {
 }
 
 const Slider: React.FC<SliderProps> = ({ scaleType, label, max }) => {
-    const scale = useAppSelector(selectScales)[scaleType];
+    const { scales } = useAppSelector(selectDisplayConfig);
+    const scale = scales[scaleType];
 
     const dispatch = useAppDispatch();
 

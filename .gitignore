@@ -5,3 +5,4 @@ node/static/files/*
 !node/static/files/.gitkeep
 .env
 .vscode
+node/dist/**/*
