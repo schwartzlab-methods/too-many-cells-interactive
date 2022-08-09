@@ -2,8 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
-    selectScales,
-    selectToggleableDisplayElements,
+    selectDisplayConfig,
     ToggleableDisplayElements,
     toggleDisplayProperty,
 } from '../../../redux/displayConfigSlice';
@@ -13,8 +12,10 @@ import Checkbox from '../../Checkbox';
 const DisplaySettings: React.FC = () => {
     const { activeFeatures } = useAppSelector(selectFeatureSlice);
     const {
-        colorScale: { variant: colorScaleType },
-    } = useAppSelector(selectScales);
+        scales: {
+            colorScale: { variant: colorScaleType },
+        },
+    } = useAppSelector(selectDisplayConfig);
 
     return (
         <BoxList>
@@ -44,7 +45,8 @@ interface ToggleCheckboxProps {
 }
 
 const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({ propName, label }) => {
-    const isVisible = useAppSelector(selectToggleableDisplayElements)[propName];
+    const isVisible =
+        useAppSelector(selectDisplayConfig)['toggleableFeatures'][propName];
     const dipatch = useAppDispatch();
 
     return (

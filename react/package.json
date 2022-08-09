@@ -29,8 +29,6 @@
     "d3-transition": "^3.0.1",
     "d3-zoom": "^3.0.0",
     "file-saver": "^2.0.5",
-    "lodash-uuid": "^0.0.3",
-    "lodash.throttle": "^4.1.1",
     "react": "^17.0.2",
     "react-colorful": "^5.5.1",
     "react-dom": "^17.0.2",

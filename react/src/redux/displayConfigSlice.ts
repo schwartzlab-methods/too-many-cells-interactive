@@ -5,9 +5,9 @@ import type { RootState } from './store';
 export interface TreeMetaData {
     leafCount: number;
     maxDistance: number;
+    maxValue: number;
     minDistance: number;
     minValue: number;
-    maxValue: number;
     nodeCount: number;
 }
 export interface ToggleableDisplayElements {
@@ -23,14 +23,14 @@ export type ColorScaleVariant = 'labelCount' | 'featureHiLos' | 'featureCount';
 
 export interface ColorScaleConfig {
     //the base color for the gradient scale
-    featureColorBase: string;
+    featureGradientColor: string;
     //average feature counts for each node
-    featureColorDomain: number[];
+    featureGradientDomain: number[];
     //the two-color range to interpolate between
-    featureColorRange: string[];
-    featureThresholdDomain: string[];
-    featureThresholdRange: string[];
-    featureThresholds: Record<string, number>;
+    featureGradientRange: string[];
+    featureHiLoDomain: string[];
+    featureHiLoRange: string[];
+    featureHiLoThresholds: Record<string, number>;
     labelDomain: string[];
     labelRange: string[];
     variant: ColorScaleVariant;
@@ -47,9 +47,9 @@ export interface Scales {
     pieScale: LinearScaleConfig;
 }
 
-interface DisplayConfigState {
+export interface DisplayConfigState {
     scales: Scales;
-    toggleableDisplayElements: ToggleableDisplayElements;
+    toggleableFeatures: ToggleableDisplayElements;
     treeMetadata: TreeMetaData;
     width: number;
 }
@@ -60,12 +60,12 @@ const initialScales: Scales = {
         range: [0, 0],
     },
     colorScale: {
-        featureColorDomain: [],
-        featureColorRange: [],
-        featureColorBase: '#E41A1C',
-        featureThresholdDomain: [],
-        featureThresholdRange: [],
-        featureThresholds: {},
+        featureGradientDomain: [],
+        featureGradientRange: [],
+        featureGradientColor: '#E41A1C',
+        featureHiLoDomain: [],
+        featureHiLoRange: [],
+        featureHiLoThresholds: {},
         labelDomain: [],
         labelRange: [],
         variant: 'labelCount',
@@ -87,7 +87,7 @@ const initialToggleableValues: ToggleableDisplayElements = {
 
 const initialState: DisplayConfigState = {
     scales: initialScales,
-    toggleableDisplayElements: initialToggleableValues,
+    toggleableFeatures: initialToggleableValues,
     treeMetadata: {} as TreeMetaData,
     width: 1000,
 };
@@ -101,9 +101,9 @@ export const displayConfigSlice = createSlice({
     initialState,
     reducers: {
         activateFeatureColorScale: state => {
-            state.scales.colorScale.featureColorRange = [
+            state.scales.colorScale.featureGradientRange = [
                 '#D3D3D3',
-                state.scales.colorScale.featureColorBase,
+                state.scales.colorScale.featureGradientColor,
             ];
             state.scales.colorScale.variant = 'featureCount';
         },
@@ -111,8 +111,8 @@ export const displayConfigSlice = createSlice({
             state,
             { payload }: PayloadAction<keyof ToggleableDisplayElements>
         ) => {
-            state.toggleableDisplayElements[payload] =
-                !state.toggleableDisplayElements[payload];
+            state.toggleableFeatures[payload] =
+                !state.toggleableFeatures[payload];
         },
         /* this is used by legend to blindly update colors for label and hi/lo scales */
         updateActiveOrdinalColorScale: (
@@ -127,8 +127,8 @@ export const displayConfigSlice = createSlice({
                 state.scales.colorScale.labelDomain = domain;
                 state.scales.colorScale.labelRange = range;
             } else {
-                state.scales.colorScale.featureThresholdDomain = domain;
-                state.scales.colorScale.featureThresholdRange = range;
+                state.scales.colorScale.featureHiLoDomain = domain;
+                state.scales.colorScale.featureHiLoRange = range;
             }
         },
         updateColorScale: (
@@ -144,8 +144,8 @@ export const displayConfigSlice = createSlice({
             state,
             { payload }: PayloadAction<Record<string, number>>
         ) => {
-            state.scales.colorScale.featureThresholds = {
-                ...state.scales.colorScale.featureThresholds,
+            state.scales.colorScale.featureHiLoThresholds = {
+                ...state.scales.colorScale.featureHiLoThresholds,
                 ...payload,
             };
         },
@@ -186,14 +186,6 @@ export const {
     updateTreeMetadata,
 } = displayConfigSlice.actions;
 
-export const selectToggleableDisplayElements = (state: RootState) =>
-    state.displayConfig.toggleableDisplayElements;
-
-export const selectScales = (state: RootState) => state.displayConfig.scales;
-
-export const selectWidth = (state: RootState) => state.displayConfig.width;
-
-export const selectTreeMetadata = (state: RootState) =>
-    state.displayConfig.treeMetadata;
+export const selectDisplayConfig = (state: RootState) => state.displayConfig;
 
 export default displayConfigSlice.reducer;

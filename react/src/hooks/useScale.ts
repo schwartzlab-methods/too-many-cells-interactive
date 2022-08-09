@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { min, range as d3Range, sum } from 'd3-array';
 import { color, rgb } from 'd3-color';
-import { HierarchyPointNode } from 'd3-hierarchy';
 import { interpolateRgb } from 'd3-interpolate';
 import {
     ScaleLinear,
@@ -12,11 +11,11 @@ import {
     scaleThreshold,
 } from 'd3-scale';
 import {
+    ColorScaleVariant,
     Scales,
-    selectScales,
-    selectToggleableDisplayElements,
+    selectDisplayConfig,
 } from '../redux/displayConfigSlice';
-import { AttributeMap, TMCNode } from '../types';
+import { AttributeMap, TMCHiearchyNode } from '../types';
 import { selectFeatureSlice } from '../redux/featureSlice';
 import { useAppSelector } from './index';
 
@@ -31,111 +30,147 @@ type ScaleType = {
 export const useLinearScale = <K extends keyof Omit<Scales, 'colorScale'>>(
     scaleName: K
 ) => {
-    const { domain, range } = useAppSelector(selectScales)[scaleName];
+    const { domain, range } =
+        useAppSelector(selectDisplayConfig)['scales'][scaleName];
     return useMemo(() => {
-        return scaleLinear().range(range).domain(domain).clamp(true);
+        return makeLinearScale(range, domain);
     }, [domain, range]) as ScaleType[K];
 };
 
+/* Wrap for export to server-side code */
+export const makeLinearScale = (
+    range: [number, number],
+    domain: [number, number]
+) => scaleLinear().range(range).domain(domain).clamp(true);
+
+/* Wrap for export to server-side code */
+export const makeOrdinalScale = (range: string[], domain: string[]) =>
+    scaleOrdinal().range(range).domain(domain) as ScaleOrdinal<string, string>;
+
 export const useColorScale = (): {
     scale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>;
-    scaleFunction: (node: HierarchyPointNode<TMCNode>) => string;
+    scaleFunction: (node: TMCHiearchyNode) => string;
 } => {
     const {
-        featureColorBase,
-        featureColorDomain,
-        featureColorRange,
-        featureThresholdDomain,
-        featureThresholdRange,
-        labelDomain,
-        labelRange,
-        variant,
-    } = useAppSelector(selectScales)['colorScale'];
+        scales: {
+            colorScale: {
+                featureGradientColor,
+                featureGradientDomain,
+                featureGradientRange,
+                featureHiLoDomain,
+                featureHiLoRange,
+                labelDomain,
+                labelRange,
+                variant,
+            },
+        },
+        toggleableFeatures: { showFeatureOpacity },
+    } = useAppSelector(selectDisplayConfig);
 
     const { activeFeatures } = useAppSelector(selectFeatureSlice);
 
-    const { showFeatureOpacity } = useAppSelector(
-        selectToggleableDisplayElements
-    );
-
     /* define the color scales */
 
-    const featureOpacityScale = useMemo(() => {
-        return buildFeatureLinearScale(featureColorDomain);
-    }, [featureColorDomain]);
+    const featureLinearScale = useMemo(() => {
+        return buildFeatureLinearScale(featureGradientDomain);
+    }, [featureGradientDomain]);
 
     const featureColorScale = useMemo(() => {
-        const interpolator = interpolateRgb(
-            featureColorRange[0],
-            featureColorBase
+        return buildFeatureColorScale(
+            featureGradientRange[0],
+            featureGradientColor,
+            featureLinearScale
         );
-        return scaleThreshold<number, string>()
-            .domain(featureOpacityScale.domain().slice())
-            .range(featureOpacityScale.range().map(v => interpolator(v)));
-    }, [featureColorBase, featureColorRange, featureOpacityScale]);
+    }, [featureGradientColor, featureGradientRange, featureLinearScale]);
 
     const featureHiLoScale = useMemo(() => {
-        return scaleOrdinal(featureThresholdRange).domain(
-            featureThresholdDomain
-        );
-    }, [featureThresholdDomain, featureThresholdRange]);
+        return makeOrdinalScale(featureHiLoRange, featureHiLoDomain);
+    }, [featureHiLoDomain, featureHiLoRange]);
 
     const labelScale = useMemo(() => {
-        return scaleOrdinal(labelRange).domain(labelDomain);
+        return makeOrdinalScale(labelRange, labelDomain);
     }, [labelDomain, labelRange]);
 
     /* return the active scale with wrapper function to handle node-level blending/opacity logic */
-    return useMemo(() => {
-        let scale:
-            | ScaleOrdinal<string, string>
-            | ScaleThreshold<number, string>;
-        let scaleFunction: (node: HierarchyPointNode<TMCNode>) => string;
-        switch (variant) {
-            case 'labelCount':
-                scale = labelScale;
-                scaleFunction = buildLabelColorFunction(
-                    activeFeatures,
-                    labelScale,
-                    featureOpacityScale,
-                    showFeatureOpacity
-                );
-                break;
-            case 'featureCount':
-                scale = featureColorScale;
-                scaleFunction = (node: HierarchyPointNode<TMCNode>) => {
-                    const featureAverage = getFeatureAverage(
-                        node,
-                        activeFeatures
-                    );
-                    return featureColorScale(featureAverage);
-                };
-                break;
-
-            case 'featureHiLos':
-                scale = featureHiLoScale;
-                scaleFunction = (node: HierarchyPointNode<TMCNode>) => {
-                    return getLabelColor(
-                        featureHiLoScale,
-                        node,
-                        'featureHiLos'
-                    ).toString();
-                };
-                break;
-        }
-        return { scaleFunction, scale };
-    }, [
-        activeFeatures,
-        featureColorScale,
-        featureHiLoScale,
-        featureOpacityScale,
-        labelScale,
-        showFeatureOpacity,
-        variant,
-    ]);
+    return useMemo(
+        () =>
+            makeColorScale(
+                activeFeatures,
+                featureColorScale,
+                featureHiLoScale,
+                featureLinearScale,
+                labelScale,
+                showFeatureOpacity,
+                variant
+            ),
+        [
+            activeFeatures,
+            featureColorScale,
+            featureHiLoScale,
+            featureLinearScale,
+            labelScale,
+            showFeatureOpacity,
+            variant,
+        ]
+    );
 };
 
-const getFeatureAverage = (
-    node: HierarchyPointNode<TMCNode>,
+export const buildFeatureColorScale = (
+    colorStart: string,
+    colorEnd: string,
+    opacityScale: ScaleThreshold<number, number>
+) => {
+    const interpolator = interpolateRgb(colorStart, colorEnd);
+    return scaleThreshold<number, string>()
+        .domain(opacityScale.domain().slice())
+        .range(opacityScale.range().map(v => interpolator(v)));
+};
+
+export const makeColorScale = (
+    activeFeatures: string[],
+    featureColorScale: ScaleThreshold<number, string>,
+    featureHiLoScale: ScaleOrdinal<string, string>,
+    featureLinearScale: ScaleThreshold<number, number>,
+    labelScale: ScaleOrdinal<string, string>,
+    showFeatureOpacity: boolean,
+    variant: ColorScaleVariant
+) => {
+    let scale: ScaleOrdinal<string, string> | ScaleThreshold<number, string>;
+    let scaleFunction: (node: TMCHiearchyNode) => string;
+    switch (variant) {
+        case 'labelCount':
+            scale = labelScale;
+            scaleFunction = buildLabelColorFunction(
+                activeFeatures,
+                labelScale,
+                showFeatureOpacity,
+                featureLinearScale
+            );
+            break;
+        case 'featureCount':
+            scale = featureColorScale;
+            scaleFunction = (node: TMCHiearchyNode) => {
+                const featureAverage = getFeatureAverage(node, activeFeatures);
+                return featureColorScale(featureAverage);
+            };
+            break;
+
+        case 'featureHiLos':
+            scale = featureHiLoScale;
+            scaleFunction = (node: TMCHiearchyNode) => {
+                return getLabelColor(
+                    featureHiLoScale,
+                    node,
+                    'featureHiLos'
+                ).toString();
+            };
+            break;
+    }
+    return { scaleFunction, scale };
+};
+
+export const getFeatureAverage = (
+    node: TMCHiearchyNode,
     activeFeatures: string[]
 ) =>
     sum(
@@ -145,17 +180,17 @@ const getFeatureAverage = (
             .flatMap(([k, v]) => v.scaleKey as number)
     ) / activeFeatures.length;
 
-const buildLabelColorFunction = (
+export const buildLabelColorFunction = (
     activeFeatures: string[],
     labelScale: ScaleOrdinal<string, string>,
-    featureOpacityScale: ScaleThreshold<number, number, never>,
-    showFeatureOpacity: boolean
-): ((node: HierarchyPointNode<TMCNode>) => string) => {
-    return (node: HierarchyPointNode<TMCNode>) => {
+    showFeatureOpacity = false,
+    featureLinearScale?: ScaleThreshold<number, number, never>
+): ((node: TMCHiearchyNode) => string) => {
+    return (node: TMCHiearchyNode) => {
         const color = getLabelColor(labelScale, node, 'labelCount');
-        if (showFeatureOpacity) {
+        if (showFeatureOpacity && featureLinearScale) {
             const featureAverage = getFeatureAverage(node, activeFeatures);
-            color.opacity = featureOpacityScale(featureAverage);
+            color.opacity = featureLinearScale(featureAverage);
         } else color.opacity = 1;
 
         return color.toString();
@@ -182,9 +217,9 @@ const blendWeighted = (colors: BlendArg[]) => {
 
 type BlendArg = { color: string; weight: number };
 
-function getLabelColor(
+export function getLabelColor(
     scale: ScaleOrdinal<string, string>,
-    node: HierarchyPointNode<TMCNode>,
+    node: TMCHiearchyNode,
     colorSource: 'featureHiLos' | 'labelCount'
 ) {
     const blendValues = node.data[colorSource];
@@ -192,7 +227,7 @@ function getLabelColor(
     return getBlendedColor(blendValues, scale);
 }
 
-const getBlendedColor = (
+export const getBlendedColor = (
     counts: AttributeMap,
     scale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
 ) => {
@@ -210,7 +245,7 @@ const getBlendedColor = (
  * @param domain all feature values (likely the average feature count of each node in the graphic)
  * @returns threshold scale that bins input values by nearest (down-rounding) power of 2 and returns a corresponding value between 0 and 1
  */
-const buildFeatureLinearScale = (domain: number[]) => {
+export const buildFeatureLinearScale = (domain: number[]) => {
     const scaledDomain = [];
 
     const BASE = 2;

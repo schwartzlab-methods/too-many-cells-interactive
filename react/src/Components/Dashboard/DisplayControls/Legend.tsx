@@ -8,7 +8,7 @@ import { Column, Row } from '../../Layout';
 import { Input } from '../../Input';
 import { useAppDispatch, useAppSelector, useColorScale } from '../../../hooks';
 import {
-    selectScales,
+    selectDisplayConfig,
     updateActiveOrdinalColorScale,
     updateColorScale,
 } from '../../../redux/displayConfigSlice';
@@ -126,15 +126,17 @@ const LinearLegend: React.FC<{ scale: ScaleThreshold<any, any> }> = ({
     const [pickerOpen, setPickerOpen] = useState(false);
     const containerRef = useRef<any>();
     const {
-        colorScale: { featureColorBase },
-    } = useAppSelector(selectScales);
+        scales: {
+            colorScale: { featureGradientColor },
+        },
+    } = useAppSelector(selectDisplayConfig);
 
     const dispatch = useAppDispatch();
 
     useClickAway(containerRef, () => setPickerOpen(false));
 
     const updateColor = (newColor: string) => {
-        dispatch(updateColorScale({ featureColorBase: newColor }));
+        dispatch(updateColorScale({ featureGradientColor: newColor }));
     };
 
     return (
@@ -162,7 +164,7 @@ const LinearLegend: React.FC<{ scale: ScaleThreshold<any, any> }> = ({
             </LinearLegendLabel>
             <Popover ref={containerRef} open={pickerOpen}>
                 <ColorPicker
-                    color={featureColorBase}
+                    color={featureGradientColor}
                     updateColor={updateColor}
                 />
             </Popover>

@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import {
     addValuePrune as _addValuePrune,
     selectActivePruneStep,
-    selectDistributionMetadata,
+    selectPruneSlice,
     ValuePruneType,
 } from '../../../redux/pruneSlice';
 import {
@@ -67,11 +67,13 @@ const PrunerPanel: React.FC = () => {
     );
 
     const {
-        depthGroups,
-        distance: distanceMeta,
-        distanceSearch: distanceSearchMeta,
-        size: sizeMeta,
-    } = useAppSelector(selectDistributionMetadata);
+        distributionMetadata: {
+            depthGroups,
+            distance: distanceMeta,
+            distanceSearch: distanceSearchMeta,
+            size: sizeMeta,
+        },
+    } = useAppSelector(selectPruneSlice);
 
     const { step } = useAppSelector(selectActivePruneStep);
 

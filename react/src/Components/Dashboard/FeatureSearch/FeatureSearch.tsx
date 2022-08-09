@@ -26,7 +26,7 @@ import Modal from '../../Modal';
 import { Caption, Title } from '../../Typography';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
-    selectScales,
+    selectDisplayConfig,
     updateColorScale as _updateColorScale,
     updateColorScaleThresholds as _updateColorScaleThresholds,
     updateColorScaleType as _updateColorScaleType,
@@ -48,8 +48,10 @@ const FeatureSearch: React.FC = () => {
     >({});
 
     const {
-        colorScale: { featureThresholds },
-    } = useAppSelector(selectScales);
+        scales: {
+            colorScale: { featureHiLoThresholds },
+        },
+    } = useAppSelector(selectDisplayConfig);
 
     const { activeFeatures, featureDistributions } =
         useAppSelector(selectFeatureSlice);
@@ -89,8 +91,8 @@ const FeatureSearch: React.FC = () => {
         const range = addGray(domain, interpolateColorScale(domain));
 
         updateColorScale({
-            featureThresholdRange: range,
-            featureThresholdDomain: domain,
+            featureHiLoRange: range,
+            featureHiLoDomain: domain,
         });
 
         if (activeFeatures.length === 1) {
@@ -124,8 +126,8 @@ const FeatureSearch: React.FC = () => {
         const range = addGray(domain, interpolateColorScale(domain));
 
         updateColorScale({
-            featureThresholdRange: range,
-            featureThresholdDomain: domain,
+            featureHiLoRange: range,
+            featureHiLoDomain: domain,
         });
 
         setLoading(false);
@@ -155,7 +157,7 @@ const FeatureSearch: React.FC = () => {
                     <FeatureListContainer>
                         <FeatureListLabel>Selected Features</FeatureListLabel>
                         <FeatureList>
-                            {Object.keys(featureThresholds)
+                            {Object.keys(featureHiLoThresholds)
                                 .filter(k => activeFeatures.includes(k))
                                 .map(k => (
                                     <SmartPruner
@@ -195,7 +197,7 @@ const FeatureSearch: React.FC = () => {
                                             })
                                         }
                                         xLabel='Theshold'
-                                        value={featureThresholds[k]}
+                                        value={featureHiLoThresholds[k]}
                                     />
                                 ))}
                         </FeatureList>

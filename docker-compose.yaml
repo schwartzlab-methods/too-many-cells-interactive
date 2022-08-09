@@ -16,7 +16,7 @@ services:
     image: too-many-cells-js:latest
     build: ./
     volumes:
-      - ./node/src:/usr/app/src
+      - ./node:/usr/app
     depends_on:
       - mongo
     environment:

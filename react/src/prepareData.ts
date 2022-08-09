@@ -1,4 +1,3 @@
-import { uuid } from 'lodash-uuid';
 import { HierarchyNode, stratify } from 'd3-hierarchy';
 import {
     TMCNode,
@@ -19,6 +18,11 @@ export const buildTree = (node: TMCFlatNode[]) => {
         .sum(d => (d.items ? d.items.length : 0));
 };
 
+const getId = () =>
+    `${Math.random().toString(36).slice(2)}-${Date.now().toString(
+        36
+    )}-${Math.random().toString(36).slice(2)}`;
+
 /**
  * Import TMC Rosetree, flatten, and pass to d3 hierarchy for rebuilding into
  *  tree that is compatible with D3 layout
@@ -28,10 +32,20 @@ export const buildTree = (node: TMCFlatNode[]) => {
  */
 export const getData = async () => {
     const labels = await (await fetch('/files/labels.csv')).text();
-    const data = await (await fetch('/files/cluster_tree.json')).json();
+    const data = (await (
+        await fetch('/files/cluster_tree.json')
+    ).json()) as RoseNode;
+    return transformData(data, labels);
+};
 
-    const flat = flatten(data as RoseNode);
+export const transformData = (data: RoseNode, labels: string) => {
+    const flat = flatten(data);
     const tree = buildTree(flat);
+
+    return addLabels(tree, labels);
+};
+
+const addLabels = (tree: HierarchyNode<TMCNode>, labels: string) => {
     const labelMap: Record<string, string> = {};
     labels.split('\n').forEach((l: string, i: number) => {
         if (i == 0) {
@@ -68,9 +82,6 @@ export const getData = async () => {
         });
 };
 
-const isObject = (item: any): item is object =>
-    !!item && typeof item === 'object' && !Array.isArray(item);
-
 const flatten = (
     data: RoseNode,
     nodes: TMCFlatNode[] = [],
@@ -78,7 +89,7 @@ const flatten = (
 ): TMCFlatNode[] => {
     const node = {} as TMCFlatNode;
     node.parentId = parentId;
-    node.id = uuid();
+    node.id = getId();
     const meta = data.find(content => isObject(content)) as
         | RoseNodeObj
         | undefined;
@@ -107,3 +118,6 @@ const flatten = (
 
     return nodes;
 };
+
+const isObject = (item: any): item is object =>
+    !!item && typeof item === 'object' && !Array.isArray(item);

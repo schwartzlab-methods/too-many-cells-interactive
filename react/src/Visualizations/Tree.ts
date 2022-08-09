@@ -3,19 +3,23 @@ import { extent, sum } from 'd3-array';
 import { dispatch } from 'd3-dispatch';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import { format } from 'd3-format';
-import { HierarchyPointLink, HierarchyPointNode } from 'd3-hierarchy';
 import { ScaleLinear, scaleLinear } from 'd3-scale';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, PieArcDatum, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
 import { carToRadius, carToTheta, formatDistance, squared } from '../util';
-import { isLinkNode, TMCNode } from '../types';
-import { ContextManager } from '../Components/Dashboard/Chart/TreeComponent';
+import { isLinkNode, TMCHierarchyPointNode, TMCHiearchyLink } from '../types';
 import { ClickPruner } from '../redux/pruneSlice';
-import { ColorScaleVariant } from '../redux/displayConfigSlice';
+import {
+    ColorScaleVariant,
+    Scales,
+    ToggleableDisplayElements,
+} from '../redux/displayConfigSlice';
 
-// for debugging
-(window as any).select = select;
+const noop = () => null;
+
+/* re-exporting for backend */
+export const d3select = select;
 
 type Point = [number, number];
 
@@ -133,22 +137,66 @@ const arcPath = arc()({
  *              this is so we can pass each slice to the color function without angering typescript
  * @param key the field to be passed to the color scale
  */
-const makePie = (data: HierarchyPointNode<TMCNode>[], key: ColorScaleVariant) =>
-    pie<HierarchyPointNode<TMCNode>>().value(
+const makePie = (data: TMCHierarchyPointNode[], key: ColorScaleVariant) =>
+    pie<TMCHierarchyPointNode>().value(
         d => Object.values(d.data[key])[0].quantity || 1
     )(data);
 
-const getPie = (
-    d: PieArcDatum<HierarchyPointNode<TMCNode>>,
-    outerRadius: number
-) =>
+const getPie = (d: PieArcDatum<TMCHierarchyPointNode>, outerRadius: number) =>
     arc()({
         innerRadius: 0,
         outerRadius,
         ...d,
     }) || '';
 
-const showToolTip = (data: HierarchyPointNode<TMCNode>, e: MouseEvent) => {
+const attachToolTip = () => {
+    const tt = select('body')
+        .append('div')
+        .attr('class', 'tooltip')
+        .style('z-index', 999)
+        .style('position', 'absolute')
+        .style('background-color', 'black')
+        .style('font-size', '10px')
+        .style('color', 'white')
+        .style('border-radius', '5px')
+        .style('visibility', 'hidden')
+        .style('padding', '5px');
+
+    const innerContainer = tt.append('div').attr('class', 'inner');
+
+    innerContainer
+        .append('div')
+        .attr('class', 'heading')
+        .style('display', 'block')
+        .append('ul')
+        .style('list-style-type', 'none')
+        .style('margin', '0px')
+        .style('padding', '5px')
+        .style('border-bottom', 'solid white thin');
+
+    const detailContainer = innerContainer
+        .append('div')
+        .attr('class', 'detail')
+        .style('display', 'flex');
+
+    detailContainer
+        .append('div')
+        .attr('class', 'label')
+        .append('ul')
+        .style('list-style-type', 'none')
+        .style('margin', '0px')
+        .style('padding', '5px');
+
+    detailContainer
+        .append('div')
+        .attr('class', 'features')
+        .append('ul')
+        .style('list-style-type', 'none')
+        .style('margin', '0px')
+        .style('padding', '5px');
+};
+
+const showToolTip = (data: TMCHierarchyPointNode, e: MouseEvent) => {
     const cellCount = sum(
         Object.values(data.data.labelCount).map(v => v.quantity)
     );
@@ -228,44 +276,79 @@ const showToolTip = (data: HierarchyPointNode<TMCNode>, e: MouseEvent) => {
         });
 };
 
-const makeLinkId = (link: HierarchyPointLink<TMCNode>) =>
+const makeLinkId = (link: TMCHiearchyLink) =>
     `${link.source.data.nodeId}-${link.target.data.nodeId}-${!!link.source
         .children}`;
 
 const deltaBehavior = dispatch('nodeDelta', 'linkDelta');
 
+interface TreeScales {
+    branchSizeScale: ScaleLinear<number, number>;
+    colorScaleWrapper: (node: TMCHierarchyPointNode) => string;
+    pieScale: ScaleLinear<number, number>;
+}
+
+type ColorScaleKey = Scales['colorScale']['variant'];
+
+interface ClickPruneCallbacks {
+    addClickPrune: (pruner: ClickPruner) => void;
+    removeClickPrune: (pruner: ClickPruner) => void;
+}
+
+interface DisplayContext {
+    clickPruneHistory: ClickPruner[];
+    colorScaleKey: ColorScaleKey;
+    scales: TreeScales;
+    toggleableFeatures: ToggleableDisplayElements;
+    visibleNodes: TMCHierarchyPointNode;
+    width: number;
+}
+
+export interface TreeContext {
+    displayContext: DisplayContext;
+    clickPruneCallbacks?: ClickPruneCallbacks;
+}
 class RadialTree {
-    branchDragBehavior: DragBehavior<SVGPolygonElement, any, any>;
+    branchDragBehavior: DragBehavior<SVGPolygonElement, any, any> | typeof noop;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
-    ContextManager: ContextManager;
+    context: TreeContext;
     distanceScale: ScaleLinear<number, number>;
-    h = 1000;
     linkContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
-    links?: Selection<SVGGElement, HierarchyPointLink<TMCNode>, any, any>;
-    nodeDragBehavior: DragBehavior<
-        SVGGElement,
-        HierarchyPointNode<TMCNode>,
-        unknown
-    >;
-    nodes?: Selection<SVGGElement, HierarchyPointNode<TMCNode>, any, any>;
+    links?: Selection<SVGGElement, TMCHiearchyLink, any, any>;
+    nodeDragBehavior:
+        | DragBehavior<SVGGElement, TMCHierarchyPointNode, unknown>
+        | typeof noop;
+    nodes?: Selection<SVGGElement, TMCHierarchyPointNode, any, any>;
     nodeContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
-    selector: string;
     svg: Selection<SVGSVGElement, unknown, HTMLElement, any>;
+    serverSideMode = false;
     transitionTime = 250;
-    constructor(ContextManager: ContextManager, selector: string) {
+    constructor(
+        context: TreeContext,
+        selection: Selection<any, unknown, any, unknown>,
+        serverSideMode = false
+    ) {
+        if (
+            !serverSideMode &&
+            (!context.clickPruneCallbacks?.addClickPrune ||
+                !context.clickPruneCallbacks?.addClickPrune)
+        ) {
+            throw 'Prune callbacks missing!';
+        }
+
+        this.serverSideMode = serverSideMode;
+
         const that = this;
 
-        this.selector = selector;
+        this.context = context;
 
-        this.ContextManager = ContextManager;
-
-        this.svg = select(this.selector)
+        this.svg = selection
             .append('svg')
             .attr('viewBox', [
-                -this.ContextManager.width / 2,
-                -this.h / 2,
-                this.ContextManager.width,
-                this.h,
+                -this.context.displayContext.width / 2,
+                -this.context.displayContext.width / 2,
+                this.context.displayContext.width,
+                this.context.displayContext.width,
             ]);
 
         this.container = this.svg
@@ -275,7 +358,7 @@ class RadialTree {
 
         this.distanceScale = scaleLinear([0, 1]).domain(
             extent(
-                this.ContextManager.visibleNodes
+                this.context.displayContext.visibleNodes
                     .descendants()
                     .map(d => +(d.data.distance || 0))
             ) as [number, number]
@@ -291,225 +374,189 @@ class RadialTree {
             .attr('class', 'node-container')
             .attr('stroke-opacity', 0.8);
 
-        const zoomBehavior = zoom<SVGSVGElement, unknown>().on('zoom', e =>
-            this.container.attr('transform', e.transform.toString())
-        );
-
-        zoomBehavior(this.svg);
-
-        /* Append tooltip */
-        const tt = select('body')
-            .append('div')
-            .attr('class', 'tooltip')
-            .style('z-index', 999)
-            .style('position', 'absolute')
-            .style('background-color', 'black')
-            .style('font-size', '10px')
-            .style('color', 'white')
-            .style('border-radius', '5px')
-            .style('visibility', 'hidden')
-            .style('padding', '5px');
-
-        const innerContainer = tt.append('div').attr('class', 'inner');
-
-        innerContainer
-            .append('div')
-            .attr('class', 'heading')
-            .style('display', 'block')
-            .append('ul')
-            .style('list-style-type', 'none')
-            .style('margin', '0px')
-            .style('padding', '5px')
-            .style('border-bottom', 'solid white thin');
-
-        const detailContainer = innerContainer
-            .append('div')
-            .attr('class', 'detail')
-            .style('display', 'flex');
-
-        detailContainer
-            .append('div')
-            .attr('class', 'label')
-            .append('ul')
-            .style('list-style-type', 'none')
-            .style('margin', '0px')
-            .style('padding', '5px');
-
-        detailContainer
-            .append('div')
-            .attr('class', 'features')
-            .append('ul')
-            .style('list-style-type', 'none')
-            .style('margin', '0px')
-            .style('padding', '5px');
-
-        this.branchDragBehavior = drag<SVGPolygonElement, any>()
-            .on(
-                'start',
-                function (
-                    event: D3DragEvent<
-                        SVGGElement,
-                        HierarchyPointLink<TMCNode>,
-                        any
-                    >,
-                    datum: HierarchyPointLink<TMCNode>
-                ) {
-                    const targetNode = that.nodeContainer
-                        .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>(
-                            'g'
-                        )
-                        .filter(g => g.data.id === datum.target.data.id);
-
-                    /* Get ids of all descendants of the target node */
-                    const descIds = targetNode
-                        .datum()
-                        .descendants()
-                        .map(d => d.data.nodeId);
-
-                    const subtreeNodes = that.nodeContainer
-                        .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>(
-                            'g.node'
-                        )
-                        .filter(d => descIds.includes(d.data.nodeId));
-
-                    const subtreeLinks = that.linkContainer
-                        .selectAll<SVGGElement, HierarchyPointLink<TMCNode>>(
-                            'polygon'
-                        )
-                        .filter(
-                            d =>
-                                descIds.includes(d.target.data.nodeId) ||
-                                descIds.includes(d.source.data.nodeId)
-                        );
-
-                    deltaBehavior.on(
-                        'linkDelta',
-                        function (dx: number, dy: number) {
-                            subtreeNodes.attr('transform', function (d) {
-                                const { e: xt, f: yt } = select<any, any>(this)
-                                    .node()
-                                    .transform.baseVal.consolidate().matrix;
-
-                                const cart = pointRadial(d.x, d.y);
-
-                                const newX = cart[0] + dx;
-                                const newY = cart[1] + dy;
-
-                                // update the layout values while we're here (d3 gives in polar coordinates) to keep updates insync
-                                d.x = carToTheta(newX, newY);
-                                d.y = carToRadius(newX, newY);
-
-                                /* shift targetnode */
-                                return `translate(${xt + dx}, ${yt + dy})`;
-                            });
-
-                            /* redraw trapezoid link with updated coords*/
-                            subtreeLinks.attr(
-                                'points',
-                                (d: HierarchyPointLink<TMCNode>) =>
-                                    drawScaledTrapezoid(
-                                        pointRadial(d.source.x, d.source.y),
-                                        pointRadial(d.target.x, d.target.y),
-                                        that.ContextManager.scales.branchSizeScale(
-                                            d.source.value!
-                                        ),
-                                        that.ContextManager.scales.branchSizeScale(
-                                            d.target.value!
-                                        )
-                                    ).toString()
-                            );
-                        }
-                    );
+        if (!this.serverSideMode) {
+            attachToolTip();
+            const zoomBehavior = zoom<SVGSVGElement, unknown>().on(
+                'zoom',
+                e => {
+                    this.container.attr('transform', e.transform.toString());
                 }
-            )
-            .on(
-                'drag',
-                (
-                    event: D3DragEvent<
-                        SVGGElement,
-                        HierarchyPointNode<TMCNode>,
-                        any
-                    >
-                ) => {
-                    const { dx, dy } = event;
-                    deltaBehavior.apply('linkDelta', undefined, [dx, dy]);
-                }
-            )
-            .on('end', () => deltaBehavior.on('linkDelta', null));
+            );
+            zoomBehavior(this.svg);
+        }
 
-        this.nodeDragBehavior = drag<SVGGElement, any>()
-            .on('start', (_, datum: HierarchyPointNode<TMCNode>) => {
-                const parentLink = that.linkContainer
-                    .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
-                        'polygon'
-                    )
-                    .filter(g => g.target.data.id === datum.data.id);
+        this.branchDragBehavior = this.serverSideMode
+            ? noop
+            : drag<SVGPolygonElement, any>()
+                  .on(
+                      'start',
+                      function (
+                          event: D3DragEvent<SVGGElement, TMCHiearchyLink, any>,
+                          datum: TMCHiearchyLink
+                      ) {
+                          const targetNode = that.nodeContainer
+                              .selectAll<SVGGElement, TMCHierarchyPointNode>(
+                                  'g'
+                              )
+                              .filter(g => g.data.id === datum.target.data.id);
 
-                deltaBehavior.on('nodeDelta', (x: number, y: number) =>
-                    parentLink.attr('points', d =>
-                        drawScaledTrapezoid(
-                            pointRadial(d.source.x, d.source.y),
-                            [x, y],
-                            that.ContextManager.scales.branchSizeScale(
-                                d.source.value!
-                            ),
-                            that.ContextManager.scales.branchSizeScale(
-                                d.target.value!
-                            )
-                        ).toString()
-                    )
-                );
-            })
-            .on(
-                'drag',
-                function (
-                    event: D3DragEvent<
-                        SVGGElement,
-                        HierarchyPointNode<TMCNode>,
-                        any
-                    >,
-                    datum: HierarchyPointNode<TMCNode>
-                ) {
-                    const { dx, dy } = event;
-                    const { e: x, f: y } = select<any, any>(this)
-                        .node()
-                        .transform.baseVal.consolidate().matrix;
+                          /* Get ids of all descendants of the target node */
+                          const descIds = targetNode
+                              .datum()
+                              .descendants()
+                              .map(d => d.data.nodeId);
 
-                    const car = pointRadial(datum.x, datum.y);
+                          const subtreeNodes = that.nodeContainer
+                              .selectAll<SVGGElement, TMCHierarchyPointNode>(
+                                  'g.node'
+                              )
+                              .filter(d => descIds.includes(d.data.nodeId));
 
-                    datum.x = carToTheta(dx + car[0], dy + car[1]);
-                    datum.y = carToRadius(dx + car[0], dy + car[1]);
+                          const subtreeLinks = that.linkContainer
+                              .selectAll<SVGGElement, TMCHiearchyLink>(
+                                  'polygon'
+                              )
+                              .filter(
+                                  d =>
+                                      descIds.includes(d.target.data.nodeId) ||
+                                      descIds.includes(d.source.data.nodeId)
+                              );
 
-                    select(this).attr(
-                        'transform',
-                        `translate(${x + dx}, ${y + dy})`
-                    );
-                    deltaBehavior.apply('nodeDelta', undefined, [
-                        dx + x,
-                        dy + y,
-                    ]);
-                }
-            )
-            .on('end', () => deltaBehavior.on('nodeDelta', null));
+                          deltaBehavior.on(
+                              'linkDelta',
+                              function (dx: number, dy: number) {
+                                  subtreeNodes.attr('transform', function (d) {
+                                      const { e: xt, f: yt } = select<any, any>(
+                                          this
+                                      )
+                                          .node()
+                                          .transform.baseVal.consolidate().matrix;
+
+                                      const cart = pointRadial(d.x, d.y);
+
+                                      const newX = cart[0] + dx;
+                                      const newY = cart[1] + dy;
+
+                                      // update the layout values while we're here (d3 gives in polar coordinates) to keep updates insync
+                                      d.x = carToTheta(newX, newY);
+                                      d.y = carToRadius(newX, newY);
+
+                                      /* shift targetnode */
+                                      return `translate(${
+                                          xt + dx
+                                      }, ${yt + dy})`;
+                                  });
+
+                                  /* redraw trapezoid link with updated coords*/
+                                  subtreeLinks.attr(
+                                      'points',
+                                      (d: TMCHiearchyLink) =>
+                                          drawScaledTrapezoid(
+                                              pointRadial(
+                                                  d.source.x,
+                                                  d.source.y
+                                              ),
+                                              pointRadial(
+                                                  d.target.x,
+                                                  d.target.y
+                                              ),
+                                              that.context.displayContext.scales.branchSizeScale(
+                                                  d.source.value!
+                                              ),
+                                              that.context.displayContext.scales.branchSizeScale(
+                                                  d.target.value!
+                                              )
+                                          ).toString()
+                                  );
+                              }
+                          );
+                      }
+                  )
+                  .on(
+                      'drag',
+                      (
+                          event: D3DragEvent<
+                              SVGGElement,
+                              TMCHierarchyPointNode,
+                              any
+                          >
+                      ) => {
+                          const { dx, dy } = event;
+                          deltaBehavior.apply('linkDelta', undefined, [dx, dy]);
+                      }
+                  )
+                  .on('end', () => deltaBehavior.on('linkDelta', null));
+
+        this.nodeDragBehavior = serverSideMode
+            ? noop
+            : drag<SVGGElement, any>()
+                  .on('start', (_, datum: TMCHierarchyPointNode) => {
+                      const parentLink = that.linkContainer
+                          .selectAll<SVGPolygonElement, TMCHiearchyLink>(
+                              'polygon'
+                          )
+                          .filter(g => g.target.data.id === datum.data.id);
+
+                      deltaBehavior.on('nodeDelta', (x: number, y: number) =>
+                          parentLink.attr('points', d =>
+                              drawScaledTrapezoid(
+                                  pointRadial(d.source.x, d.source.y),
+                                  [x, y],
+                                  that.context.displayContext.scales.branchSizeScale(
+                                      d.source.value!
+                                  ),
+                                  that.context.displayContext.scales.branchSizeScale(
+                                      d.target.value!
+                                  )
+                              ).toString()
+                          )
+                      );
+                  })
+                  .on(
+                      'drag',
+                      function (
+                          event: D3DragEvent<
+                              SVGGElement,
+                              TMCHierarchyPointNode,
+                              any
+                          >,
+                          datum: TMCHierarchyPointNode
+                      ) {
+                          const { dx, dy } = event;
+                          const { e: x, f: y } = select<any, any>(this)
+                              .node()
+                              .transform.baseVal.consolidate().matrix;
+
+                          const car = pointRadial(datum.x, datum.y);
+
+                          datum.x = carToTheta(dx + car[0], dy + car[1]);
+                          datum.y = carToRadius(dx + car[0], dy + car[1]);
+
+                          select(this).attr(
+                              'transform',
+                              `translate(${x + dx}, ${y + dy})`
+                          );
+                          deltaBehavior.apply('nodeDelta', undefined, [
+                              dx + x,
+                              dy + y,
+                          ]);
+                      }
+                  )
+                  .on('end', () => deltaBehavior.on('nodeDelta', null));
     }
 
     /* todo: why is add label scale not triggering rerender? why do nodes rerender every time? */
     renderLinks = (
-        selection: Selection<
-            SVGGElement,
-            HierarchyPointLink<TMCNode>,
-            any,
-            unknown
-        >
+        selection: Selection<SVGGElement, TMCHiearchyLink, any, unknown>
     ) => {
         const { branchSizeScale, colorScaleWrapper } =
-            this.ContextManager.scales;
+            this.context.displayContext.scales;
 
         const gradients = this.container
-            .selectAll<BaseType, HierarchyPointLink<TMCNode>>('linearGradient')
+            .selectAll<BaseType, TMCHiearchyLink>('linearGradient')
             .data(
-                this.ContextManager.visibleNodes.links(),
-                //  (d: HierarchyPointLink<TMCNode>) =>
+                this.context.displayContext.visibleNodes.links(),
+                //  (d: TMCHiearchyLink) =>
                 //      `${makeLinkId(d)}-${this.colorScale.range().join(' ')}`
                 () => Math.random()
             )
@@ -532,9 +579,7 @@ class RadialTree {
             .attr('stop-color', d => colorScaleWrapper(d.target));
 
         return selection
-            .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
-                'polygon.link'
-            )
+            .selectAll<SVGPolygonElement, TMCHiearchyLink>('polygon.link')
             .data(
                 d => [d],
                 d => makeLinkId(d)
@@ -599,7 +644,7 @@ class RadialTree {
             )
             .attr(
                 'stroke',
-                this.ContextManager.toggleableFeatures.strokeVisible
+                this.context.displayContext.toggleableFeatures.strokeVisible
                     ? 'black'
                     : 'none'
             )
@@ -611,15 +656,15 @@ class RadialTree {
 
     registerClickHandlers = (
         selection:
-            | Selection<SVGGElement, HierarchyPointNode<TMCNode>, any, any>
-            | Selection<SVGGElement, HierarchyPointLink<TMCNode>, any, any>
+            | Selection<SVGGElement, TMCHierarchyPointNode, any, any>
+            | Selection<SVGGElement, TMCHiearchyLink, any, any>
     ) => {
         const that = this;
         selection.on('click', function (event, d) {
             let pruner: ClickPruner = {};
             const targetNodeId = isLinkNode(d)
                 ? d.target.data.id
-                : (d as HierarchyPointNode<TMCNode>).data.id;
+                : (d as TMCHierarchyPointNode).data.id;
 
             if (event.ctrlKey) {
                 pruner = {
@@ -633,7 +678,7 @@ class RadialTree {
                 };
             }
             if (pruner.key) {
-                that.ContextManager.addClickPrune(pruner);
+                that.context.clickPruneCallbacks!.addClickPrune(pruner);
             }
         });
     };
@@ -641,7 +686,8 @@ class RadialTree {
     render = () => {
         const that = this;
 
-        const { colorScaleKey, visibleNodes } = this.ContextManager;
+        const { colorScaleKey, scales, visibleNodes } =
+            this.context.displayContext;
 
         const {
             distanceVisible,
@@ -649,13 +695,12 @@ class RadialTree {
             nodeIdsVisible,
             piesVisible,
             strokeVisible,
-        } = this.ContextManager.toggleableFeatures;
+        } = this.context.displayContext.toggleableFeatures;
 
-        const { branchSizeScale, colorScaleWrapper, pieScale } =
-            this.ContextManager.scales;
+        const { branchSizeScale, colorScaleWrapper, pieScale } = scales;
 
         this.nodes = this.nodeContainer
-            .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>('g.node')
+            .selectAll<SVGGElement, TMCHierarchyPointNode>('g.node')
             .data(visibleNodes.descendants(), d => d.data.nodeId)
             .join(
                 enter => {
@@ -670,10 +715,8 @@ class RadialTree {
                             )
                             .on(
                                 'mouseover',
-                                (
-                                    e: MouseEvent,
-                                    d: HierarchyPointNode<TMCNode>
-                                ) => showToolTip(d, e)
+                                (e: MouseEvent, d: TMCHierarchyPointNode) =>
+                                    showToolTip(d, e)
                             )
                             .on('mouseout', () =>
                                 selectAll('.tooltip').style(
@@ -687,10 +730,9 @@ class RadialTree {
                             .attr('opacity', 1)
                             .each(function (d) {
                                 if (!d.children) {
-                                    select<
-                                        SVGGElement,
-                                        HierarchyPointNode<TMCNode>
-                                    >(this).call(that.nodeDragBehavior);
+                                    select<SVGGElement, TMCHierarchyPointNode>(
+                                        this
+                                    ).call(that.nodeDragBehavior);
                                 } else {
                                     select(this).on('mousedown.drag', null);
                                 }
@@ -708,10 +750,9 @@ class RadialTree {
                         )
                         .each(function (d) {
                             if (!d.children) {
-                                select<
-                                    SVGGElement,
-                                    HierarchyPointNode<TMCNode>
-                                >(this).call(that.nodeDragBehavior);
+                                select<SVGGElement, TMCHierarchyPointNode>(
+                                    this
+                                ).call(that.nodeDragBehavior);
                             } else {
                                 select(this).on('mousedown.drag', null);
                             }
@@ -723,17 +764,15 @@ class RadialTree {
         this.nodes.call(this.registerClickHandlers);
 
         this.links = this.linkContainer
-            .selectAll<SVGGElement, HierarchyPointLink<TMCNode>>('g.link')
+            .selectAll<SVGGElement, TMCHiearchyLink>('g.link')
             .data(visibleNodes.links(), d => makeLinkId(d))
             .join('g')
             .attr('class', 'link');
 
         this.links
             .call(this.renderLinks)
-            .selectAll<SVGPolygonElement, HierarchyPointLink<TMCNode>>(
-                'polygon'
-            )
-            .on('mouseover', (e: MouseEvent, d: HierarchyPointLink<TMCNode>) =>
+            .selectAll<SVGPolygonElement, TMCHiearchyLink>('polygon')
+            .on('mouseover', (e: MouseEvent, d: TMCHiearchyLink) =>
                 showToolTip(d.target, e)
             )
             .on('mouseout', () =>
@@ -745,11 +784,9 @@ class RadialTree {
 
         /* append nodes */
         this.nodes
-            .selectAll<SVGPathElement, HierarchyPointNode<TMCNode>>(
-                'circle.node'
-            )
+            .selectAll<SVGPathElement, TMCHierarchyPointNode>('circle.node')
             //need to wrap datum to prevent d3 from calling Array.from() on node and returning all descendants!
-            .data((d: HierarchyPointNode<TMCNode>) => [d])
+            .data((d: TMCHierarchyPointNode) => [d])
             .join('circle')
             .attr('class', 'node')
             .attr('stroke', strokeVisible ? 'black' : 'none')
@@ -787,11 +824,8 @@ class RadialTree {
                         d =>
                             `${
                                 Object.entries(
-                                    (
-                                        d as PieArcDatum<
-                                            HierarchyPointNode<TMCNode>
-                                        >
-                                    ).data.data[colorScaleKey]
+                                    (d as PieArcDatum<TMCHierarchyPointNode>)
+                                        .data.data[colorScaleKey]
                                 )[0][1].scaleKey
                             }-${outer.data.nodeId}-${outer.children}`
                     )
@@ -810,13 +844,15 @@ class RadialTree {
             .on('click', (event, d) => {
                 if (event.shiftKey) {
                     const collapsed =
-                        that.ContextManager.clickPruneHistory.find(
+                        that.context.displayContext.clickPruneHistory.find(
                             p =>
                                 p.key === 'setCollapsedNode' &&
                                 p.value === d.data.id
                         );
                     if (collapsed) {
-                        that.ContextManager.removeClickPrune(collapsed);
+                        that.context.clickPruneCallbacks!.removeClickPrune(
+                            collapsed
+                        );
                     }
 
                     event.stopPropagation();
@@ -825,15 +861,13 @@ class RadialTree {
 
         /* Append distance arcs --> have to go on top of everything */
         this.nodes
-            .selectAll<SVGGElement, HierarchyPointNode<TMCNode>>(
-                'path.distance'
-            )
+            .selectAll<SVGGElement, TMCHierarchyPointNode>('path.distance')
             .data(
                 d => [d],
                 d => d.data.nodeId
             )
             .join('path')
-            .on('mouseover', (e: MouseEvent, d: HierarchyPointNode<TMCNode>) =>
+            .on('mouseover', (e: MouseEvent, d: TMCHierarchyPointNode) =>
                 showToolTip(d, e)
             )
             .on('mouseout', () =>
@@ -862,9 +896,7 @@ class RadialTree {
 
         /* node ids */
         this.nodes
-            .selectAll<SVGTextElement, HierarchyPointNode<TMCNode>>(
-                'text.node-id'
-            )
+            .selectAll<SVGTextElement, TMCHierarchyPointNode>('text.node-id')
             .data(d => [d])
             .join('text')
             .style('cursor', 'pointer')

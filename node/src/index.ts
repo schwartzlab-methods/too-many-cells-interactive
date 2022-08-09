@@ -1,11 +1,10 @@
 import express from 'express';
 import mongoose from 'mongoose';
+import { Feature } from './models';
 
 const app = express();
 
 mongoose.connect(process.env.MONGO_CONNECTION_STRING!);
-
-console.log(process.env.MONGO_CONNECTION_STRING!);
 
 app.use('/', express.static('/usr/app/static'));
 
@@ -14,7 +13,7 @@ app.use('/api/features', async (req, res) => {
     if (!q) {
         res.status(422).json('no feature sent!');
     }
-    const r = await Feature.find({ feature: q }).exec();
+    const r = await Feature.find({ feature: q });
     res.json(r);
 });
 
@@ -32,12 +31,3 @@ app.use((req, res) => {
 app.listen(3000, () => {
     console.log(`The app is running!`);
 });
-
-const featureSchema = new mongoose.Schema({
-    feature: String,
-    feature_type: String,
-    id: String,
-    value: Number,
-});
-
-const Feature = mongoose.model('features', featureSchema, 'features');

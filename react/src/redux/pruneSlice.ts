@@ -142,10 +142,6 @@ export const selectActivePruneStep = (state: RootState) => ({
     index: state.pruneSlice.currentPruneStep,
 });
 
-export const selectDistributionMetadata = (state: RootState) =>
-    state.pruneSlice.distributionMetadata;
-
-export const selectPruneHistory = (state: RootState) =>
-    state.pruneSlice.pruneHistory;
+export const selectPruneSlice = (state: RootState) => state.pruneSlice;
 
 export default pruneSlice.reducer;
