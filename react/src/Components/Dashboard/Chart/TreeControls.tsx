@@ -4,22 +4,40 @@ import { saveAs } from 'file-saver';
 import Button from '../../Button';
 import { Column, Row } from '../../Layout';
 import { Bold, Text } from '../../Typography';
-import { useAppSelector, useColorScale, useExportState } from '../../../hooks';
+import {
+    useAppSelector,
+    useColorScale,
+    useDownloadNodeMeta,
+    useExportState,
+    useSelectTree,
+} from '../../../hooks';
 import { selectDisplayConfig } from '../../../redux/displayConfigSlice';
 import { downloadPng, downloadSvg } from '../../../downloadImage';
 
 const TreeControls: React.FC = () => {
     const { scale: colorScale } = useColorScale();
 
+    useDownloadNodeMeta();
+
     const state = useExportState();
+
+    const { selector } = useSelectTree();
+
+    const downloadMeta = useDownloadNodeMeta();
 
     return (
         <Column>
             <Row margin='5px'>
-                <Button horizontal onClick={() => downloadSvg(colorScale!)}>
+                <Button
+                    horizontal
+                    onClick={() => downloadSvg(colorScale!, selector)}
+                >
                     Download SVG
                 </Button>
-                <Button horizontal onClick={() => downloadPng(colorScale!)}>
+                <Button
+                    horizontal
+                    onClick={() => downloadPng(colorScale!, selector)}
+                >
                     Download PNG
                 </Button>
                 <Button
@@ -34,6 +52,12 @@ const TreeControls: React.FC = () => {
                     }}
                 >
                     Export State
+                </Button>
+                <Button horizontal onClick={() => downloadMeta('csv')}>
+                    Download csv
+                </Button>
+                <Button horizontal onClick={() => downloadMeta('json')}>
+                    Download JSON
                 </Button>
             </Row>
             <Row margin='5px'>

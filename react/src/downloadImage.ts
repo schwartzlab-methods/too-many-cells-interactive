@@ -4,20 +4,18 @@ import { BaseType, select, Selection } from 'd3-selection';
 import { scaleIsThreshold } from './types';
 
 const getSvgSrc = (
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
+    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>,
+    selector: string
 ) => {
     const fontSize = 20;
 
-    const clonedParent = (select('.tree').node() as Element).cloneNode(
+    const clonedParent = (select(selector).node() as Element).cloneNode(
         true
     ) as Element;
 
     const clonedSvg = select(clonedParent.getElementsByTagName('svg').item(0)!)
         .attr('xmlns', 'http://www.w3.org/2000/svg')
         .attr('version', 1.1);
-
-    /* reset any zoom/panning, leaving some margin for legend */
-    clonedSvg.select('g.container');
 
     //we have to manually draw/attach legend b/c display DOM legend is a react component
     attachLegend(clonedSvg, colorScale, fontSize);
@@ -116,12 +114,13 @@ export const attachLegend = (
 };
 
 export const downloadPng = (
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
+    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>,
+    selector: string
 ) => {
-    const w = (select('svg').node() as Element).clientWidth;
-    const h = (select('svg').node() as Element).clientHeight;
+    const w = (select(selector).select('svg').node() as Element).clientWidth;
+    const h = (select(selector).select('svg').node() as Element).clientHeight;
 
-    const src = getSvgSrc(colorScale);
+    const src = getSvgSrc(colorScale, selector);
 
     const canvas = document.createElement('canvas')!;
     const context = canvas.getContext('2d')!;
@@ -142,8 +141,9 @@ export const downloadPng = (
 };
 
 export const downloadSvg = (
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
+    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>,
+    selector: string
 ) => {
-    const svgSrc = getSvgSrc(colorScale);
+    const svgSrc = getSvgSrc(colorScale, selector);
     saveAs(svgSrc);
 };

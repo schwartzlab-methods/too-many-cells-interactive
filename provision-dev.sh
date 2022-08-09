@@ -15,7 +15,6 @@ fi
 #build the node image
 docker-compose build node
 
-#todo: build script, since the version on the image, like node_modules, will get wiped out too if not present on host when volume mounts
 # in general should move to a switch-like entrypoint script
 
 #install react dependencies

@@ -48,6 +48,7 @@ export interface Scales {
 }
 
 export interface DisplayConfigState {
+    containerClassName: string;
     scales: Scales;
     toggleableFeatures: ToggleableDisplayElements;
     treeMetadata: TreeMetaData;
@@ -86,6 +87,7 @@ const initialToggleableValues: ToggleableDisplayElements = {
 };
 
 const initialState: DisplayConfigState = {
+    containerClassName: `tree-${Math.random().toString(36).slice(2)}`,
     scales: initialScales,
     toggleableFeatures: initialToggleableValues,
     treeMetadata: {} as TreeMetaData,

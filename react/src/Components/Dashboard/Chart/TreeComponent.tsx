@@ -1,10 +1,4 @@
-import React, {
-    useEffect,
-    useLayoutEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { bindActionCreators } from 'redux';
 import { extent } from 'd3-array';
 import { select } from 'd3-selection';
@@ -17,7 +11,12 @@ import {
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
 import { TreeContext } from '../../../Visualizations/Tree';
-import { useAppDispatch, useAppSelector, usePrunedTree } from '../../../hooks';
+import {
+    useAppDispatch,
+    useAppSelector,
+    usePrunedTree,
+    useSelectTree,
+} from '../../../hooks';
 import { useColorScale, useLinearScale } from '../../../hooks/useScale';
 import { TMCHiearchyNode, TMCHierarchyPointNode } from '../../../types';
 import {
@@ -30,6 +29,8 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
     baseTree,
 }) => {
     const [Tree, setTree] = useState<TreeViz>();
+
+    const { className, selector } = useSelectTree();
 
     const branchSizeScale = useLinearScale('branchSizeScale');
     const { scaleFunction: colorScaleWrapper } = useColorScale();
@@ -129,7 +130,7 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
 
     /* intial render */
     useLayoutEffect(() => {
-        const selection = select(`.${selector.current}`);
+        const selection = select(selector);
         const _Tree = new TreeViz(context, selection);
         setTree(_Tree);
         _Tree.render();
@@ -143,11 +144,9 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
         }
     }, [context]);
 
-    const selector = useRef<string>('tree');
-
     return (
         <div
-            className={selector.current}
+            className={className}
             style={{ border: 'thin gray solid', width: '100%' }}
         />
     );
