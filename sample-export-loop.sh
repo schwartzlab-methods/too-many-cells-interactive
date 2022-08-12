@@ -25,7 +25,7 @@ json=$(cat <<EOF
         }
     },
     "width":500,
-    "fontSize": 30
+    "fontsize": 30
 }
 EOF
 )

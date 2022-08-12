@@ -21,7 +21,29 @@ too-many-cells-interactive is an interactive visualization tool allowing users t
 
 To run the application, first make sure that you have [Docker](https://www.docker.com/) and [Docker-Compose](https://docs.docker.com/compose/install/) on your system. Before running the software, use [too-many-cells](https://github.com/GregorySchwartz/too-many-cells) to generate (among others) a `cluster_tree.json` file. You will also need a file called `labels.csv` as described in the [too-many-cells documentation](https://gregoryschwartz.github.io/too-many-cells/#:~:text=labels.csv). Optionally, you may also include the original matrix files, which will be used to populate a database of features that can overlay your cluster tree visualization. Depending on the size of these files, it may take a while for the database to populate. The current benchmark is about 100,000 entries per second.
 
-All files, including the cluster tree, the labels, and the matrix files, should be located within a root directory on the host machine. If there are many matrix files, each set (the feature, matrix, and barcodes files) should be located within its own subdirectory. too-many-cells-interactive will scan the main directory and any subdirectories and import the files based on the naming convention. See [the import script](./node/import-matrix.py) for more details.
+All files, including the cluster tree, the labels, and the matrix files, should be located within a root directory on the host machine. If there are many matrix files, each set (the feature, matrix, and barcodes files) should be located within its own subdirectory. too-many-cells-interactive will scan the main directory and any subdirectories and import the files based on the naming convention. 
+
+Example directory structure:
+
+```
+├-my-matrices-and-trees
+|  ├-data
+|   ├-droplet
+|     ├-Bladder-10X_P4_3
+|       | barcodes.tsv
+|       | genes.tsv
+|       | matrix.mtx
+|     ├-Spleen-10X_P4_7
+|       | barcodes.tsv
+|       | genes.tsv
+|       | matrix.mtx   
+|  ├-output
+|   | labels.csv
+|   | cluster_tree.json
+
+```
+
+See [the import script](./node/import-matrix.py) for more details.
 
 To build the images, provision the containers, and start the application, run the command `./start-and-load.sh` with the `--data-dir` and `--port` arguments. `--data-dir` should indicate the root directory where the required files are located on your host machine (they will be mounted into the docker container) and `--port` should be the port on which the React app will listen on localhost. Once the build and loading process is complete, you should be able to view the app at this location in a web browser.
 
@@ -39,5 +61,5 @@ It is now possible to generate svg images outside of the browser via the command
 To build the application for development, you will first need to provision the Docker containers, compile the Typescript, and load some sample feature data. 
   - the Docker configuration for development can be found in [docker-compose.yaml](./docker-compose.yaml). By default, the React application will listen on port 1212. You can change this value by creating an `.env` file and entering your own value for `REACT_PORT`. There is a sample `.env` file called `.env.sample` that can serve as a basis.
   - there is a helper script called `provision-dev.sh` that will build the images and bring up the containers. It should be passed a path to the directory that contains your data. For example: `./provision-dev.sh --data-dir /path/to/your/data`
-  - when this script completes, the app will be accessible on port 1212 or the port specified in the `.env` file. Any changes made to the React or node files locally will cause the respective process to update.
-  - You need to perform the provisioning process just once for a given dataset. Once the features are in the database and files moved into the static files directory, you only need to run `docker-compose up` to bring up the application. If you would like to import a new set of features, the easiest way to do so is to rerun the `provision-dev.sh` script, which will drop your previous data.
+  - when this script completes, the app will be accessible on port 1212 or the port specified in the `.env` file. Any changes made to the React or Node files locally will trigger a code recompilation.
+  - You need to perform the provisioning process just once for a given dataset. Once the features are in the database and files moved into the static files directory, you only need to run `docker-compose up` to bring up the application. If you would like to import a new set of features, the easiest way to do so is to rerun the `provision-dev.sh` script, which will drop your previous data from the Mongo database.

@@ -269,7 +269,7 @@ const saveTree = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
 
     RadialTree.render();
 
-    attachLegend(selection.select('svg'), scale, 20);
+    attachLegend(selection.select('svg'), scale, state.fontsize);
 
     selection
         .select('svg')
@@ -426,7 +426,7 @@ const provideDefaults = (state: StateConfig): ChartConfig => {
     config.scales.colorScale.variant =
         config.scales.colorScale.variant ?? defaultScales.colorScale?.variant;
 
-    config.fontsize = config.fontsize ?? 20;
+    config.fontsize = state.fontsize ?? 20;
 
     return config;
 };

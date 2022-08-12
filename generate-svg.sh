@@ -69,7 +69,6 @@ done
 # mount config file only if we're not reading from stdin
 if [[ $target_config_path == '-' ]]; then
     config_volume_mount=' '
-    echo "reading stdin"
 else
     config_volume_mount="-v "${host_config_path}":"${target_config_path}":ro"
 fi

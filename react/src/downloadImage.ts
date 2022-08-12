@@ -17,7 +17,7 @@ const getSvgSrc = (
         .attr('xmlns', 'http://www.w3.org/2000/svg')
         .attr('version', 1.1);
 
-    //we have to manually draw/attach legend b/c display DOM legend is a react component
+    //we have to redraw/attach legend as SVG b/c display DOM legend is a react component
     attachLegend(clonedSvg, colorScale, fontSize);
 
     return `data:image/svg+xml;base64,\n${window.btoa(clonedParent.innerHTML)}`;
