@@ -13,7 +13,7 @@ import { AreaChartComponent } from '../../../Components';
 import Button from '../../Button';
 import { NumberInput } from '../../Input';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
-import { Column, Row } from '../../Layout';
+import { Column, Row, WidgetSection } from '../../Layout';
 import { useAppDispatch, useAppSelector, useClickAway } from '../../../hooks';
 import { Text } from '../../Typography';
 
@@ -107,68 +107,73 @@ const PrunerPanel: React.FC = () => {
         addValuePrune({ key, value });
 
     return (
-        <Column>
-            <Row>
-                <Button onClick={() => setPanelVisible(true)}>
-                    Select Pruner
-                </Button>
-            </Row>
-            {panelVisible && (
-                <PrunerSelectPanel
-                    onClose={() => setPanelVisible(false)}
-                    onSelect={(pruner: ValuePruneType | undefined) => {
-                        setSelected(pruner);
-                        setPanelVisible(false);
-                    }}
-                    pruners={pruners}
-                    selected={selected}
+        <WidgetSection
+            title='Prune the tree'
+            caption='Reduce node count by distance, size, or depth'
+        >
+            <Column>
+                <Row>
+                    <Button onClick={() => setPanelVisible(true)}>
+                        Select Pruner
+                    </Button>
+                </Row>
+                {panelVisible && (
+                    <PrunerSelectPanel
+                        onClose={() => setPanelVisible(false)}
+                        onSelect={(pruner: ValuePruneType | undefined) => {
+                            setSelected(pruner);
+                            setPanelVisible(false);
+                        }}
+                        pruners={pruners}
+                        selected={selected}
+                    />
+                )}
+                <SmartPruner
+                    expanded={selected === 'minSize'}
+                    id='minSize'
+                    label={<Text>Prune by size</Text>}
+                    madValues={sizeMeta.madGroups}
+                    madSize={sizeMeta.mad}
+                    median={sizeMeta.median}
+                    onSubmit={prune('minSize')}
+                    plainValues={sizeMeta.plainGroups}
+                    value={getPrunerVal('minSize')}
+                    xLabel='Size'
                 />
-            )}
-            <SmartPruner
-                expanded={selected === 'minSize'}
-                id='minSize'
-                label={<Text>Prune by size</Text>}
-                madValues={sizeMeta.madGroups}
-                madSize={sizeMeta.mad}
-                median={sizeMeta.median}
-                onSubmit={prune('minSize')}
-                plainValues={sizeMeta.plainGroups}
-                value={getPrunerVal('minSize')}
-                xLabel='Size'
-            />
-            <SmartPruner
-                expanded={selected === 'minDistance'}
-                id='minDistance'
-                label={<Text>Prune by distance</Text>}
-                madValues={distanceMeta.madGroups}
-                madSize={distanceMeta.mad}
-                median={distanceMeta.median}
-                onSubmit={prune('minDistance')}
-                plainValues={distanceMeta.plainGroups}
-                value={getPrunerVal('minDistance')}
-                xLabel='Distance'
-            />
-            <SmartPruner
-                expanded={selected === 'minDistanceSearch'}
-                id='minDistanceSearch'
-                label={<Text>Prune by distance (search)</Text>}
-                madValues={distanceSearchMeta.madGroups}
-                madSize={distanceSearchMeta.mad}
-                median={distanceSearchMeta.median}
-                onSubmit={prune('minDistanceSearch')}
-                plainValues={distanceSearchMeta.plainGroups}
-                value={getPrunerVal('minDistanceSearch')}
-                xLabel='Distance (Search)'
-            />
-            <Pruner
-                expanded={selected === 'minDepth'}
-                label='Prune by depth'
-                onSubmit={prune('minDepth')}
-                plainValues={depthGroups}
-                xLabel='Depth'
-                value={getPrunerVal('minDepth')}
-            />
-        </Column>
+                <SmartPruner
+                    expanded={selected === 'minDistance'}
+                    id='minDistance'
+                    label={<Text>Prune by distance</Text>}
+                    madValues={distanceMeta.madGroups}
+                    madSize={distanceMeta.mad}
+                    median={distanceMeta.median}
+                    onSubmit={prune('minDistance')}
+                    plainValues={distanceMeta.plainGroups}
+                    value={getPrunerVal('minDistance')}
+                    xLabel='Distance'
+                />
+                <SmartPruner
+                    expanded={selected === 'minDistanceSearch'}
+                    id='minDistanceSearch'
+                    label={<Text>Prune by distance (search)</Text>}
+                    madValues={distanceSearchMeta.madGroups}
+                    madSize={distanceSearchMeta.mad}
+                    median={distanceSearchMeta.median}
+                    onSubmit={prune('minDistanceSearch')}
+                    plainValues={distanceSearchMeta.plainGroups}
+                    value={getPrunerVal('minDistanceSearch')}
+                    xLabel='Distance (Search)'
+                />
+                <Pruner
+                    expanded={selected === 'minDepth'}
+                    label='Prune by depth'
+                    onSubmit={prune('minDepth')}
+                    plainValues={depthGroups}
+                    xLabel='Depth'
+                    value={getPrunerVal('minDepth')}
+                />
+            </Column>
+        </WidgetSection>
     );
 };
 
@@ -392,7 +397,9 @@ const PrunerPanelItem: React.FC<PrunerPanelItemProps> = ({
             onChange={onSelect.bind(null, name)}
             type='radio'
         />
-        <RadioLabel htmlFor={name}>{title}</RadioLabel>
+        <RadioLabel fontSize='18px' htmlFor={name}>
+            {title}
+        </RadioLabel>
     </Row>
 );
 

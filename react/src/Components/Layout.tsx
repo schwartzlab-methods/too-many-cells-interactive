@@ -2,6 +2,7 @@ import React from 'react';
 import styled, { useTheme } from 'styled-components';
 import { useMediaQuery } from '../hooks';
 import theme from '../theme';
+import { Caption, Title } from './Typography';
 
 interface ColProps {
     alignItems?: string;
@@ -66,3 +67,28 @@ export const ResponsiveRow: React.FC<ResponsiveRowProps> = ({
         <Column {...colProps}>{children}</Column>
     );
 };
+
+const WidgetSectionColumn = styled(Column)`
+    margin: 10px 0px;
+`;
+
+interface WidgetSectionProps {
+    caption?: string;
+    title: string;
+}
+
+export const WidgetSection: React.FC<WidgetSectionProps> = ({
+    caption,
+    children,
+    title,
+}) => (
+    <WidgetSectionColumn>
+        <Row>
+            <Column>
+                <Title>{title}</Title>
+                <Caption>{caption}</Caption>
+            </Column>
+        </Row>
+        <Row>{children}</Row>
+    </WidgetSectionColumn>
+);

@@ -10,6 +10,7 @@ import {
 } from '../../../redux/displayConfigSlice';
 import { selectFeatureSlice } from '../../../redux/featureSlice';
 import Checkbox from '../../Checkbox';
+import { Column, WidgetSection } from '../../Layout';
 
 const DisplaySettings: React.FC = () => {
     const { activeFeatures } = useAppSelector(selectFeatureSlice);
@@ -33,35 +34,43 @@ const DisplaySettings: React.FC = () => {
     );
 
     return (
-        <BoxList>
-            <ToggleCheckbox label='Show Strokes' propName='strokeVisible' />
-            <ToggleCheckbox label='Show Node IDs' propName='nodeIdsVisible' />
-            <ToggleCheckbox
-                label='Show Observation Counts'
-                propName='nodeCountsVisible'
-            />
-            <ToggleCheckbox label='Show Distance' propName='distanceVisible' />
-            <ToggleCheckbox label='Show Pies' propName='piesVisible' />
-            <Checkbox
-                checked={branchScalingDisabled}
-                label='Disable branch width scaling'
-                onClick={() =>
-                    updateLinearScale({
-                        branchSizeScale: {
-                            domain: branchScalingDisabled
-                                ? [minValue, maxValue]
-                                : [1, 1],
-                        },
-                    })
-                }
-            />
-            {!!activeFeatures.length && colorScaleType === 'labelCount' && (
+        <WidgetSection title='Display Toggles'>
+            <Column>
+                <ToggleCheckbox label='Show Strokes' propName='strokeVisible' />
                 <ToggleCheckbox
-                    label='Show feature opacity'
-                    propName='showFeatureOpacity'
+                    label='Show Node IDs'
+                    propName='nodeIdsVisible'
                 />
-            )}
-        </BoxList>
+                <ToggleCheckbox
+                    label='Show Observation Counts'
+                    propName='nodeCountsVisible'
+                />
+                <ToggleCheckbox
+                    label='Show Distance'
+                    propName='distanceVisible'
+                />
+                <ToggleCheckbox label='Show Pies' propName='piesVisible' />
+                <Checkbox
+                    checked={branchScalingDisabled}
+                    label='Disable branch width scaling'
+                    onClick={() =>
+                        updateLinearScale({
+                            branchSizeScale: {
+                                domain: branchScalingDisabled
+                                    ? [minValue, maxValue]
+                                    : [1, 1],
+                            },
+                        })
+                    }
+                />
+                {!!activeFeatures.length && colorScaleType === 'labelCount' && (
+                    <ToggleCheckbox
+                        label='Show feature opacity'
+                        propName='showFeatureOpacity'
+                    />
+                )}
+            </Column>
+        </WidgetSection>
     );
 };
 
@@ -85,9 +94,3 @@ const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({ propName, label }) => {
         />
     );
 };
-
-const BoxList = styled.div`
-    display: flex;
-    flex-direction: column;
-    width: 200px;
-`;

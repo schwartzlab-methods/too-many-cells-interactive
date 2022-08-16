@@ -3,7 +3,7 @@ import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import { formatDistance, formatInteger, pruneStepIsEmpty } from '../../../util';
 import Button from '../../Button';
-import { Column, Row } from '../../Layout';
+import { Column, Row, WidgetSection } from '../../Layout';
 import { Text, Title } from '../../Typography';
 import {
     addStep as _addStep,
@@ -49,26 +49,23 @@ const PruneHistory: React.FC = () => {
     const resetPruneHistory = () => resetHistory();
 
     return (
-        <Column>
-            <PruneHistoryContainer>
+        <WidgetSection title='Pruning history'>
+            <Column>
                 <Row>
-                    <HistoryTitle>Pruning History</HistoryTitle>
-                    <span>
-                        <Button
-                            horizontal
-                            disabled={getResetButtonDisabled()}
-                            onClick={() => resetPruneHistory()}
-                        >
-                            Reset
-                        </Button>
-                        <Button
-                            horizontal
-                            onClick={applyPrune}
-                            disabled={getApplyButtonDisabled()}
-                        >
-                            Apply
-                        </Button>
-                    </span>
+                    <Button
+                        horizontal
+                        onClick={applyPrune}
+                        disabled={getApplyButtonDisabled()}
+                    >
+                        Apply
+                    </Button>
+                    <Button
+                        horizontal
+                        disabled={getResetButtonDisabled()}
+                        onClick={() => resetPruneHistory()}
+                    >
+                        Reset
+                    </Button>
                 </Row>
                 <StepContainer>
                     {pruneHistory.map((history, i) => (
@@ -84,21 +81,17 @@ const PruneHistory: React.FC = () => {
                         />
                     ))}
                 </StepContainer>
-            </PruneHistoryContainer>
-        </Column>
+            </Column>
+        </WidgetSection>
     );
 };
 
 const StepContainer = styled(Row)`
     flex-wrap: wrap;
-    margin: 0px;
+    margin-top: 5px;
     border: solid 1px gray;
     border-radius: 5px;
     padding: 5px;
-}`;
-
-const HistoryTitle = styled(Title)`
-    margin: 5px;
 `;
 
 interface PruneStepProps {
@@ -165,10 +158,6 @@ const PruneStepContainer = styled.div<{ active: boolean; empty: boolean }>`
     padding: 5px;
     margin: 5px;
     border-radius: 3px;
-`;
-
-const PruneHistoryContainer = styled(Column)`
-    padding: 10px;
 `;
 
 export default PruneHistory;

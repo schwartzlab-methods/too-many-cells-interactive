@@ -12,10 +12,10 @@ export const RadioGroup = styled.div`
     margin-top: 5px;
 `;
 
-export const RadioLabel = styled(Label)`
+export const RadioLabel = styled(Label)<{ fontSize?: string }>`
     margin-left: 3px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: ${props => props.fontSize ?? '12px'};
     + input[type='radio'] {
         margin-left: 3px;
     }

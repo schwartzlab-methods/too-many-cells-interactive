@@ -1,8 +1,12 @@
 import styled from 'styled-components';
 
-export const Text = styled.p`
+interface TextProps {
+    fontSize?: string;
+}
+
+export const Text = styled.p<TextProps>`
     margin: 0px;
-    font-size: 16px;
+    font-size: ${props => props.fontSize ?? '16px'};
 `;
 
 export const Bold = styled.span`
@@ -23,6 +27,7 @@ export const Main = styled.h2`
 `;
 
 export const Title = styled.h3`
+    margin: 0px;
     font-size: 24px;
 `;
 

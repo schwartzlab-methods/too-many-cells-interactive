@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
 import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
-import { Column, Row } from '../../Layout';
+import { Column, Row, WidgetSection } from '../../Layout';
 import { Input } from '../../Input';
 import { useAppDispatch, useAppSelector, useColorScale } from '../../../hooks';
 import {
@@ -19,16 +19,18 @@ const Legend: React.FC = () => {
     const { scale: colorScale } = useColorScale();
 
     return (
-        <LegendContainer className='legend'>
-            {colorScale && !scaleIsThreshold(colorScale) && (
-                <OrdinalLegend
-                    scale={colorScale as ScaleOrdinal<string, string>}
-                />
-            )}
-            {colorScale && scaleIsThreshold(colorScale) && (
-                <LinearLegend scale={colorScale} />
-            )}
-        </LegendContainer>
+        <WidgetSection title='Legend'>
+            <LegendContainer className='legend'>
+                {colorScale && !scaleIsThreshold(colorScale) && (
+                    <OrdinalLegend
+                        scale={colorScale as ScaleOrdinal<string, string>}
+                    />
+                )}
+                {colorScale && scaleIsThreshold(colorScale) && (
+                    <LinearLegend scale={colorScale} />
+                )}
+            </LegendContainer>
+        </WidgetSection>
     );
 };
 

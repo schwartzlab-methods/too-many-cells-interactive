@@ -21,7 +21,7 @@ import {
 } from '../../../util';
 import Button from '../../Button';
 import { Input } from '../../Input';
-import { Column, Row } from '../../Layout';
+import { Column, Row, WidgetSection } from '../../Layout';
 import Modal from '../../Modal';
 import { Caption, Title } from '../../Typography';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
@@ -127,73 +127,78 @@ const FeatureSearch: React.FC = () => {
     };
 
     return (
-        <Column>
-            <Row>
-                <Column>
-                    <SearchTitle>Feature Search</SearchTitle>
-                    <Caption>Search for a feature by identifier</Caption>
-                </Column>
-                <Column>
+        <WidgetSection
+            title='Add Feature Overlay'
+            caption='Search for a feature by identifier'
+        >
+            <Column>
+                <Row justifyContent='flex-start'>
+                    <Autocomplete
+                        options={featureList || []}
+                        onSelect={getFeature}
+                    />
                     <Button onClick={clearActiveFeatures}>Reset</Button>
-                </Column>
-            </Row>
-            <Autocomplete options={featureList || []} onSelect={getFeature} />
+                </Row>
 
-            {!!activeFeatures.length && (
-                <>
-                    <FeatureListContainer>
-                        <FeatureListLabel>Selected Features</FeatureListLabel>
-                        <FeatureList>
-                            {Object.keys(featureHiLoThresholds)
-                                .filter(k => activeFeatures.includes(k))
-                                .map(k => (
-                                    <SmartPruner
-                                        key={k}
-                                        expanded={true}
-                                        id={k}
-                                        label={
-                                            <Row>
-                                                {k}&nbsp;
-                                                <CloseIcon
-                                                    onClick={removeFeature.bind(
-                                                        null,
-                                                        k
-                                                    )}
-                                                    size='7px'
-                                                    strokeWidth={8}
-                                                />
-                                            </Row>
-                                        }
-                                        madSize={featureDistributions[k].mad}
-                                        madValues={
-                                            featureDistributions[k].madGroups
-                                        }
-                                        median={featureDistributions[k].median}
-                                        plainValues={
-                                            featureDistributions[k].plainGroups
-                                        }
-                                        onSubmit={v =>
-                                            updateColorScaleThresholds({
-                                                [k]: v,
-                                            })
-                                        }
-                                        xLabel='Theshold'
-                                        value={featureHiLoThresholds[k]}
-                                    />
-                                ))}
-                        </FeatureList>
-                    </FeatureListContainer>
-                </>
-            )}
-
+                {!!activeFeatures.length && (
+                    <>
+                        <FeatureListContainer>
+                            <FeatureListLabel>
+                                Selected Features
+                            </FeatureListLabel>
+                            <FeatureList>
+                                {Object.keys(featureHiLoThresholds)
+                                    .filter(k => activeFeatures.includes(k))
+                                    .map(k => (
+                                        <SmartPruner
+                                            key={k}
+                                            expanded={true}
+                                            id={k}
+                                            label={
+                                                <Row>
+                                                    {k}&nbsp;
+                                                    <CloseIcon
+                                                        onClick={removeFeature.bind(
+                                                            null,
+                                                            k
+                                                        )}
+                                                        size='7px'
+                                                        strokeWidth={8}
+                                                    />
+                                                </Row>
+                                            }
+                                            madSize={
+                                                featureDistributions[k].mad
+                                            }
+                                            madValues={
+                                                featureDistributions[k]
+                                                    .madGroups
+                                            }
+                                            median={
+                                                featureDistributions[k].median
+                                            }
+                                            plainValues={
+                                                featureDistributions[k]
+                                                    .plainGroups
+                                            }
+                                            onSubmit={v =>
+                                                updateColorScaleThresholds({
+                                                    [k]: v,
+                                                })
+                                            }
+                                            xLabel='Theshold'
+                                            value={featureHiLoThresholds[k]}
+                                        />
+                                    ))}
+                            </FeatureList>
+                        </FeatureListContainer>
+                    </>
+                )}
+            </Column>
             <Modal open={loading} message='Loading...' />
-        </Column>
+        </WidgetSection>
     );
 };
-
-const SearchTitle = styled(Title)`
-    margin: 0px;
-`;
 
 const FeatureListContainer = styled(Column)`
     position: relative;
@@ -309,34 +314,32 @@ const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
     };
 
     return (
-        <Row alignItems='center' style={{ marginTop: '5px' }}>
-            <AutocompleteContainer width='auto' ref={containerRef}>
-                <AutocompleteInput
-                    ref={inputRef}
-                    handleKeyPress={handleKeyPress}
-                    onChange={e => {
-                        setSearch(e.currentTarget.value);
-                        setChoicesVisible(true);
-                    }}
-                    onClick={() => setChoicesVisible(true)}
-                    value={search}
-                />
-                <AutocompleteChoicesContainer _width={parentWidth.current}>
-                    {choicesVisible &&
-                        choices
-                            .slice(minVisibleIdx, minVisibleIdx + maxVisible)
-                            .map((c, i) => (
-                                <Choice
-                                    onClick={() => select(c)}
-                                    selected={getIsSelected(i)}
-                                    key={c}
-                                >
-                                    {c}
-                                </Choice>
-                            ))}
-                </AutocompleteChoicesContainer>
-            </AutocompleteContainer>
-        </Row>
+        <AutocompleteContainer width='auto' ref={containerRef}>
+            <AutocompleteInput
+                ref={inputRef}
+                handleKeyPress={handleKeyPress}
+                onChange={e => {
+                    setSearch(e.currentTarget.value);
+                    setChoicesVisible(true);
+                }}
+                onClick={() => setChoicesVisible(true)}
+                value={search}
+            />
+            <AutocompleteChoicesContainer _width={parentWidth.current}>
+                {choicesVisible &&
+                    choices
+                        .slice(minVisibleIdx, minVisibleIdx + maxVisible)
+                        .map((c, i) => (
+                            <Choice
+                                onClick={() => select(c)}
+                                selected={getIsSelected(i)}
+                                key={c}
+                            >
+                                {c}
+                            </Choice>
+                        ))}
+            </AutocompleteChoicesContainer>
+        </AutocompleteContainer>
     );
 };
 
