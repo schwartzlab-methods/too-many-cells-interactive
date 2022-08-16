@@ -799,7 +799,7 @@ class RadialTree {
 
         this.nodes
             .selectAll('g.pie')
-            .data(d => [d])
+            .data(d => (piesVisible ? [d] : []))
             .join('g')
             .attr('class', 'pie')
             .style('cursor', 'pointer')
@@ -840,7 +840,6 @@ class RadialTree {
                         return !outer.children ? colorScaleWrapper(d.data) : '';
                     });
             })
-            .style('visibility', piesVisible ? 'visible' : 'hidden')
             .on('click', (event, d) => {
                 if (event.shiftKey) {
                     const collapsed =
@@ -863,7 +862,7 @@ class RadialTree {
         this.nodes
             .selectAll<SVGGElement, TMCHierarchyPointNode>('path.distance')
             .data(
-                d => [d],
+                d => (distanceVisible ? [d] : []),
                 d => d.data.nodeId
             )
             .join('path')
@@ -874,7 +873,6 @@ class RadialTree {
                 selectAll('.tooltip').style('visibility', 'hidden')
             )
             .attr('class', 'distance')
-            .style('visibility', distanceVisible ? 'visible' : 'hidden')
             .attr('d', d => (d.children ? arcPath : null))
             .transition()
             .delay(this.transitionTime)
@@ -886,24 +884,22 @@ class RadialTree {
 
         this.nodes
             .selectAll('text.node-count')
-            .data(d => [d])
+            .data(d => (nodeCountsVisible ? [d] : []))
             .join('text')
             .style('cursor', 'pointer')
             .attr('class', 'node-count')
             .text(d => d.value!.toLocaleString())
-            .attr('text-anchor', 'middle')
-            .style('visibility', nodeCountsVisible ? 'visible' : 'hidden');
+            .attr('text-anchor', 'middle');
 
         /* node ids */
         this.nodes
             .selectAll<SVGTextElement, TMCHierarchyPointNode>('text.node-id')
-            .data(d => [d])
+            .data(d => (nodeIdsVisible ? [d] : []))
             .join('text')
             .style('cursor', 'pointer')
             .attr('class', 'node-id')
             .text(d => d.data.nodeId)
-            .attr('text-anchor', 'middle')
-            .style('visibility', nodeIdsVisible ? 'visible' : 'hidden');
+            .attr('text-anchor', 'middle');
     };
 }
 
