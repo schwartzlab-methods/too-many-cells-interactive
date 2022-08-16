@@ -106,7 +106,7 @@ async def parse_matrices(root_dir: str):
                     + 1: {
                         "feature": row[0],
                         "feature_type": row[1]
-                        if row[1] and row[1] != row[0]
+                        if len(row) > 1 and row[1] != row[0]
                         else "Gene Expression",
                     }
                     for i, row in enumerate(
@@ -132,7 +132,7 @@ async def parse_matrices(root_dir: str):
                             "feature": feature_ids[int(feature_idx)]["feature"],
                             "feature_type": feature_ids[int(feature_idx)]["feature_type"],
                             "id": barcodes[int(barcode_idx)],
-                            "value": int(value),
+                            "value": float(value),
                         }
                     )
                     i+=1

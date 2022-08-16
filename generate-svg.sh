@@ -90,4 +90,4 @@ docker-compose -f docker-compose.prod.yaml \
     --outPath "${target_out_dir}" 
 
 # bash generate-svg.sh --label-path ~/too-many-cells/data/tabula_muris/all_simple/labels.csv --config-path ~/too-many-cells/data/tabula_muris/all_simple/state.json --tree-path ~/too-many-cells/data/tabula_muris/all_simple/cluster_tree.json --out-path ~/too-many-cells/data/tabula_muris/sample-output.svg --no-build
-# echo '{"width": 2000, "filenameOverride": "somefile.svg"}' | bash generate-svg.sh --label-path ~/too-many-cells/data/tabula_muris/all_simple/labels.csv --config-path - --tree-path ~/too-many-cells/data/tabula_muris/all_simple/cluster_tree.json --out-path ~/too-many-cells/data/tabula_muris/sample-output.svg
+# echo '{"width": 2000, "filenameOverride": "somefile.svg"}' | bash generate-svg.sh --label-path ~/too-many-cells/data/tabula_muris/all_simple/labels.csv --config-path - -p
