@@ -33,7 +33,7 @@ const Legend: React.FC = () => {
 };
 
 const LegendContainer = styled(Column)`
-    margin-top: 5px;
+    padding-bottom: 15px;
 `;
 
 const LegendDot = styled(DotIcon)`

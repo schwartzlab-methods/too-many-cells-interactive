@@ -77,6 +77,7 @@ const DisplayControls: React.FC = () => {
     return (
         <>
             <Column width={'50%'}>
+                <Legend />
                 <DisplaySettings />
                 {!!activeFeatures.length && (
                     <RadioGroupContainer>
@@ -119,7 +120,7 @@ const DisplayControls: React.FC = () => {
                         </RadioGroup>
                     </RadioGroupContainer>
                 )}
-                <Legend />
+
                 <SliderGroup>
                     <Slider
                         label='Adjust Max Width'

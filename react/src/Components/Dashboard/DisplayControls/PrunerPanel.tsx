@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'd3-format';
 import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
@@ -8,17 +8,13 @@ import {
     selectPruneSlice,
     ValuePruneType,
 } from '../../../redux/pruneSlice';
-import {
-    AreaChartComponent,
-    CaretDownIcon,
-    CaretUpIcon,
-} from '../../../Components';
+import { AreaChartComponent } from '../../../Components';
 //https://github.com/styled-components/styled-components/issues/1449
 import Button from '../../Button';
 import { NumberInput } from '../../Input';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import { Column, Row } from '../../Layout';
-import { useAppDispatch, useAppSelector } from '../../../hooks';
+import { useAppDispatch, useAppSelector, useClickAway } from '../../../hooks';
 import { Text } from '../../Typography';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
@@ -30,11 +26,7 @@ const PrunerContainer = styled.div<{ expanded: boolean }>`
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    height: ${props => (props.expanded ? '255px' : '25px')};
-    + {PrunerContainer} {
-        margin-bottom: 10px;
-    }
-    transition: 0.25s height cubic-bezier(.73,.32,.34,1.5);
+    height: ${props => (props.expanded ? '300px' : '0px')};
     width: 100%;
     max-width: 320px;
 `;
@@ -56,8 +48,39 @@ const TextInputGroup = styled.div`
     flex-wrap: nowrap;
 `;
 
+interface PrunerConfig {
+    title: string;
+    id: ValuePruneType | undefined;
+}
+
 const PrunerPanel: React.FC = () => {
-    const [expanded, setExpanded] = useState<ValuePruneType>();
+    const [selected, setSelected] = useState<ValuePruneType>();
+    const [panelVisible, setPanelVisible] = useState(false);
+
+    const pruners: PrunerConfig[] = useMemo(() => {
+        return [
+            {
+                title: 'Prune by Size',
+                id: 'minSize',
+            },
+            {
+                title: 'Prune by Depth',
+                id: 'minDepth',
+            },
+            {
+                title: 'Prune by Distance',
+                id: 'minDistance',
+            },
+            {
+                title: 'Prune by Distance (Search)',
+                id: 'minDistanceSearch',
+            },
+            {
+                title: 'None',
+                id: undefined,
+            },
+        ];
+    }, []);
 
     const { addValuePrune } = bindActionCreators(
         {
@@ -80,59 +103,66 @@ const PrunerPanel: React.FC = () => {
     const getPrunerVal = (key: ValuePruneType) =>
         key === step.valuePruner.key ? step.valuePruner.value : undefined;
 
-    const onExpand = (id: ValuePruneType) => () => {
-        setExpanded(expanded === id ? undefined : id);
-    };
-
-    const prune = (key: ValuePruneType) => (value: number) => {
-        return addValuePrune({ key, value });
-    };
+    const prune = (key: ValuePruneType) => (value: number) =>
+        addValuePrune({ key, value });
 
     return (
         <Column>
+            <Row>
+                <Button onClick={() => setPanelVisible(true)}>
+                    Select Pruner
+                </Button>
+            </Row>
+            {panelVisible && (
+                <PrunerSelectPanel
+                    onClose={() => setPanelVisible(false)}
+                    onSelect={(pruner: ValuePruneType | undefined) => {
+                        setSelected(pruner);
+                        setPanelVisible(false);
+                    }}
+                    pruners={pruners}
+                    selected={selected}
+                />
+            )}
             <SmartPruner
-                expanded={expanded === 'minSize'}
+                expanded={selected === 'minSize'}
                 id='minSize'
                 label={<Text>Prune by size</Text>}
                 madValues={sizeMeta.madGroups}
                 madSize={sizeMeta.mad}
                 median={sizeMeta.median}
-                onExpand={onExpand('minSize')}
                 onSubmit={prune('minSize')}
                 plainValues={sizeMeta.plainGroups}
                 value={getPrunerVal('minSize')}
                 xLabel='Size'
             />
             <SmartPruner
-                expanded={expanded === 'minDistance'}
+                expanded={selected === 'minDistance'}
                 id='minDistance'
                 label={<Text>Prune by distance</Text>}
                 madValues={distanceMeta.madGroups}
                 madSize={distanceMeta.mad}
                 median={distanceMeta.median}
-                onExpand={onExpand('minDistance')}
                 onSubmit={prune('minDistance')}
                 plainValues={distanceMeta.plainGroups}
                 value={getPrunerVal('minDistance')}
                 xLabel='Distance'
             />
             <SmartPruner
-                expanded={expanded === 'minDistanceSearch'}
+                expanded={selected === 'minDistanceSearch'}
                 id='minDistanceSearch'
                 label={<Text>Prune by distance (search)</Text>}
                 madValues={distanceSearchMeta.madGroups}
                 madSize={distanceSearchMeta.mad}
                 median={distanceSearchMeta.median}
-                onExpand={onExpand('minDistanceSearch')}
                 onSubmit={prune('minDistanceSearch')}
                 plainValues={distanceSearchMeta.plainGroups}
                 value={getPrunerVal('minDistanceSearch')}
                 xLabel='Distance (Search)'
             />
             <Pruner
-                expanded={expanded === 'minDepth'}
+                expanded={selected === 'minDepth'}
                 label='Prune by depth'
-                onExpand={onExpand('minDepth')}
                 onSubmit={prune('minDepth')}
                 plainValues={depthGroups}
                 xLabel='Depth'
@@ -147,7 +177,6 @@ export default PrunerPanel;
 interface PrunerProps {
     expanded: boolean;
     label: string;
-    onExpand: () => void;
     onSubmit: (size: number) => void;
     plainValues: Record<number, number>;
     xLabel: string;
@@ -157,7 +186,6 @@ interface PrunerProps {
 const Pruner: React.FC<PrunerProps> = ({
     expanded,
     label,
-    onExpand,
     plainValues,
     onSubmit,
     value,
@@ -173,33 +201,33 @@ const Pruner: React.FC<PrunerProps> = ({
 
     return (
         <PrunerContainer expanded={expanded}>
-            <PrunerLabel expanded={expanded} onClick={onExpand}>
-                {label}
-            </PrunerLabel>
-            <ChartContainer expanded={expanded}>
-                {expanded && (
-                    <>
-                        <AreaChartComponent
-                            counts={plainValues}
-                            onBrush={v => {
-                                setInputVal(format('.1f')(v));
-                                onSubmit(v);
-                            }}
-                            value={value}
-                            xLabel={xLabel}
-                        />
-                        <UpdateBox
-                            onChange={v => setInputVal(v + '')}
-                            onSubmit={() => {
-                                if (inputVal) {
-                                    onSubmit(+inputVal);
-                                }
-                            }}
-                            value={inputVal}
-                        />
-                    </>
-                )}
-            </ChartContainer>
+            {expanded && (
+                <>
+                    <PrunerLabel>{label}</PrunerLabel>
+                    <ChartContainer expanded={expanded}>
+                        <>
+                            <AreaChartComponent
+                                counts={plainValues}
+                                onBrush={v => {
+                                    setInputVal(format('.1f')(v));
+                                    onSubmit(v);
+                                }}
+                                value={value}
+                                xLabel={xLabel}
+                            />
+                            <UpdateBox
+                                onChange={v => setInputVal(v + '')}
+                                onSubmit={() => {
+                                    if (inputVal) {
+                                        onSubmit(+inputVal);
+                                    }
+                                }}
+                                value={inputVal}
+                            />
+                        </>
+                    </ChartContainer>
+                </>
+            )}
         </PrunerContainer>
     );
 };
@@ -211,7 +239,6 @@ interface SmartPrunerProps {
     madSize: number;
     madValues: Record<number, number>;
     median: number;
-    onExpand: () => void;
     plainValues: Record<number, number>;
     onSubmit: (size: number) => void;
     xLabel: string;
@@ -224,7 +251,6 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
     label,
     madValues,
     median,
-    onExpand,
     plainValues,
     onSubmit,
     xLabel,
@@ -241,79 +267,76 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
 
     return (
         <PrunerContainer expanded={expanded}>
-            <PrunerLabel expanded={expanded} onClick={onExpand}>
-                {label}
-            </PrunerLabel>
-            <ChartContainer expanded={expanded}>
-                {expanded && (
-                    <>
-                        <RadioGroup>
-                            <RadioButton
-                                checked={type === 'raw'}
-                                id={`${id}raw`}
-                                name={`${id}types`}
-                                onChange={() => setType('raw')}
-                                type='radio'
-                            />
-                            <RadioLabel htmlFor={`${id}raw`}>Plain</RadioLabel>
-                            <RadioButton
-                                checked={type === 'smart'}
-                                id={`${id}smart`}
-                                name={`${id}types`}
-                                onChange={() => setType('smart')}
-                                type='radio'
-                            />
-                            <RadioLabel htmlFor={`${id}smart`}>
-                                Smart
-                            </RadioLabel>
-                        </RadioGroup>
-                        {type === 'raw' && (
-                            <AreaChartComponent
-                                counts={plainValues}
-                                onBrush={val => {
-                                    setInputVal(format('.3f')(val));
-                                    onSubmit(val);
+            {expanded && (
+                <>
+                    <PrunerLabel>{label}</PrunerLabel>
+                    <ChartContainer expanded={expanded}>
+                        <>
+                            <RadioGroup>
+                                <RadioButton
+                                    checked={type === 'raw'}
+                                    id={`${id}raw`}
+                                    name={`${id}types`}
+                                    onChange={() => setType('raw')}
+                                    type='radio'
+                                />
+                                <RadioLabel htmlFor={`${id}raw`}>
+                                    Plain
+                                </RadioLabel>
+                                <RadioButton
+                                    checked={type === 'smart'}
+                                    id={`${id}smart`}
+                                    name={`${id}types`}
+                                    onChange={() => setType('smart')}
+                                    type='radio'
+                                />
+                                <RadioLabel htmlFor={`${id}smart`}>
+                                    Smart
+                                </RadioLabel>
+                            </RadioGroup>
+                            {type === 'raw' && (
+                                <AreaChartComponent
+                                    counts={plainValues}
+                                    onBrush={val => {
+                                        setInputVal(format('.3f')(val));
+                                        onSubmit(val);
+                                    }}
+                                    value={value}
+                                    xLabel={xLabel}
+                                />
+                            )}
+                            {type === 'smart' && (
+                                <AreaChartComponent
+                                    counts={madValues}
+                                    onBrush={val => {
+                                        setInputVal(format('.3f')(val));
+                                        onSubmit(median + val * median);
+                                    }}
+                                    value={
+                                        value ? value / median - 1 : undefined
+                                    }
+                                    xLabel={`${xLabel} in MADs from median`}
+                                />
+                            )}
+                            <UpdateBox
+                                onChange={v => setInputVal(v + '')}
+                                onSubmit={() => {
+                                    if (inputVal) {
+                                        onSubmit(+inputVal);
+                                    }
                                 }}
-                                value={value}
-                                xLabel={xLabel}
+                                value={inputVal}
                             />
-                        )}
-                        {type === 'smart' && (
-                            <AreaChartComponent
-                                counts={madValues}
-                                onBrush={val => {
-                                    setInputVal(format('.3f')(val));
-                                    onSubmit(median + val * median);
-                                }}
-                                value={value ? value / median - 1 : undefined}
-                                xLabel={`${xLabel} in MADs from median`}
-                            />
-                        )}
-                        <UpdateBox
-                            onChange={v => setInputVal(v + '')}
-                            onSubmit={() => {
-                                if (inputVal) {
-                                    onSubmit(+inputVal);
-                                }
-                            }}
-                            value={inputVal}
-                        />
-                    </>
-                )}
-            </ChartContainer>
+                        </>
+                    </ChartContainer>
+                </>
+            )}
         </PrunerContainer>
     );
 };
 
-const PrunerLabel: React.FC<{ expanded: boolean; onClick: () => void }> = ({
-    children,
-    expanded,
-    onClick,
-}) => (
-    <PrunerLabelContainer onClick={onClick}>
-        {children}
-        {expanded ? <CaretDownIcon /> : <CaretUpIcon />}
-    </PrunerLabelContainer>
+const PrunerLabel: React.FC = ({ children }) => (
+    <PrunerLabelContainer>{children}</PrunerLabelContainer>
 );
 
 interface UpdateBoxProps {
@@ -334,3 +357,76 @@ const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => (
         <SubmitButton onClick={() => onSubmit(value)}>Update</SubmitButton>
     </TextInputGroup>
 );
+
+const PrunerSelectPanelContainer = styled.div`
+    position: relative;
+    width: 100%;
+    z-index: 9999;
+`;
+
+const PrunerSelectPanelPanel = styled.div`
+    background-color: ${props => props.theme.palette.white};
+    border: ${props => `${props.theme.palette.lightGrey} thin solid`};
+    padding: 5px;
+    position: absolute;
+`;
+
+interface PrunerPanelItemProps {
+    name: ValuePruneType | undefined;
+    onSelect: (pruner: ValuePruneType | undefined) => void;
+    selected: boolean;
+    title: string;
+}
+
+const PrunerPanelItem: React.FC<PrunerPanelItemProps> = ({
+    name,
+    onSelect,
+    selected,
+    title,
+}) => (
+    <Row>
+        <RadioButton
+            checked={selected}
+            id={name}
+            name={name}
+            onChange={onSelect.bind(null, name)}
+            type='radio'
+        />
+        <RadioLabel htmlFor={name}>{title}</RadioLabel>
+    </Row>
+);
+
+interface PrunerSelectPanelProps {
+    onClose: () => void;
+    onSelect: (selection: ValuePruneType | undefined) => void;
+    pruners: PrunerConfig[];
+    selected?: ValuePruneType;
+}
+
+const PrunerSelectPanel: React.FC<PrunerSelectPanelProps> = ({
+    onClose,
+    onSelect,
+    pruners,
+    selected,
+}) => {
+    const containerRef = useRef<any>();
+
+    useClickAway(containerRef, onClose);
+
+    return (
+        <PrunerSelectPanelContainer ref={containerRef}>
+            <PrunerSelectPanelPanel>
+                {pruners.map(p => (
+                    <Column key={p.title}>
+                        <PrunerPanelItem
+                            name={p.id}
+                            onSelect={onSelect}
+                            selected={selected === p.id}
+                            title={p.title}
+                        />
+                    </Column>
+                ))}
+            </PrunerSelectPanelPanel>
+        </PrunerSelectPanelContainer>
+    );
+};

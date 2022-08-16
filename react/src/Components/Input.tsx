@@ -1,17 +1,22 @@
 import React, { useCallback } from 'react';
 import styled from 'styled-components';
 
-export const Input = styled.input`
+interface InputProps {
+    fullWidth?: boolean;
+}
+
+export const Input = styled.input<InputProps>`
     &:focus,
     &:focus-visible {
         border-color: ${props => props.theme.palette.grey};
         outline: none;
     }
     background-color: ${props => props.theme.palette.white};
-    border: 0.1em solid ${props => props.theme.palette.gray};
+    border: 0.1em solid ${props => props.theme.palette.lightGrey};
+    border-radius: 4px;
     color: ${props => props.theme.palette.grey};
-    padding: 0.25em 0.5em;
-    width: 100px;
+    padding: 0.75em 0.5em;
+    width: ${props => (props.fullWidth ? '100%' : '100px')};
 `;
 
 interface NumberInputProps {

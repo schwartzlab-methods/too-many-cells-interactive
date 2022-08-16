@@ -43,9 +43,6 @@ import { CloseIcon } from '../../Icons';
 const FeatureSearch: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [featureList, setFeatureList] = useState<string[]>();
-    const [visibleFeatureControls, setVisibleFeatureControls] = useState<
-        Record<string, boolean>
-    >({});
 
     const {
         scales: {
@@ -98,14 +95,6 @@ const FeatureSearch: React.FC = () => {
         if (activeFeatures.length === 1) {
             updateColorScaleType('labelCount');
         }
-
-        setVisibleFeatureControls(
-            Object.fromEntries(
-                Object.entries(visibleFeatureControls).filter(
-                    ([k, _]) => k !== featureName
-                )
-            )
-        );
     };
 
     const getFeature = async (feature: string) => {
@@ -132,11 +121,6 @@ const FeatureSearch: React.FC = () => {
 
         setLoading(false);
 
-        setVisibleFeatureControls({
-            ...visibleFeatureControls,
-            [feature]: true,
-        });
-
         if (!activeFeatures.length) {
             updateColorScaleType('featureHiLos');
         }
@@ -144,13 +128,16 @@ const FeatureSearch: React.FC = () => {
 
     return (
         <Column>
-            <SearchTitle>Feature Search</SearchTitle>
-            <Caption>Search for a feature by identifier</Caption>
-            <Autocomplete
-                resetOverlay={clearActiveFeatures}
-                options={featureList || []}
-                onSelect={getFeature}
-            />
+            <Row>
+                <Column>
+                    <SearchTitle>Feature Search</SearchTitle>
+                    <Caption>Search for a feature by identifier</Caption>
+                </Column>
+                <Column>
+                    <Button onClick={clearActiveFeatures}>Reset</Button>
+                </Column>
+            </Row>
+            <Autocomplete options={featureList || []} onSelect={getFeature} />
 
             {!!activeFeatures.length && (
                 <>
@@ -162,7 +149,7 @@ const FeatureSearch: React.FC = () => {
                                 .map(k => (
                                     <SmartPruner
                                         key={k}
-                                        expanded={visibleFeatureControls[k]}
+                                        expanded={true}
                                         id={k}
                                         label={
                                             <Row>
@@ -182,12 +169,6 @@ const FeatureSearch: React.FC = () => {
                                             featureDistributions[k].madGroups
                                         }
                                         median={featureDistributions[k].median}
-                                        onExpand={() =>
-                                            setVisibleFeatureControls({
-                                                ...visibleFeatureControls,
-                                                [k]: !visibleFeatureControls[k],
-                                            })
-                                        }
                                         plainValues={
                                             featureDistributions[k].plainGroups
                                         }
@@ -233,14 +214,9 @@ const FeatureListLabel = styled(Caption)`
 interface AutocompleteProps {
     options: string[];
     onSelect: (feature: string) => void;
-    resetOverlay: () => void;
 }
 
-const Autocomplete: React.FC<AutocompleteProps> = ({
-    options,
-    onSelect,
-    resetOverlay,
-}) => {
+const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
     const [choices, setChoices] = useState<string[]>([]);
     const [choicesVisible, setChoicesVisible] = useState(false);
     const [minVisibleIdx, setMinVisibleIdx] = useState(0);
@@ -306,11 +282,6 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
         setSelectedIdx(0);
     };
 
-    const _resetOverlay = () => {
-        resetOverlay();
-        resetInputs();
-    };
-
     const select = (choice: string) => {
         onSelect(choice);
         resetInputs();
@@ -365,7 +336,6 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
                             ))}
                 </AutocompleteChoicesContainer>
             </AutocompleteContainer>
-            <Button onClick={_resetOverlay}>Reset</Button>
         </Row>
     );
 };
@@ -378,7 +348,14 @@ interface AutocompleteInputProps extends InputHTMLAttributes<any> {
 const AutocompleteInput: React.FC<AutocompleteInputProps> = forwardRef(
     (props: AutocompleteInputProps, ref: ForwardedRef<HTMLInputElement>) => {
         const { handleKeyPress, ...rest } = props;
-        return <Input {...rest} ref={ref} onKeyDownCapture={handleKeyPress} />;
+        return (
+            <Input
+                {...rest}
+                fullWidth={true}
+                ref={ref}
+                onKeyDownCapture={handleKeyPress}
+            />
+        );
     }
 );
 
