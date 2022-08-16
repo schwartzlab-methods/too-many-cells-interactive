@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import { Input } from '../../Input';
-import Checkbox from '../../Checkbox';
 import { Column, ResponsiveRow, Row } from '../../Layout';
 import { Label } from '../../Typography';
 import { selectFeatureSlice } from '../../../redux/featureSlice';
@@ -28,10 +27,8 @@ import Legend from './Legend';
 const DisplayControls: React.FC = () => {
     const {
         scales: {
-            branchSizeScale,
             colorScale: { variant: colorScaleType },
         },
-        treeMetadata: { minValue, maxValue },
     } = useAppSelector(selectDisplayConfig);
 
     const { activeFeatures } = useAppSelector(selectFeatureSlice);
@@ -40,7 +37,6 @@ const DisplayControls: React.FC = () => {
         activateContinuousFeatureScale,
         updateColorScale,
         updateColorScaleType,
-        updateLinearScale,
     } = bindActionCreators(
         {
             activateContinuousFeatureScale: _activateContinuousFeatureScale,
@@ -50,10 +46,6 @@ const DisplayControls: React.FC = () => {
         },
         useAppDispatch()
     );
-
-    const branchScalingDisabled = useMemo(() => {
-        return branchSizeScale.domain[0] === branchSizeScale.domain[1];
-    }, [branchSizeScale]);
 
     const changeScaleType = (scaleType: typeof colorScaleType) => {
         updateColorScaleType(scaleType);
@@ -78,7 +70,6 @@ const DisplayControls: React.FC = () => {
         <>
             <Column width={'50%'}>
                 <Legend />
-                <DisplaySettings />
                 {!!activeFeatures.length && (
                     <RadioGroupContainer>
                         <RadioGroup>
@@ -121,6 +112,7 @@ const DisplayControls: React.FC = () => {
                     </RadioGroupContainer>
                 )}
 
+                <DisplaySettings />
                 <SliderGroup>
                     <Slider
                         label='Adjust Max Width'
@@ -133,19 +125,6 @@ const DisplayControls: React.FC = () => {
                         max={50}
                     />
                 </SliderGroup>
-                <Checkbox
-                    checked={branchScalingDisabled}
-                    label='Branch width scaling disabled'
-                    onClick={() =>
-                        updateLinearScale({
-                            branchSizeScale: {
-                                domain: branchScalingDisabled
-                                    ? [minValue, maxValue]
-                                    : [1, 1],
-                            },
-                        })
-                    }
-                />
             </Column>
             <Column width='50%'>
                 <PrunerPanel />
