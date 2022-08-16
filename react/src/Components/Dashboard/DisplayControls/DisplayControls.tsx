@@ -188,7 +188,7 @@ const Slider: React.FC<SliderProps> = ({ scaleType, label, max }) => {
 
     return (
         <Column>
-            <Row margin='0px'>
+            <Row>
                 <Label>{label}</Label>
             </Row>
             {scale && (

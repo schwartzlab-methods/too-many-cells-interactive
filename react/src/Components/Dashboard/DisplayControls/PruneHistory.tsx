@@ -51,7 +51,7 @@ const PruneHistory: React.FC = () => {
     return (
         <Column>
             <PruneHistoryContainer>
-                <Row margin='0px'>
+                <Row>
                     <HistoryTitle>Pruning History</HistoryTitle>
                     <span>
                         <Button

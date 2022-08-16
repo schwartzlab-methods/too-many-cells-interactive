@@ -140,7 +140,7 @@ const LinearLegend: React.FC<{ scale: ScaleThreshold<any, any> }> = ({
     };
 
     return (
-        <LinearLegendRow margin='0px'>
+        <LinearLegendRow>
             <LinearLegendLabel>{scale.domain()[0]}</LinearLegendLabel>
             <LinearLegendContainer onClick={() => setPickerOpen(true)}>
                 <svg viewBox='0 0 200 25'>

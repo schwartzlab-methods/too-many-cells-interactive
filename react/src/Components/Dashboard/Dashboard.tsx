@@ -7,29 +7,16 @@ import { useAppSelector } from '../../hooks';
 import { selectDisplayConfig } from '../../redux/displayConfigSlice';
 import { getData } from '../../prepareData';
 import { TMCHierarchyPointNode } from '../../types';
+import theme from '../../theme';
 import TreeControls from './Chart/TreeControls';
 import PruneHistory from './DisplayControls/PruneHistory';
 import DisplayControls from './DisplayControls/DisplayControls';
 import TreeComponent from './Chart/TreeComponent';
 
-export const theme = {
-    palette: {
-        grey: '#5e6365',
-        lightGrey: '#d1d9dd',
-        primary: '#009FFD',
-        secondary: '#FFA400',
-        text: '#000000',
-        white: '#ffffff',
-    },
-    breakpoints: {
-        lg: '1200px',
-        md: '900px',
-    },
-};
-
 const GlobalStyle = createGlobalStyle`
     body {
-        font-family: Arial;
+        font-family: Helvetica, Arial, Sans-Serif;
+        margin: 0px;
     }
 `;
 
@@ -61,7 +48,7 @@ const Dashboard: React.FC = () => {
                             <Accent>Interactive</Accent>
                         </Main>
                     </Row>
-                    <ResponsiveRow mdUp alignItems='flex-start' margin='0px'>
+                    <ResponsiveRow mdUp alignItems='flex-start'>
                         <Row>
                             <Column>
                                 <TreeControls />
@@ -72,10 +59,10 @@ const Dashboard: React.FC = () => {
                         </Row>
                         <Row>
                             <Column justifyContent='flex-start'>
-                                <Row margin='0px'>
+                                <Row>
                                     <PruneHistory />
                                 </Row>
-                                <Row margin='0px' alignItems='flex-start'>
+                                <Row alignItems='flex-start'>
                                     <DisplayControls />
                                 </Row>
                             </Column>

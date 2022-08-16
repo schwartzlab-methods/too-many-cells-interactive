@@ -165,7 +165,7 @@ const FeatureSearch: React.FC = () => {
                                         expanded={visibleFeatureControls[k]}
                                         id={k}
                                         label={
-                                            <Row margin='0px'>
+                                            <Row>
                                                 {k}&nbsp;
                                                 <CloseIcon
                                                     onClick={removeFeature.bind(
@@ -338,7 +338,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
     };
 
     return (
-        <Row alignItems='center' margin='0px' style={{ marginTop: '5px' }}>
+        <Row alignItems='center' style={{ marginTop: '5px' }}>
             <AutocompleteContainer width='auto' ref={containerRef}>
                 <AutocompleteInput
                     ref={inputRef}

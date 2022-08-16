@@ -1,7 +1,7 @@
 import React from 'react';
 import styled, { useTheme } from 'styled-components';
 import { useMediaQuery } from '../hooks';
-import { theme } from './Dashboard/Dashboard';
+import theme from '../theme';
 
 interface ColProps {
     alignItems?: string;
@@ -11,6 +11,7 @@ interface ColProps {
 
 interface RowProps extends ColProps {
     margin?: string;
+    padding?: string;
 }
 
 export const Column = styled.div<ColProps>`
@@ -30,7 +31,8 @@ export const Row = styled.div<RowProps>`
     flex-wrap: no-wrap;
     flex-grow: 1;
     justify-content: ${props => props.justifyContent ?? 'flex-start'};
-    margin: ${props => props.margin ?? '25px'};
+    padding: ${props => props.padding ?? '5px'};
+    margin: ${props => props.margin ?? '0px'};
 `;
 
 interface ResponsiveRowProps extends RowProps {
