@@ -23,7 +23,7 @@ import Button from '../../Button';
 import { Input } from '../../Input';
 import { Column, Row, WidgetSection } from '../../Layout';
 import Modal from '../../Modal';
-import { Caption, Title } from '../../Typography';
+import { Caption } from '../../Typography';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectDisplayConfig,
@@ -137,7 +137,9 @@ const FeatureSearch: React.FC = () => {
                         options={featureList || []}
                         onSelect={getFeature}
                     />
-                    <Button onClick={clearActiveFeatures}>Reset</Button>
+                    <Button ml='5px' onClick={clearActiveFeatures}>
+                        Reset
+                    </Button>
                 </Row>
 
                 {!!activeFeatures.length && (
@@ -351,29 +353,21 @@ interface AutocompleteInputProps extends InputHTMLAttributes<any> {
 const AutocompleteInput: React.FC<AutocompleteInputProps> = forwardRef(
     (props: AutocompleteInputProps, ref: ForwardedRef<HTMLInputElement>) => {
         const { handleKeyPress, ...rest } = props;
-        return (
-            <Input
-                {...rest}
-                fullWidth={true}
-                ref={ref}
-                onKeyDownCapture={handleKeyPress}
-            />
-        );
+        return <Input {...rest} ref={ref} onKeyDownCapture={handleKeyPress} />;
     }
 );
 
 AutocompleteInput.displayName = 'Autocomplete Input';
 
 const AutocompleteContainer = styled(Column)`
-    flex-grow: 0;
-    margin-right: 5px;
+    max-width: 200px;
     position: relative;
 `;
 
 const AutocompleteChoicesContainer = styled(Column)<{ _width: string }>`
     border-radius: 5px;
     position: absolute;
-    top: 25px;
+    top: 40px;
     width: ${props => props._width};
 `;
 

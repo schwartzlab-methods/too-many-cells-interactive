@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { bindActionCreators } from 'redux';
-import styled from 'styled-components';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectDisplayConfig,
@@ -34,7 +33,7 @@ const DisplaySettings: React.FC = () => {
     );
 
     return (
-        <WidgetSection title='Display Toggles'>
+        <WidgetSection title='Display Settings'>
             <Column>
                 <ToggleCheckbox label='Show Strokes' propName='strokeVisible' />
                 <ToggleCheckbox

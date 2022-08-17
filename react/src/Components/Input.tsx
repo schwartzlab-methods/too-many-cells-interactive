@@ -16,7 +16,7 @@ export const Input = styled.input<InputProps>`
     border-radius: 4px;
     color: ${props => props.theme.palette.grey};
     padding: 0.75em 0.5em;
-    width: ${props => (props.fullWidth ? '100%' : '100px')};
+    max-width: ${props => (props.fullWidth ? '100%' : '200px')};
 `;
 
 interface NumberInputProps {

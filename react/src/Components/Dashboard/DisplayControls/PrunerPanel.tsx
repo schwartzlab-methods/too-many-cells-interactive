@@ -38,11 +38,11 @@ const PrunerLabelContainer = styled(Row)`
 `;
 
 const SubmitButton = styled(Button)`
-    align-self: flex-start;
     margin-left: 5px;
 `;
 
 const TextInputGroup = styled.div`
+    align-items: center;
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -392,12 +392,12 @@ const PrunerPanelItem: React.FC<PrunerPanelItemProps> = ({
     <Row>
         <RadioButton
             checked={selected}
-            id={name}
-            name={name}
+            id={name ?? title}
+            name={name ?? title}
             onChange={onSelect.bind(null, name)}
             type='radio'
         />
-        <RadioLabel fontSize='18px' htmlFor={name}>
+        <RadioLabel fontSize='18px' htmlFor={name ?? title}>
             {title}
         </RadioLabel>
     </Row>

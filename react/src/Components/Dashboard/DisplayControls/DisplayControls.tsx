@@ -71,7 +71,7 @@ const DisplayControls: React.FC = () => {
             <Column width={'50%'}>
                 <Legend />
                 {!!activeFeatures.length && (
-                    <RadioGroupContainer>
+                    <Row>
                         <RadioGroup>
                             <RadioButton
                                 checked={colorScaleType === 'featureHiLos'}
@@ -109,7 +109,7 @@ const DisplayControls: React.FC = () => {
                                 Show Feature Blend
                             </RadioLabel>
                         </RadioGroup>
-                    </RadioGroupContainer>
+                    </Row>
                 )}
 
                 <DisplaySettings />
@@ -138,10 +138,6 @@ export default DisplayControls;
 
 const SliderGroup = styled(Column)`
     margin-top: 15px;
-`;
-
-const RadioGroupContainer = styled(Row)`
-    margin: 15px 0px;
 `;
 
 interface SliderProps {

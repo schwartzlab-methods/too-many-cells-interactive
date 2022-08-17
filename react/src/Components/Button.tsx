@@ -1,6 +1,10 @@
 import styled from 'styled-components';
 
-export default styled.button<{ active?: boolean; horizontal?: boolean }>`
+export default styled.button<{
+    active?: boolean;
+    horizontal?: boolean;
+    ml?: string;
+}>`
     background-color: ${props =>
         props.disabled
             ? props.theme.palette.lightGrey
@@ -13,6 +17,7 @@ export default styled.button<{ active?: boolean; horizontal?: boolean }>`
     color: ${props => props.theme.palette.white};
     display: inline-block;
     font-weight: 500;
+    margin-left: ${props => props.ml ?? 'inherit'};
     outline: 0;
     padding: 6px 16px;
     text-align: center;
