@@ -30,18 +30,6 @@ export const CheckboxUncheckedIcon: React.FC<IconProps> = props => (
     </Icon>
 );
 
-export const CaretUpIcon: React.FC<IconProps> = props => (
-    <Icon {...props} viewBox='0 0 1030 638'>
-        <path d='M1017 570L541 12Q530 0 515 0t-26 12L13 570q-16 19-7 43.5T39 638h952q24 0 33-24.5t-7-43.5z' />
-    </Icon>
-);
-
-export const CaretDownIcon: React.FC<IconProps> = props => (
-    <Icon {...props} viewBox='0 0 1030 638'>
-        <path d='M1017 68L541 626q-11 12-26 12t-26-12L13 68Q-3 49 6 24.5T39 0h952q24 0 33 24.5t-7 43.5z' />
-    </Icon>
-);
-
 export const CloseIcon: React.FC<IconProps> = props => (
     <Icon {...props} viewBox='0 0 50 50' strokeLinecap='round'>
         <line x1='0' y1='0' x2='50' y2='50' />
@@ -52,5 +40,13 @@ export const CloseIcon: React.FC<IconProps> = props => (
 export const DotIcon: React.FC<IconProps> = props => (
     <Icon {...props} viewBox='0 0 20 20'>
         <circle r={props.size || 5} cx={10} cy={10} />
+    </Icon>
+);
+
+export const RightArrowIcon: React.FC<IconProps> = props => (
+    <Icon {...props}>
+        <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'>
+            <path d='M10.029 5H0v7.967h10.029V18l9.961-9.048L10.029 0v5z' />
+        </svg>
     </Icon>
 );

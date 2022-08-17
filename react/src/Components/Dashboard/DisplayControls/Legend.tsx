@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
 import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
-import { Column, Row, WidgetSection } from '../../Layout';
+import { Column, Row, WidgetTitle } from '../../Layout';
 import { Input } from '../../Input';
 import { useAppDispatch, useAppSelector, useColorScale } from '../../../hooks';
 import {
@@ -19,24 +19,19 @@ const Legend: React.FC = () => {
     const { scale: colorScale } = useColorScale();
 
     return (
-        <WidgetSection title='Legend'>
-            <LegendContainer className='legend'>
-                {colorScale && !scaleIsThreshold(colorScale) && (
-                    <OrdinalLegend
-                        scale={colorScale as ScaleOrdinal<string, string>}
-                    />
-                )}
-                {colorScale && scaleIsThreshold(colorScale) && (
-                    <LinearLegend scale={colorScale} />
-                )}
-            </LegendContainer>
-        </WidgetSection>
+        <Column xs={12} className='legend'>
+            <WidgetTitle title='Legend' />
+            {colorScale && !scaleIsThreshold(colorScale) && (
+                <OrdinalLegend
+                    scale={colorScale as ScaleOrdinal<string, string>}
+                />
+            )}
+            {colorScale && scaleIsThreshold(colorScale) && (
+                <LinearLegend scale={colorScale} />
+            )}
+        </Column>
     );
 };
-
-const LegendContainer = styled(Column)`
-    padding-bottom: 15px;
-`;
 
 const LegendDot = styled(DotIcon)`
     cursor: pointer;
@@ -84,7 +79,7 @@ interface ColorPickerProps {
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ color, updateColor }) => {
     return (
-        <Column>
+        <Column xs={12}>
             <HexColorPicker color={color} onChange={updateColor} />
             <PickerInput
                 value={color}
@@ -117,8 +112,8 @@ const LinearLegendLabel = styled(Text)`
     margin: 0px 3px;
 `;
 
-const LinearLegendRow = styled(Row)`
-    margin: 0px;
+const LinearLegendRow = styled.div`
+    display: flex;
     position: relative;
 `;
 

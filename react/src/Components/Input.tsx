@@ -2,7 +2,8 @@ import React, { useCallback } from 'react';
 import styled from 'styled-components';
 
 interface InputProps {
-    fullWidth?: boolean;
+    ml?: string;
+    width?: string | number;
 }
 
 export const Input = styled.input<InputProps>`
@@ -16,7 +17,8 @@ export const Input = styled.input<InputProps>`
     border-radius: 4px;
     color: ${props => props.theme.palette.grey};
     padding: 0.75em 0.5em;
-    max-width: ${props => (props.fullWidth ? '100%' : '200px')};
+    margin-left: ${props => props.ml ?? 'inherit'};
+    max-width: ${props => props.width ?? '200px'};
 `;
 
 interface NumberInputProps {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
-import { Column, ResponsiveRow, Row } from '../Layout';
+import { Column, Row } from '../Layout';
 import { Accent, Main, Primary } from '../Typography';
 import { calculateTreeLayout } from '../../util';
 import { useAppSelector } from '../../hooks';
@@ -15,13 +15,19 @@ import TreeComponent from './Chart/TreeComponent';
 
 const GlobalStyle = createGlobalStyle`
     body {
+        box-sizing: border-box;
         font-family: Helvetica, Arial, Sans-Serif;
-        margin: 0px;
+        margin: 0;
+        padding: 0;
     }
 `;
 
-const Container = styled(Column)`
+const Container = styled.div`
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     max-width: 1800px;
+    padding: 15px;
 `;
 
 const Dashboard: React.FC = () => {
@@ -40,36 +46,28 @@ const Dashboard: React.FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <GlobalStyle />
-            <Column alignItems='center'>
-                <Container>
-                    <Row>
-                        <Main>
-                            <Primary>TooManyCells</Primary>
-                            <Accent>Interactive</Accent>
-                        </Main>
-                    </Row>
-                    <ResponsiveRow mdUp alignItems='flex-start'>
+            <Container>
+                <Row>
+                    <Main>
+                        <Primary>TooManyCells</Primary>
+                        <Accent>Interactive</Accent>
+                    </Main>
+                </Row>
+                <Row alignItems='flex-start' justifyContent='center'>
+                    <Column xs={12} md={6}>
+                        <TreeControls />
+                        {baseTree && <TreeComponent baseTree={baseTree} />}
+                    </Column>
+                    <Column xs={12} md={6}>
                         <Row>
-                            <Column>
-                                <TreeControls />
-                                {baseTree && (
-                                    <TreeComponent baseTree={baseTree} />
-                                )}
-                            </Column>
+                            <PruneHistory />
                         </Row>
-                        <Row>
-                            <Column justifyContent='flex-start'>
-                                <Row>
-                                    <PruneHistory />
-                                </Row>
-                                <Row alignItems='flex-start'>
-                                    <DisplayControls />
-                                </Row>
-                            </Column>
+                        <Row alignItems='flex-start'>
+                            <DisplayControls />
                         </Row>
-                    </ResponsiveRow>
-                </Container>
-            </Column>
+                    </Column>
+                </Row>
+            </Container>
         </ThemeProvider>
     );
 };

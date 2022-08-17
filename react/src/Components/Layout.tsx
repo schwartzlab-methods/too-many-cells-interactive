@@ -1,18 +1,32 @@
 import React from 'react';
-import styled, { useTheme } from 'styled-components';
-import { useMediaQuery } from '../hooks';
-import theme from '../theme';
+import styled from 'styled-components';
 import { Caption, Title } from './Typography';
 
-interface ColProps {
+interface RowProps {
     alignItems?: string;
     justifyContent?: string;
-    width?: string;
 }
 
-interface RowProps extends ColProps {
-    margin?: string;
-    padding?: string;
+const media = {
+    xs: (cols: number) => `  
+        flex-basis: ${(cols / 12) * 100}%
+    `,
+    md: (cols: number) => `
+        @media only screen and (min-width: 480px) and (max-width: 767px) {
+            flex-basis: ${(cols / 12) * 100}%
+        }
+    `,
+    lg: (cols: number) => `
+        @media only screen and (min-width: 768px) {
+            flex-basis: ${(cols / 12) * 100}%
+        }
+    `,
+};
+
+interface ColProps extends RowProps {
+    xs: number;
+    md?: number;
+    lg?: number;
 }
 
 export const Column = styled.div<ColProps>`
@@ -20,75 +34,42 @@ export const Column = styled.div<ColProps>`
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    flex-shrink: 1;
     justify-content: ${props => props.justifyContent ?? 'flex-start'};
-    width: ${props => props.width ?? '100%'};
+    & + & {
+        margin-left: 15px;
+    }
+    ${props => media.xs(props.xs)}
+    ${props => props.md && media.xs(props.md)}
+    ${props => props.lg && media.xs(props.lg)}
 `;
 
 export const Row = styled.div<RowProps>`
     align-items: ${props => props.alignItems ?? 'center'};
     display: flex;
-    width: ${props => props.width ?? '100%'};
     flex-direction: row;
-    flex-wrap: no-wrap;
     flex-grow: 1;
+    flex-shrink: 1;
+    flex-wrap: wrap;
     justify-content: ${props => props.justifyContent ?? 'flex-start'};
-    padding: ${props => props.padding ?? '5px'};
-    margin: ${props => props.margin ?? '0px'};
+    & + & {
+        margin-top: 15px;
+    }
+    width: 100%;
 `;
 
-interface ResponsiveRowProps extends RowProps {
-    lgUp?: boolean;
-    mdUp?: boolean;
-}
-
-export const ResponsiveRow: React.FC<ResponsiveRowProps> = ({
-    alignItems,
-    children,
-    justifyContent,
-    lgUp,
-    margin,
-    width,
-}) => {
-    const _theme = useTheme() as typeof theme;
-
-    const breakpoint = lgUp ? _theme.breakpoints.lg : _theme.breakpoints.md;
-    const matches = useMediaQuery(`(min-width: ${breakpoint})`);
-
-    const rowProps = { alignItems, justifyContent, margin, width };
-    const colProps = {
-        justifyContent: alignItems,
-        alignItems: justifyContent,
-        width,
-    };
-
-    return matches ? (
-        <Row {...rowProps}>{children}</Row>
-    ) : (
-        <Column {...colProps}>{children}</Column>
-    );
-};
-
-const WidgetSectionColumn = styled(Column)`
-    margin: 10px 0px;
+const TitleContainer = styled(Column)`
+    margin-bottom: 10px;
 `;
 
-interface WidgetSectionProps {
+interface WidgetTitleProps {
     caption?: string;
     title: string;
 }
 
-export const WidgetSection: React.FC<WidgetSectionProps> = ({
-    caption,
-    children,
-    title,
-}) => (
-    <WidgetSectionColumn>
-        <Row>
-            <Column>
-                <Title>{title}</Title>
-                <Caption>{caption}</Caption>
-            </Column>
-        </Row>
-        <Row>{children}</Row>
-    </WidgetSectionColumn>
+export const WidgetTitle: React.FC<WidgetTitleProps> = ({ caption, title }) => (
+    <TitleContainer xs={12}>
+        <Title>{title}</Title>
+        <Caption>{caption}</Caption>
+    </TitleContainer>
 );

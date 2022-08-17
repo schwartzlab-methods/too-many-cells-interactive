@@ -13,7 +13,7 @@ import { AreaChartComponent } from '../../../Components';
 import Button from '../../Button';
 import { NumberInput } from '../../Input';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
-import { Column, Row, WidgetSection } from '../../Layout';
+import { Column, Row, WidgetTitle } from '../../Layout';
 import { useAppDispatch, useAppSelector, useClickAway } from '../../../hooks';
 import { Text } from '../../Typography';
 
@@ -31,7 +31,7 @@ const PrunerContainer = styled.div<{ expanded: boolean }>`
     max-width: 320px;
 `;
 
-const PrunerLabelContainer = styled(Row)`
+const PrunerLabelContainer = styled.div`
     margin: 0px;
     justify-content: space-between;
     flex-grow: 0;
@@ -107,27 +107,28 @@ const PrunerPanel: React.FC = () => {
         addValuePrune({ key, value });
 
     return (
-        <WidgetSection
-            title='Prune the tree'
-            caption='Reduce node count by distance, size, or depth'
-        >
-            <Column>
-                <Row>
-                    <Button onClick={() => setPanelVisible(true)}>
-                        Select Pruner
-                    </Button>
-                </Row>
-                {panelVisible && (
-                    <PrunerSelectPanel
-                        onClose={() => setPanelVisible(false)}
-                        onSelect={(pruner: ValuePruneType | undefined) => {
-                            setSelected(pruner);
-                            setPanelVisible(false);
-                        }}
-                        pruners={pruners}
-                        selected={selected}
-                    />
-                )}
+        <Column xs={12}>
+            <WidgetTitle
+                title='Pruning'
+                caption='Reduce node count by distance, size, or depth'
+            />
+            <Row>
+                <Button onClick={() => setPanelVisible(true)}>
+                    Select Pruner
+                </Button>
+            </Row>
+            {panelVisible && (
+                <PrunerSelectPanel
+                    onClose={() => setPanelVisible(false)}
+                    onSelect={(pruner: ValuePruneType | undefined) => {
+                        setSelected(pruner);
+                        setPanelVisible(false);
+                    }}
+                    pruners={pruners}
+                    selected={selected}
+                />
+            )}
+            <Row>
                 <SmartPruner
                     expanded={selected === 'minSize'}
                     id='minSize'
@@ -172,8 +173,8 @@ const PrunerPanel: React.FC = () => {
                     xLabel='Depth'
                     value={getPrunerVal('minDepth')}
                 />
-            </Column>
-        </WidgetSection>
+            </Row>
+        </Column>
     );
 };
 
@@ -371,8 +372,13 @@ const PrunerSelectPanelContainer = styled.div`
 
 const PrunerSelectPanelPanel = styled.div`
     background-color: ${props => props.theme.palette.white};
+    box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%),
+        0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
+    display: flex;
+    flex-direction: column;
     border: ${props => `${props.theme.palette.lightGrey} thin solid`};
-    padding: 5px;
+    border-radius: 5px;
+    padding: 8px;
     position: absolute;
 `;
 
@@ -389,7 +395,7 @@ const PrunerPanelItem: React.FC<PrunerPanelItemProps> = ({
     selected,
     title,
 }) => (
-    <Row>
+    <div>
         <RadioButton
             checked={selected}
             id={name ?? title}
@@ -400,7 +406,7 @@ const PrunerPanelItem: React.FC<PrunerPanelItemProps> = ({
         <RadioLabel fontSize='18px' htmlFor={name ?? title}>
             {title}
         </RadioLabel>
-    </Row>
+    </div>
 );
 
 interface PrunerSelectPanelProps {
@@ -424,14 +430,14 @@ const PrunerSelectPanel: React.FC<PrunerSelectPanelProps> = ({
         <PrunerSelectPanelContainer ref={containerRef}>
             <PrunerSelectPanelPanel>
                 {pruners.map(p => (
-                    <Column key={p.title}>
+                    <div key={p.title}>
                         <PrunerPanelItem
                             name={p.id}
                             onSelect={onSelect}
                             selected={selected === p.id}
                             title={p.title}
                         />
-                    </Column>
+                    </div>
                 ))}
             </PrunerSelectPanelPanel>
         </PrunerSelectPanelContainer>

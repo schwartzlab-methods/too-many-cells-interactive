@@ -26,8 +26,8 @@ const TreeControls: React.FC = () => {
     const downloadMeta = useDownloadNodeMeta();
 
     return (
-        <Column>
-            <Row margin='5px'>
+        <div>
+            <Row>
                 <Button
                     horizontal
                     onClick={() => downloadSvg(colorScale!, selector)}
@@ -60,10 +60,10 @@ const TreeControls: React.FC = () => {
                     Download JSON
                 </Button>
             </Row>
-            <Row margin='5px'>
+            <Row>
                 <PruneStatuses />
             </Row>
-        </Column>
+        </div>
     );
 };
 
@@ -90,8 +90,8 @@ const PruneStatuses: React.FC = () => {
     );
 };
 
-const StatusContainer = styled(Row)`
-    margin: 0px;
+const StatusContainer = styled.div`
+    display: flex;
     ${Text} {
         + ${Text} {
             margin-left: 5px;

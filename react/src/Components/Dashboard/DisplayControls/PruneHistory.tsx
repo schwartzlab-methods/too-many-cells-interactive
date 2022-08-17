@@ -3,8 +3,8 @@ import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import { formatDistance, formatInteger, pruneStepIsEmpty } from '../../../util';
 import Button from '../../Button';
-import { Column, Row, WidgetSection } from '../../Layout';
-import { Text, Title } from '../../Typography';
+import { Column, Row, WidgetTitle } from '../../Layout';
+import { Text } from '../../Typography';
 import {
     addStep as _addStep,
     PruneStep,
@@ -49,24 +49,25 @@ const PruneHistory: React.FC = () => {
     const resetPruneHistory = () => resetHistory();
 
     return (
-        <WidgetSection title='Pruning history'>
-            <Column>
-                <Row>
-                    <Button
-                        horizontal
-                        onClick={applyPrune}
-                        disabled={getApplyButtonDisabled()}
-                    >
-                        Apply
-                    </Button>
-                    <Button
-                        horizontal
-                        disabled={getResetButtonDisabled()}
-                        onClick={() => resetPruneHistory()}
-                    >
-                        Reset
-                    </Button>
-                </Row>
+        <Column xs={12}>
+            <Row>
+                <WidgetTitle title='Pruning history' />
+                <Button
+                    horizontal
+                    onClick={applyPrune}
+                    disabled={getApplyButtonDisabled()}
+                >
+                    Apply
+                </Button>
+                <Button
+                    horizontal
+                    disabled={getResetButtonDisabled()}
+                    onClick={() => resetPruneHistory()}
+                >
+                    Reset
+                </Button>
+            </Row>
+            <Row>
                 <StepContainer>
                     {pruneHistory.map((history, i) => (
                         <PruneStep
@@ -81,16 +82,19 @@ const PruneHistory: React.FC = () => {
                         />
                     ))}
                 </StepContainer>
-            </Column>
-        </WidgetSection>
+            </Row>
+        </Column>
     );
 };
 
-const StepContainer = styled(Row)`
+const StepContainer = styled.div`
+    align-items: center;
+    display: flex;
+    flex-basis: 100%;
     flex-wrap: wrap;
-    margin-top: 5px;
     border: solid 1px gray;
     border-radius: 5px;
+    margin-top: 5px;
     padding: 5px;
 `;
 

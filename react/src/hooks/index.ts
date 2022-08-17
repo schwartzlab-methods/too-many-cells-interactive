@@ -3,7 +3,6 @@ export { default as useAppSelector } from './useAppSelector';
 export { default as useClickAway } from './useClickAway';
 export { default as useDownloadNodeMeta } from './useDownloadNodeMeta';
 export { default as useExportState } from './useExportState';
-export { default as useMediaQuery } from './useMediaQuery';
 export { default as usePrunedTree } from './usePrunedTree';
 export { default as useSelectTree } from './useSelectTree';
 export * from './useScale';
