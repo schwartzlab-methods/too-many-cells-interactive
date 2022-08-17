@@ -11,7 +11,7 @@ services:
     networks:
       - tmc-network
   mongo:
-    image: mongo:latest
+    image: mongo:5.0
     volumes:
       - mongo-data:/data/db
     networks:

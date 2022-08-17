@@ -1,7 +1,7 @@
 version: "3.6"
 services:
   react:
-    image: node:latest
+    image: node:18.7-buster
     volumes:
       - ./react:/usr/app
     working_dir: /usr/app
@@ -25,7 +25,7 @@ services:
     networks:
       - tmc-network
   mongo:
-    image: mongo:latest
+    image: mongo:5.0
     volumes:
       - mongo-data:/data/db
       - ./mongo:/opt/appdata

@@ -1,4 +1,4 @@
-FROM node:latest
+FROM node:18.7-buster
 
 WORKDIR /usr/app
 
