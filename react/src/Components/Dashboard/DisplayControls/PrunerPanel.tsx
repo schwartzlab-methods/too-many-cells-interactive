@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'd3-format';
 import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
@@ -14,8 +14,9 @@ import Button from '../../Button';
 import { NumberInput } from '../../Input';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import { Column, Row, WidgetTitle } from '../../Layout';
-import { useAppDispatch, useAppSelector, useClickAway } from '../../../hooks';
+import { useAppDispatch, useAppSelector } from '../../../hooks';
 import { Text } from '../../Typography';
+import SelectPanel from '../../SelectPanel';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -48,16 +49,11 @@ const TextInputGroup = styled.div`
     flex-wrap: nowrap;
 `;
 
-interface PrunerConfig {
-    title: string;
-    id: ValuePruneType | undefined;
-}
-
 const PrunerPanel: React.FC = () => {
     const [selected, setSelected] = useState<ValuePruneType>();
     const [panelVisible, setPanelVisible] = useState(false);
 
-    const pruners: PrunerConfig[] = useMemo(() => {
+    const pruners = useMemo(() => {
         return [
             {
                 title: 'Prune by Size',
@@ -118,13 +114,13 @@ const PrunerPanel: React.FC = () => {
                 </Button>
             </Row>
             {panelVisible && (
-                <PrunerSelectPanel
+                <SelectPanel
                     onClose={() => setPanelVisible(false)}
-                    onSelect={(pruner: ValuePruneType | undefined) => {
-                        setSelected(pruner);
+                    onSelect={(pruner: string | undefined) => {
+                        setSelected(pruner as ValuePruneType);
                         setPanelVisible(false);
                     }}
-                    pruners={pruners}
+                    items={pruners}
                     selected={selected}
                 />
             )}
@@ -363,83 +359,3 @@ const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => (
         <SubmitButton onClick={() => onSubmit(value)}>Update</SubmitButton>
     </TextInputGroup>
 );
-
-const PrunerSelectPanelContainer = styled.div`
-    position: relative;
-    width: 100%;
-    z-index: 9999;
-`;
-
-const PrunerSelectPanelPanel = styled.div`
-    background-color: ${props => props.theme.palette.white};
-    box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%),
-        0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
-    display: flex;
-    flex-direction: column;
-    border: ${props => `${props.theme.palette.lightGrey} thin solid`};
-    border-radius: 5px;
-    padding: 8px;
-    position: absolute;
-`;
-
-interface PrunerPanelItemProps {
-    name: ValuePruneType | undefined;
-    onSelect: (pruner: ValuePruneType | undefined) => void;
-    selected: boolean;
-    title: string;
-}
-
-const PrunerPanelItem: React.FC<PrunerPanelItemProps> = ({
-    name,
-    onSelect,
-    selected,
-    title,
-}) => (
-    <div>
-        <RadioButton
-            checked={selected}
-            id={name ?? title}
-            name={name ?? title}
-            onChange={onSelect.bind(null, name)}
-            type='radio'
-        />
-        <RadioLabel fontSize='18px' htmlFor={name ?? title}>
-            {title}
-        </RadioLabel>
-    </div>
-);
-
-interface PrunerSelectPanelProps {
-    onClose: () => void;
-    onSelect: (selection: ValuePruneType | undefined) => void;
-    pruners: PrunerConfig[];
-    selected?: ValuePruneType;
-}
-
-const PrunerSelectPanel: React.FC<PrunerSelectPanelProps> = ({
-    onClose,
-    onSelect,
-    pruners,
-    selected,
-}) => {
-    const containerRef = useRef<any>();
-
-    useClickAway(containerRef, onClose);
-
-    return (
-        <PrunerSelectPanelContainer ref={containerRef}>
-            <PrunerSelectPanelPanel>
-                {pruners.map(p => (
-                    <div key={p.title}>
-                        <PrunerPanelItem
-                            name={p.id}
-                            onSelect={onSelect}
-                            selected={selected === p.id}
-                            title={p.title}
-                        />
-                    </div>
-                ))}
-            </PrunerSelectPanelPanel>
-        </PrunerSelectPanelContainer>
-    );
-};

@@ -14,6 +14,7 @@ import {
     selectPruneSlice,
 } from '../../../redux/pruneSlice';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
+import { RightArrowIcon } from '../../Icons';
 
 const PruneHistory: React.FC = () => {
     const { addStep, resetHistory, revertToStep } = bindActionCreators(
@@ -114,8 +115,11 @@ const PruneStep: React.FC<PruneStepProps> = ({
     setActive,
 }) => {
     return (
-        <PruneStepContainer onClick={setActive} active={active} empty={empty}>
-            {getPruneHistoryLabel(pruneStep, index)}
+        <PruneStepContainer>
+            {!!index && <RightArrowIcon />}
+            <PruneStepItem onClick={setActive} active={active} empty={empty}>
+                {getPruneHistoryLabel(pruneStep, index)}
+            </PruneStepItem>
         </PruneStepContainer>
     );
 };
@@ -150,7 +154,7 @@ const getPruneHistoryLabel = (pruneStep: PruneStep, index: number) => {
     }
 };
 
-const PruneStepContainer = styled.div<{ active: boolean; empty: boolean }>`
+const PruneStepItem = styled.div<{ active: boolean; empty: boolean }>`
     background-color: ${props =>
         props.empty ? props.theme.palette.grey : props.theme.palette.primary};
     border: ${props =>
@@ -162,6 +166,11 @@ const PruneStepContainer = styled.div<{ active: boolean; empty: boolean }>`
     padding: 5px;
     margin: 5px;
     border-radius: 3px;
+`;
+
+const PruneStepContainer = styled.div`
+    display: flex;
+    flex-direction: row;
 `;
 
 export default PruneHistory;

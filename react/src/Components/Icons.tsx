@@ -44,9 +44,7 @@ export const DotIcon: React.FC<IconProps> = props => (
 );
 
 export const RightArrowIcon: React.FC<IconProps> = props => (
-    <Icon {...props}>
-        <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'>
-            <path d='M10.029 5H0v7.967h10.029V18l9.961-9.048L10.029 0v5z' />
-        </svg>
+    <Icon {...props} viewBox='0 0 20 20'>
+        <path d='M10.029 5H0v7.967h10.029V18l9.961-9.048L10.029 0v5z' />
     </Icon>
 );

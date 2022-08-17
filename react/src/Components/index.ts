@@ -3,6 +3,7 @@ export { default as Dashboard } from './Dashboard/Dashboard';
 export { default as AreaChartComponent } from './Dashboard/DisplayControls/AreaChartComponent';
 export { default as Button } from './Button';
 export { default as Checkbox } from './Checkbox';
+export { default as SelectPanel } from './SelectPanel';
 export * from './Icons';
 export * from './Typography';
 export * from './Input';
