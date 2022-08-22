@@ -1,69 +1,15 @@
 import React from 'react';
 import styled from 'styled-components';
-import { saveAs } from 'file-saver';
-import Button from '../../Button';
-import { Column, Row } from '../../Layout';
+import { Row } from '../../Layout';
 import { Bold, Text } from '../../Typography';
-import {
-    useAppSelector,
-    useColorScale,
-    useDownloadNodeMeta,
-    useExportState,
-    useSelectTree,
-} from '../../../hooks';
+import { useAppSelector } from '../../../hooks';
 import { selectDisplayConfig } from '../../../redux/displayConfigSlice';
-import { downloadPng, downloadSvg } from '../../../downloadImage';
 
 const TreeControls: React.FC = () => {
-    const { scale: colorScale } = useColorScale();
-
-    useDownloadNodeMeta();
-
-    const state = useExportState();
-
-    const { selector } = useSelectTree();
-
-    const downloadMeta = useDownloadNodeMeta();
-
     return (
-        <div>
-            <Row>
-                <Button
-                    horizontal
-                    onClick={() => downloadSvg(colorScale!, selector)}
-                >
-                    Download SVG
-                </Button>
-                <Button
-                    horizontal
-                    onClick={() => downloadPng(colorScale!, selector)}
-                >
-                    Download PNG
-                </Button>
-                <Button
-                    horizontal
-                    onClick={() => {
-                        saveAs(
-                            `data:text/json,${encodeURIComponent(
-                                JSON.stringify(state)
-                            )}`,
-                            'tmc-state-export.json'
-                        );
-                    }}
-                >
-                    Export State
-                </Button>
-                <Button horizontal onClick={() => downloadMeta('csv')}>
-                    Download csv
-                </Button>
-                <Button horizontal onClick={() => downloadMeta('json')}>
-                    Download JSON
-                </Button>
-            </Row>
-            <Row>
-                <PruneStatuses />
-            </Row>
-        </div>
+        <Row>
+            <PruneStatuses />
+        </Row>
     );
 };
 

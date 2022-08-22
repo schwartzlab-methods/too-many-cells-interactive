@@ -20,6 +20,7 @@ import {
     interpolateColorScale,
 } from '../../../util';
 import DisplaySettings from './DisplaySettings';
+import ExportControls from './ExportControls';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
 
@@ -131,6 +132,9 @@ const DisplayControls: React.FC = () => {
                 </Row>
             </Column>
             <Column xs={12} md={6}>
+                <Row>
+                    <ExportControls />
+                </Row>
                 <Row>
                     <PrunerPanel />
                 </Row>

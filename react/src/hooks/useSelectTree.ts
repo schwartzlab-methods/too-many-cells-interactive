@@ -14,14 +14,15 @@ const useSelectTree = () => {
     return {
         className,
         selector: `.${className}`,
-        tree: select(`.${className}`).select<SVGSVGElement>(
-            'svg .node-container .node'
-        ) as Selection<
-            SVGSVGElement,
-            TMCHierarchyPointNode,
-            HTMLDivElement,
-            unknown
-        >,
+        selectTree: () =>
+            select(`.${className}`).select<SVGSVGElement>(
+                'svg .node-container .node'
+            ) as Selection<
+                SVGSVGElement,
+                TMCHierarchyPointNode,
+                HTMLDivElement,
+                unknown
+            >,
     };
 };
 

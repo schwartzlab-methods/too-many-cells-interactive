@@ -104,7 +104,7 @@ const PrunerPanel: React.FC = () => {
     return (
         <Column xs={12}>
             <WidgetTitle
-                title='Pruning'
+                title='Pruning Controls'
                 caption='Reduce node count by distance, size, or depth'
             />
             <Row>

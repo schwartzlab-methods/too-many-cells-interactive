@@ -29,12 +29,13 @@ const mapMeta = (node: TMCHierarchyDataNode) => {
 };
 
 const useDownloadNodeMeta = () => {
-    const { tree } = useSelectTree();
+    const { selectTree } = useSelectTree();
 
     const _rows: Record<string, any>[] = [];
 
     return (type: 'csv' | 'json') => {
-        if (tree && !tree.empty() && tree.datum()) {
+        if (selectTree() && !selectTree().empty() && selectTree().datum()) {
+            const tree = selectTree();
             if (type === 'json') {
                 saveAs(
                     `data:text/json,${encodeURIComponent(
