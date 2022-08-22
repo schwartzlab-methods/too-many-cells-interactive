@@ -68,35 +68,32 @@ const PruneHistory: React.FC = () => {
                     Reset
                 </Button>
             </Row>
-            <Row>
-                <StepContainer>
-                    {pruneHistory.map((history, i) => (
-                        <PruneStep
-                            key={i}
-                            active={i === activePruneIdx}
-                            empty={pruneStepIsEmpty(history)}
-                            index={i}
-                            pruneStep={history}
-                            setActive={() => {
-                                revertToStep(i);
-                            }}
-                        />
-                    ))}
-                </StepContainer>
-            </Row>
+            <StepContainer>
+                {pruneHistory.map((history, i) => (
+                    <PruneStep
+                        key={i}
+                        active={i === activePruneIdx}
+                        empty={pruneStepIsEmpty(history)}
+                        index={i}
+                        pruneStep={history}
+                        setActive={() => revertToStep(i)}
+                    />
+                ))}
+            </StepContainer>
         </Column>
     );
 };
 
 const StepContainer = styled.div`
     align-items: center;
-    display: flex;
-    flex-basis: 100%;
-    flex-wrap: wrap;
     border: solid 1px gray;
     border-radius: 5px;
+    display: flex;
+    flex-grow: 1;
+    flex-wrap: wrap;
     margin-top: 5px;
     padding: 5px;
+    width: 100%;
 `;
 
 interface PruneStepProps {
@@ -116,7 +113,7 @@ const PruneStep: React.FC<PruneStepProps> = ({
 }) => {
     return (
         <PruneStepContainer>
-            {!!index && <RightArrowIcon />}
+            {!!index && <RightArrowIcon strokeWidth={0} />}
             <PruneStepItem onClick={setActive} active={active} empty={empty}>
                 {getPruneHistoryLabel(pruneStep, index)}
             </PruneStepItem>
@@ -156,9 +153,9 @@ const getPruneHistoryLabel = (pruneStep: PruneStep, index: number) => {
 
 const PruneStepItem = styled.div<{ active: boolean; empty: boolean }>`
     background-color: ${props =>
-        props.empty ? props.theme.palette.grey : props.theme.palette.primary};
-    border: ${props =>
-        props.active ? `solid 3px ${props.theme.palette.secondary}` : 'auto'};
+        props.active
+            ? props.theme.palette.secondary
+            : props.theme.palette.grey};
     color: white;
     cursor: pointer;
     display: flex;

@@ -7,18 +7,14 @@ interface RowProps {
     justifyContent?: string;
 }
 
+//2 accounts for 2% "gutter" margin
 const media = {
     xs: (cols: number) => `  
-        flex-basis: ${(cols / 12) * 100}%
+        flex-basis: ${(cols / 12) * 100 - 2}%;
     `,
     md: (cols: number) => `
-        @media only screen and (min-width: 480px) and (max-width: 767px) {
-            flex-basis: ${(cols / 12) * 100}%
-        }
-    `,
-    lg: (cols: number) => `
-        @media only screen and (min-width: 768px) {
-            flex-basis: ${(cols / 12) * 100}%
+        @media only screen and (min-width: 1238px) {
+            flex-basis: ${(cols / 12) * 100 - 2}%;
         }
     `,
 };
@@ -37,11 +33,10 @@ export const Column = styled.div<ColProps>`
     flex-shrink: 1;
     justify-content: ${props => props.justifyContent ?? 'flex-start'};
     & + & {
-        margin-left: 15px;
+        margin-left: 2%;
     }
     ${props => media.xs(props.xs)}
-    ${props => props.md && media.xs(props.md)}
-    ${props => props.lg && media.xs(props.lg)}
+    ${props => props.md && media.md(props.md)}
 `;
 
 export const Row = styled.div<RowProps>`

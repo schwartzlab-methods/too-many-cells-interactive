@@ -24,7 +24,6 @@ const ChartContainer = styled.div<{ expanded: boolean }>`
 `;
 
 const PrunerContainer = styled.div<{ expanded: boolean }>`
-    cursor: pointer;
     display: flex;
     flex-direction: column;
     height: ${props => (props.expanded ? '300px' : '0px')};

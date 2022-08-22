@@ -155,14 +155,14 @@ const FeatureSearch: React.FC = () => {
                                         expanded={true}
                                         id={k}
                                         label={
-                                            <Row>
+                                            <Row justifyContent='space-between'>
                                                 {k}&nbsp;
                                                 <CloseIcon
                                                     onClick={removeFeature.bind(
                                                         null,
                                                         k
                                                     )}
-                                                    size='7px'
+                                                    size='10px'
                                                     strokeWidth={8}
                                                 />
                                             </Row>
@@ -209,7 +209,7 @@ const FeatureList = styled.div`
 
 const FeatureListLabel = styled(Caption)`
     background-color: white;
-    position: absolute;
+    margin: 5px;
 `;
 
 interface AutocompleteProps {

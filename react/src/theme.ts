@@ -1,10 +1,11 @@
 const theme = {
     palette: {
         grey: '#5e6365',
+        highlight: '#ff7f00',
         lightGrey: '#d1d9dd',
-        primary: '#009FFD',
+        primary: '#377eb8',
         primaryDark: '#00426a',
-        secondary: '#FFA400',
+        secondary: '#4daf4a',
         text: '#000000',
         white: '#ffffff',
     },
