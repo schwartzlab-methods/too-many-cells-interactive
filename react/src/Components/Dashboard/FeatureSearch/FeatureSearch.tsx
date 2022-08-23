@@ -162,6 +162,7 @@ const FeatureSearch: React.FC = () => {
                                                         null,
                                                         k
                                                     )}
+                                                    pointer
                                                     size='10px'
                                                     strokeWidth={8}
                                                 />

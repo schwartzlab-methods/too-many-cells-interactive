@@ -10,7 +10,6 @@ import {
 import Button from '../../Button';
 import { WidgetTitle } from '../../Layout';
 import SelectPanel from '../../SelectPanel';
-import { compose } from 'redux';
 
 const ExportControls: React.FC = () => {
     const [panelOpen, setPanelOpen] = useState(false);
