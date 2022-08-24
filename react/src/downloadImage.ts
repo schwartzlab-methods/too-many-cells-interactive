@@ -1,10 +1,10 @@
 import { saveAs } from 'file-saver';
-import { ScaleOrdinal, ScaleThreshold } from 'd3-scale';
+import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
 import { BaseType, select, Selection } from 'd3-selection';
-import { scaleIsThreshold } from './types';
+import { scaleIsSequential } from './types';
 
 const getSvgSrc = (
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>,
+    colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
     selector: string
 ) => {
     const fontSize = 20;
@@ -28,10 +28,10 @@ const getSvgSrc = (
  */
 export const attachLegend = (
     svg: Selection<SVGSVGElement, unknown, any, unknown>,
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>,
+    colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
     fontSize = 20
 ) => {
-    const hasOrdinalScale = !scaleIsThreshold(colorScale);
+    const hasOrdinalScale = !scaleIsSequential(colorScale);
 
     const container = svg.select('g.container');
 
@@ -82,18 +82,20 @@ export const attachLegend = (
         gradient
             .append('stop')
             .attr('offset', '5%')
+            //@ts-ignore // bad typing -- submit PR if it works...
             .attr('stop-color', colorScale.range()[0]);
         gradient
             .append('stop')
             .attr('offset', '95%')
             .attr(
                 'stop-color',
+                //@ts-ignore // bad typing
                 colorScale.range()[colorScale.range().length - 1]
             );
 
         legend
             .append('text')
-            .text(colorScale.domain()[0])
+            .text(Math.floor(colorScale.domain()[0]))
             .style('font-size', fontSize)
             .attr('text-anchor', 'end')
             .attr('transform', `translate(-10, ${fontSize})`);
@@ -109,12 +111,14 @@ export const attachLegend = (
             .style('font-size', fontSize)
             .attr('text-anchor', 'start')
             .attr('transform', `translate(210, ${fontSize})`)
-            .text(colorScale.domain()[colorScale.domain().length - 1]);
+            .text(
+                Math.ceil(colorScale.domain()[colorScale.domain().length - 1])
+            );
     }
 };
 
 export const downloadPng = (
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>,
+    colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
     selector: string
 ) => {
     const w = (select(selector).select('svg').node() as Element).clientWidth;
@@ -141,7 +145,7 @@ export const downloadPng = (
 };
 
 export const downloadSvg = (
-    colorScale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>,
+    colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
     selector: string
 ) => {
     const svgSrc = getSvgSrc(colorScale, selector);

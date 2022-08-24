@@ -15,6 +15,7 @@ import {
     Scales,
     ToggleableDisplayElements,
 } from '../redux/displayConfigSlice';
+import { getFeatureAverage } from '../hooks';
 
 const noop = () => null;
 
@@ -196,7 +197,11 @@ const attachToolTip = () => {
         .style('padding', '5px');
 };
 
-const showToolTip = (data: TMCHierarchyPointNode, e: MouseEvent) => {
+const showToolTip = (
+    data: TMCHierarchyPointNode,
+    activeFeatures: string[],
+    e: MouseEvent
+) => {
     const cellCount = sum(
         Object.values(data.data.labelCount).map(v => v.quantity)
     );
@@ -258,7 +263,7 @@ const showToolTip = (data: TMCHierarchyPointNode, e: MouseEvent) => {
     const featuresContainer = detail.select('div.features ul');
 
     featuresContainer
-        .selectAll('li.item')
+        .selectAll('li.hi-lo-item')
         .data(
             Object.values(data.data.featureHiLos).sort((a, b) =>
                 a.quantity < b.quantity ? 1 : -1
@@ -266,13 +271,31 @@ const showToolTip = (data: TMCHierarchyPointNode, e: MouseEvent) => {
             Math.random
         )
         .join('li')
-        .attr('class', 'item')
+        .attr('class', 'hi-lo-item')
         .each(function (d) {
             const s = select(this).append('span');
             const strong = s.append('strong');
             strong.html(`${d.scaleKey}: `);
             const val = s.append('span');
             val.html(d.quantity.toLocaleString());
+        });
+
+    featuresContainer
+        .selectAll('li.feature-item')
+        .data(
+            activeFeatures.length
+                ? [getFeatureAverage(data, activeFeatures).toLocaleString()]
+                : [],
+            Math.random
+        )
+        .join('li')
+        .attr('class', 'feature-item')
+        .each(function (d) {
+            const s = select(this).append('span');
+            const strong = s.append('strong');
+            strong.html(`Feature Average: `);
+            const val = s.append('span');
+            val.html(d.toLocaleString());
         });
 };
 
@@ -296,6 +319,7 @@ interface ClickPruneCallbacks {
 }
 
 interface DisplayContext {
+    activeFeatures: string[];
     clickPruneHistory: ClickPruner[];
     colorScaleKey: ColorScaleKey;
     scales: TreeScales;
@@ -686,7 +710,7 @@ class RadialTree {
     render = () => {
         const that = this;
 
-        const { colorScaleKey, scales, visibleNodes } =
+        const { activeFeatures, colorScaleKey, scales, visibleNodes } =
             this.context.displayContext;
 
         const {
@@ -713,17 +737,6 @@ class RadialTree {
                                 'transform',
                                 d => `translate(${pointRadial(d.x, d.y)})`
                             )
-                            .on(
-                                'mouseover',
-                                (e: MouseEvent, d: TMCHierarchyPointNode) =>
-                                    showToolTip(d, e)
-                            )
-                            .on('mouseout', () =>
-                                selectAll('.tooltip').style(
-                                    'visibility',
-                                    'hidden'
-                                )
-                            )
                             .transition()
                             //.delay(this.transitionTime * 2)
                             .duration(this.transitionTime)
@@ -741,6 +754,14 @@ class RadialTree {
                 },
                 update => {
                     return update
+                        .on(
+                            'mouseover',
+                            (e: MouseEvent, d: TMCHierarchyPointNode) =>
+                                showToolTip(d, activeFeatures, e)
+                        )
+                        .on('mouseout', () =>
+                            selectAll('.tooltip').style('visibility', 'hidden')
+                        )
                         .transition()
                         .delay(this.transitionTime)
                         .duration(this.transitionTime)
@@ -773,7 +794,7 @@ class RadialTree {
             .call(this.renderLinks)
             .selectAll<SVGPolygonElement, TMCHiearchyLink>('polygon')
             .on('mouseover', (e: MouseEvent, d: TMCHiearchyLink) =>
-                showToolTip(d.target, e)
+                showToolTip(d.target, activeFeatures, e)
             )
             .on('mouseout', () =>
                 selectAll('.tooltip').style('visibility', 'hidden')
@@ -867,7 +888,7 @@ class RadialTree {
             )
             .join('path')
             .on('mouseover', (e: MouseEvent, d: TMCHierarchyPointNode) =>
-                showToolTip(d, e)
+                showToolTip(d, activeFeatures, e)
             )
             .on('mouseout', () =>
                 selectAll('.tooltip').style('visibility', 'hidden')

@@ -56,12 +56,6 @@ const DisplaySettings: React.FC = () => {
                     })
                 }
             />
-            {!!activeFeatures.length && colorScaleType === 'labelCount' && (
-                <ToggleCheckbox
-                    label='Show feature opacity'
-                    propName='showFeatureOpacity'
-                />
-            )}
         </Column>
     );
 };

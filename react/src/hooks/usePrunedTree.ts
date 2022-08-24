@@ -555,7 +555,7 @@ export const updateFeatureCounts = (
 
                 n.data.featureCount[f] = {
                     quantity,
-                    scaleKey: quantity / n.descendants().length || 1,
+                    scaleKey: quantity / n.value!,
                 };
             });
         }

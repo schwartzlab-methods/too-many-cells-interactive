@@ -1,10 +1,15 @@
 import React, { useRef, useState } from 'react';
-import { ScaleOrdinal, ScaleThreshold } from 'd3-scale';
+import {
+    ScaleOrdinal,
+    ScaleLinear,
+    ScaleThreshold,
+    ScaleSequential,
+} from 'd3-scale';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
 import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
-import { Column, Row, WidgetTitle } from '../../Layout';
+import { Column, WidgetTitle } from '../../Layout';
 import { Input } from '../../Input';
 import { useAppDispatch, useAppSelector, useColorScale } from '../../../hooks';
 import {
@@ -12,7 +17,7 @@ import {
     updateActiveOrdinalColorScale,
     updateColorScale,
 } from '../../../redux/displayConfigSlice';
-import { scaleIsThreshold } from '../../../types';
+import { scaleIsSequential } from '../../../types';
 import { Text } from '../../Typography';
 
 const Legend: React.FC = () => {
@@ -21,12 +26,12 @@ const Legend: React.FC = () => {
     return (
         <Column xs={12} className='legend'>
             <WidgetTitle title='Legend' />
-            {colorScale && !scaleIsThreshold(colorScale) && (
+            {colorScale && !scaleIsSequential(colorScale) && (
                 <OrdinalLegend
                     scale={colorScale as ScaleOrdinal<string, string>}
                 />
             )}
-            {colorScale && scaleIsThreshold(colorScale) && (
+            {colorScale && scaleIsSequential(colorScale) && (
                 <LinearLegend scale={colorScale} />
             )}
         </Column>
@@ -113,13 +118,14 @@ const LinearLegendLabel = styled(Text)`
 `;
 
 const LinearLegendRow = styled.div`
+    align-items: center;
     display: flex;
     position: relative;
 `;
 
-const LinearLegend: React.FC<{ scale: ScaleThreshold<any, any> }> = ({
-    scale,
-}) => {
+const LinearLegend: React.FC<{
+    scale: ScaleSequential<string>;
+}> = ({ scale }) => {
     const [pickerOpen, setPickerOpen] = useState(false);
     const containerRef = useRef<any>();
     const {
@@ -138,14 +144,23 @@ const LinearLegend: React.FC<{ scale: ScaleThreshold<any, any> }> = ({
 
     return (
         <LinearLegendRow>
-            <LinearLegendLabel>{scale.domain()[0]}</LinearLegendLabel>
+            <LinearLegendLabel>
+                {Math.round(scale.domain()[0])}
+            </LinearLegendLabel>
             <LinearLegendContainer onClick={() => setPickerOpen(true)}>
                 <svg viewBox='0 0 200 25'>
                     <linearGradient id='scaleGradient'>
-                        <stop offset='5%' stopColor={scale.range()[0]} />
+                        <stop
+                            offset='5%'
+                            //bad source typing
+                            stopColor={(scale.range() as any)[0]}
+                        />
                         <stop
                             offset='95%'
-                            stopColor={scale.range()[scale.range().length - 1]}
+                            stopColor={
+                                //bad source typing
+                                (scale.range() as any)[scale.range().length - 1]
+                            }
                         />
                     </linearGradient>
 
@@ -157,7 +172,7 @@ const LinearLegend: React.FC<{ scale: ScaleThreshold<any, any> }> = ({
                 </svg>
             </LinearLegendContainer>
             <LinearLegendLabel>
-                {scale.domain().slice(-1)[0].toLocaleString()}
+                {Math.round(scale.domain().slice(-1)[0])}
             </LinearLegendLabel>
             <Popover ref={containerRef} open={pickerOpen}>
                 <ColorPicker

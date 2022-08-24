@@ -3,7 +3,12 @@ import {
     HierarchyPointLink,
     HierarchyPointNode,
 } from 'd3-hierarchy';
-import { ScaleOrdinal, ScaleThreshold } from 'd3-scale';
+import {
+    ScaleLinear,
+    ScaleOrdinal,
+    ScaleSequential,
+    ScaleThreshold,
+} from 'd3-scale';
 
 export interface RoseNodeItem {
     _barcode: { unCell: string };
@@ -57,10 +62,10 @@ export const isLinkNode = (
     item: TMCHiearchyNode | TMCHiearchyLink
 ): item is TMCHiearchyLink => !!(item as TMCHiearchyLink).source;
 
-export const scaleIsThreshold = (
-    scale: ScaleOrdinal<string, string> | ScaleThreshold<any, any>
-): scale is ScaleThreshold<any, any> =>
-    !!(scale as ScaleThreshold<any, any>).invertExtent;
+export const scaleIsSequential = (
+    scale: ScaleOrdinal<string, string> | ScaleSequential<string>
+): scale is ScaleSequential<string> =>
+    !!(scale as ScaleSequential<string>).interpolator;
 
 /* Tree without layout calculated (i.e., no x or y values attached) */
 export type TMCHiearchyNode = HierarchyNode<TMCNode>;

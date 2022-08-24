@@ -26,7 +26,6 @@ import {
 } from '../../react/src/util';
 import {
     buildFeatureColorScale,
-    buildFeatureLinearScale,
     buildLabelColorFunction,
     getFeatureAverage,
     getLabelColor,
@@ -105,18 +104,12 @@ const getFeatureMap = async (features: string[]) => {
 };
 
 /**
- * If features are present, either because we have a feature scale or a label scale with opacity,
- * add features to cells and annotate nodes as required for scales to render appropriately.
+ * If features are present, add them to cells and annotate nodes as required for scales to render appropriately.
  */
 const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
     const { variant: scaleType } = state.scales!.colorScale!;
 
-    if (
-        state.features.length &&
-        (scaleType !== 'labelCount' ||
-            (scaleType === 'labelCount' &&
-                state.optionalDisplayElements.showFeatureOpacity))
-    ) {
+    if (state.features.length && scaleType !== 'labelCount') {
         await mongoose.connect(process.env.MONGO_CONNECTION_STRING!);
         const featureMap = await getFeatureMap(state.features);
         addFeaturesToCells(nodes, featureMap);
@@ -172,22 +165,8 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
             labelDomain = res.domain;
         }
 
-        const opacityVisible = state.optionalDisplayElements.showFeatureOpacity;
-
-        if (opacityVisible) {
-            updateFeatureCounts(nodes, state.features);
-            linearScale = buildFeatureLinearScale(
-                getFeatureGradientDomain(nodes, state.features)
-            );
-        }
-
         const scale = makeOrdinalScale(labelRange, labelDomain);
-        const scaleFunction = buildLabelColorFunction(
-            state.features,
-            scale,
-            opacityVisible,
-            linearScale
-        );
+        const scaleFunction = buildLabelColorFunction(state.features, scale);
         return { scale, scaleFunction };
     } else if (scaleType === 'featureHiLos') {
         const domain = state.scales.colorScale?.featureHiLoDomain?.length
@@ -202,14 +181,10 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
         };
         return { scale, scaleFunction };
     } else {
-        const linearScale = buildFeatureLinearScale(
-            getFeatureGradientDomain(nodes, state.features)
-        );
-
         const scale = buildFeatureColorScale(
             '#D3D3D3',
             state.scales.colorScale?.featureGradientColor || '#E41A1C',
-            linearScale
+            getFeatureGradientDomain(nodes, state.features)
         );
 
         const scaleFunction = (node: TMCHiearchyNode) => {
@@ -252,6 +227,7 @@ const saveTree = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
 
     const context: TreeContext = {
         displayContext: {
+            activeFeatures: state.features,
             clickPruneHistory: [],
             colorScaleKey: scaleType!,
             scales: treeScales,
@@ -299,7 +275,6 @@ const OPTIONAL_DISPLAY_ELEMENTS: (keyof ToggleableDisplayElements)[] = [
     'nodeCountsVisible',
     'nodeIdsVisible',
     'piesVisible',
-    'showFeatureOpacity',
     'strokeVisible',
 ];
 
@@ -393,7 +368,6 @@ const defaultToggleableFeatures = {
     nodeCountsVisible: false,
     nodeIdsVisible: false,
     piesVisible: true,
-    showFeatureOpacity: false,
     strokeVisible: false,
 };
 

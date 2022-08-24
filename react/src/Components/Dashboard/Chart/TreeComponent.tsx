@@ -24,6 +24,7 @@ import {
     removeClickPrune as _removeClickPrune,
     selectActivePruneStep,
 } from '../../../redux/pruneSlice';
+import { selectFeatureSlice } from '../../../redux/featureSlice';
 
 const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
     baseTree,
@@ -53,6 +54,8 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
         },
     } = useAppSelector(selectDisplayConfig);
 
+    const { activeFeatures } = useAppSelector(selectFeatureSlice);
+
     const {
         step: { clickPruneHistory },
     } = useAppSelector(selectActivePruneStep);
@@ -76,6 +79,7 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
                 removeClickPrune,
             },
             displayContext: {
+                activeFeatures,
                 clickPruneHistory,
                 colorScaleKey,
                 scales: treeScales,
@@ -85,6 +89,7 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
             },
         }),
         [
+            activeFeatures,
             addClickPrune,
             clickPruneHistory,
             colorScaleKey,

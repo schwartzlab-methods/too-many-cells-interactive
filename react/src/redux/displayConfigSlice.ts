@@ -15,7 +15,6 @@ export interface ToggleableDisplayElements {
     nodeCountsVisible: boolean;
     nodeIdsVisible: boolean;
     piesVisible: boolean;
-    showFeatureOpacity: boolean;
     strokeVisible: boolean;
 }
 
@@ -82,7 +81,6 @@ const initialToggleableValues: ToggleableDisplayElements = {
     nodeCountsVisible: false,
     nodeIdsVisible: false,
     piesVisible: true,
-    showFeatureOpacity: false,
     strokeVisible: false,
 };
 
