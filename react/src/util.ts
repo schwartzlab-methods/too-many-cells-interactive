@@ -59,6 +59,24 @@ export const getMAD = (values: number[]) => {
     return median(distances);
 };
 
+/**
+ * Return value as count of MADs from given median
+ */
+export const valueToMadCount = (value: number, median: number, mad: number) => {
+    return Math.abs(value - median) / mad;
+};
+
+/**
+ * Return mad count as value, given median and mad
+ */
+export const madCountToValue = (
+    madCount: number,
+    median: number,
+    mad: number
+) => {
+    return median + madCount * mad;
+};
+
 /* this is mainly for exporting to backend to avoid 2 d3 dependencies */
 export const getMedian = (values: number[]) => median(values) || 0;
 

@@ -17,6 +17,7 @@ import { Column, Row, WidgetTitle } from '../../Layout';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import { Text } from '../../Typography';
 import SelectPanel from '../../SelectPanel';
+import { madCountToValue, valueToMadCount } from '../../../util';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -251,6 +252,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
     id,
     label,
     madValues,
+    madSize,
     median,
     plainValues,
     onSubmit,
@@ -258,13 +260,25 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
     value,
 }) => {
     const [type, setType] = useState<'raw' | 'smart'>('raw');
+
     const [inputVal, setInputVal] = useState<string>(value ? value + '' : '0');
 
+    const formatVal = format('.3f');
+
     useEffect(() => {
+        //not sure about this....
         if (!value && inputVal != '0') {
             setInputVal('0');
         }
-    }, [value]);
+
+        if (value !== undefined) {
+            if (type === 'raw') {
+                setInputVal(formatVal(value));
+            } else {
+                setInputVal(formatVal(valueToMadCount(value, median, madSize)));
+            }
+        }
+    }, [value, type]);
 
     return (
         <PrunerContainer expanded={expanded}>
@@ -299,7 +313,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                                 <AreaChartComponent
                                     counts={plainValues}
                                     onBrush={val => {
-                                        setInputVal(format('.3f')(val));
+                                        setInputVal(val.toString());
                                         onSubmit(val);
                                     }}
                                     value={value}
@@ -310,11 +324,23 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                                 <AreaChartComponent
                                     counts={madValues}
                                     onBrush={val => {
-                                        setInputVal(format('.3f')(val));
-                                        onSubmit(median + val * median);
+                                        setInputVal(val.toString());
+                                        onSubmit(
+                                            madCountToValue(
+                                                val,
+                                                median,
+                                                madSize
+                                            )
+                                        );
                                     }}
                                     value={
-                                        value ? value / median - 1 : undefined
+                                        value
+                                            ? valueToMadCount(
+                                                  value,
+                                                  median,
+                                                  madSize
+                                              )
+                                            : undefined
                                     }
                                     xLabel={`${xLabel} in MADs from median`}
                                 />
@@ -323,7 +349,15 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                                 onChange={v => setInputVal(v + '')}
                                 onSubmit={() => {
                                     if (inputVal) {
-                                        onSubmit(+inputVal);
+                                        onSubmit(
+                                            type === 'smart'
+                                                ? madCountToValue(
+                                                      +inputVal,
+                                                      median,
+                                                      madSize
+                                                  )
+                                                : +inputVal
+                                        );
                                     }
                                 }}
                                 value={inputVal}

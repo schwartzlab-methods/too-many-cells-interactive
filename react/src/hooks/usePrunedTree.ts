@@ -510,7 +510,7 @@ const getMadFeatureGroups = (range: number[], mad: number, median: number) => {
 
     const maxMads = Math.ceil((maxVal - median) / mad);
 
-    const thresholds = ticks(0, maxMads, Math.min(maxMads, 25));
+    const thresholds = ticks(0, maxMads, Math.max(maxMads, 25));
 
     return thresholds.reduce<Record<number, number>>(
         (acc, curr) => ({
