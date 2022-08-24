@@ -82,7 +82,7 @@ export const attachLegend = (
         gradient
             .append('stop')
             .attr('offset', '5%')
-            //@ts-ignore // bad typing -- submit PR if it works...
+            //@ts-ignore // bad typing -- todo: submit PR to DT
             .attr('stop-color', colorScale.range()[0]);
         gradient
             .append('stop')
@@ -104,13 +104,13 @@ export const attachLegend = (
             .append('rect')
             .attr('fill', "url('#scaleGradientDownload')")
             .attr('height', 25)
-            .attr('width', 200);
+            .attr('width', legendWidth - 5);
 
         legend
             .append('text')
             .style('font-size', fontSize)
             .attr('text-anchor', 'start')
-            .attr('transform', `translate(210, ${fontSize})`)
+            .attr('transform', `translate(${legendWidth}, ${fontSize})`)
             .text(
                 Math.ceil(colorScale.domain()[colorScale.domain().length - 1])
             );
