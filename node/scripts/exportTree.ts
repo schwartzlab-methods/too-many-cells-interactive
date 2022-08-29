@@ -184,7 +184,8 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
         const scale = buildFeatureColorScale(
             '#D3D3D3',
             state.scales.colorScale?.featureGradientColor || '#E41A1C',
-            getFeatureGradientDomain(nodes, state.features)
+            state.scales.colorScale?.featureGradientScaleType || 'sequential',
+            getFeatureGradientDomain(nodes)
         );
 
         const scaleFunction = (node: TMCHiearchyNode) => {
@@ -302,7 +303,7 @@ const validateScales = (scales: ChartConfig['scales']) => {
 
     if (colorScale) {
         const { variant } = colorScale;
-        if (variant === 'featureCount') {
+        if (variant === 'featureAverage') {
             if (
                 colorScale.featureGradientColor &&
                 typeof colorScale.featureGradientColor !== 'string'

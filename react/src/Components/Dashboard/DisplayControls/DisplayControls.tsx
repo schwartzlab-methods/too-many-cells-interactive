@@ -27,7 +27,7 @@ import Legend from './Legend';
 const DisplayControls: React.FC = () => {
     const {
         scales: {
-            colorScale: { variant: colorScaleType },
+            colorScale: { variant: colorScaleType, featureGradientScaleType },
         },
     } = useAppSelector(selectDisplayConfig);
 
@@ -68,7 +68,7 @@ const DisplayControls: React.FC = () => {
 
     return (
         <>
-            <Column xs={12} md={6}>
+            <Column xs={6}>
                 <Row>
                     <Legend />
                 </Row>
@@ -83,7 +83,7 @@ const DisplayControls: React.FC = () => {
                                 type='radio'
                             />
                             <RadioLabel htmlFor='featureHiLos'>
-                                Show Features
+                                Feature HiLo
                             </RadioLabel>
                             <RadioButton
                                 checked={colorScaleType === 'labelCount'}
@@ -95,20 +95,39 @@ const DisplayControls: React.FC = () => {
                                 )}
                                 type='radio'
                             />
-                            <RadioLabel htmlFor='labelCount'>
-                                Show Labels
-                            </RadioLabel>
+                            <RadioLabel htmlFor='labelCount'>Labels</RadioLabel>
                             <RadioButton
-                                checked={colorScaleType === 'featureCount'}
+                                checked={
+                                    colorScaleType === 'featureAverage' &&
+                                    featureGradientScaleType === 'sequential'
+                                }
                                 id='two-color'
                                 name='two-color'
                                 onChange={() =>
-                                    activateContinuousFeatureScale()
+                                    activateContinuousFeatureScale('sequential')
                                 }
                                 type='radio'
                             />
                             <RadioLabel htmlFor='two-color'>
-                                Show Feature Blend
+                                Feature Avg
+                            </RadioLabel>
+                            <RadioButton
+                                checked={
+                                    colorScaleType === 'featureAverage' &&
+                                    featureGradientScaleType ===
+                                        'symlogSequential'
+                                }
+                                id='two-color-sym'
+                                name='two-color-sym'
+                                onChange={() =>
+                                    activateContinuousFeatureScale(
+                                        'symlogSequential'
+                                    )
+                                }
+                                type='radio'
+                            />
+                            <RadioLabel htmlFor='two-color-sym'>
+                                Feature Avg SymLog
                             </RadioLabel>
                         </RadioGroup>
                     </Row>
@@ -131,7 +150,7 @@ const DisplayControls: React.FC = () => {
                     </Column>
                 </Row>
             </Column>
-            <Column xs={12} md={6}>
+            <Column xs={6}>
                 <Row>
                     <ExportControls />
                 </Row>

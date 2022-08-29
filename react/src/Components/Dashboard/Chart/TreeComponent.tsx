@@ -109,7 +109,7 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
                     domain: extent(
                         visibleNodes.descendants().map(d => +(d.value || 0))
                     ) as [number, number],
-                    range: [0.01, 20],
+                    range: [0.1, 20],
                 },
             })
         );

@@ -9,9 +9,11 @@ import {
     ScaleLinear,
     scaleSequential,
     ScaleSequential,
+    scaleSequentialSymlog,
 } from 'd3-scale';
 import {
     ColorScaleVariant,
+    FeatureGradientScaleType,
     Scales,
     selectDisplayConfig,
 } from '../redux/displayConfigSlice';
@@ -57,6 +59,7 @@ export const useColorScale = (): {
                 featureGradientColor,
                 featureGradientDomain,
                 featureGradientRange,
+                featureGradientScaleType,
                 featureHiLoDomain,
                 featureHiLoRange,
                 labelDomain,
@@ -74,6 +77,7 @@ export const useColorScale = (): {
         return buildFeatureColorScale(
             featureGradientRange[0],
             featureGradientColor,
+            featureGradientScaleType,
             featureGradientDomain
         );
     }, [featureGradientColor, featureGradientRange, featureGradientDomain]);
@@ -109,11 +113,15 @@ export const useColorScale = (): {
 export const buildFeatureColorScale = (
     colorStart: string,
     colorEnd: string,
+    scaleType: FeatureGradientScaleType,
     featureDomain: number[]
 ) => {
-    return scaleSequential<string>(
-        interpolateRgb(rgb(colorStart), rgb(colorEnd))
-    ).domain(extent(featureDomain) as [number, number]);
+    const scale =
+        scaleType === 'sequential' ? scaleSequential : scaleSequentialSymlog;
+
+    return scale<string>(interpolateRgb(rgb(colorStart), rgb(colorEnd))).domain(
+        extent(featureDomain) as [number, number]
+    );
 };
 
 export const makeColorScale = (
@@ -130,7 +138,7 @@ export const makeColorScale = (
             scale = labelScale;
             scaleFunction = buildLabelColorFunction(activeFeatures, labelScale);
             break;
-        case 'featureCount':
+        case 'featureAverage':
             scale = featureColorScale;
             scaleFunction = (node: TMCHiearchyNode) => {
                 const featureAverage = getFeatureAverage(node, activeFeatures);

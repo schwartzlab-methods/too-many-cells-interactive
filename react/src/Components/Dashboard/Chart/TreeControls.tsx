@@ -21,7 +21,7 @@ const PruneStatuses: React.FC = () => {
     return (
         <StatusContainer>
             <Text>
-                <Bold>Observation count:</Bold> {nodeCount}
+                <Bold>Node count:</Bold> {nodeCount}
             </Text>
             <Text>
                 <Bold>Leaf count:</Bold> {leafCount}
@@ -30,7 +30,8 @@ const PruneStatuses: React.FC = () => {
                 <Bold>Min value:</Bold> {minValue}
             </Text>
             <Text>
-                <Bold>Max value:</Bold> {(maxValue || 0).toLocaleString()}
+                <Bold>Observation total:</Bold>{' '}
+                {(maxValue || 0).toLocaleString()}
             </Text>
         </StatusContainer>
     );

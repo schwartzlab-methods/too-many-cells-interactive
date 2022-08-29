@@ -7,15 +7,19 @@ import { ScaleLinear, scaleLinear } from 'd3-scale';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, PieArcDatum, pointRadial } from 'd3-shape';
 import { zoom } from 'd3-zoom';
-import { carToRadius, carToTheta, formatDistance, squared } from '../util';
-import { isLinkNode, TMCHierarchyPointNode, TMCHiearchyLink } from '../types';
+import { carToRadius, carToTheta, formatDigit, squared } from '../util';
+import {
+    isLinkNode,
+    TMCHierarchyPointNode,
+    TMCHiearchyLink,
+    TMCHierarchyDataNode,
+} from '../types';
 import { ClickPruner } from '../redux/pruneSlice';
 import {
     ColorScaleVariant,
     Scales,
     ToggleableDisplayElements,
 } from '../redux/displayConfigSlice';
-import { getFeatureAverage } from '../hooks';
 
 const noop = () => null;
 
@@ -139,9 +143,15 @@ const arcPath = arc()({
  * @param key the field to be passed to the color scale
  */
 const makePie = (data: TMCHierarchyPointNode[], key: ColorScaleVariant) =>
-    pie<TMCHierarchyPointNode>().value(
-        d => Object.values(d.data[key])[0].quantity || 1
-    )(data);
+    pie<TMCHierarchyPointNode>().value(d => {
+        const item = Object.values(d.data[key])[0];
+        //if scalekey is numeric  use that, otherwise use quantity
+        return (
+            (typeof item.scaleKey === 'number'
+                ? item.scaleKey
+                : item.quantity) || 1
+        );
+    })(data);
 
 const getPie = (d: PieArcDatum<TMCHierarchyPointNode>, outerRadius: number) =>
     arc()({
@@ -225,7 +235,7 @@ const showToolTip = (
             [
                 'Distance',
                 data.data.distance
-                    ? formatDistance(data.data.distance)
+                    ? formatDigit(3, data.data.distance)
                     : 'null',
             ],
             ['Observation Count', data.value!.toLocaleString()],
@@ -284,7 +294,7 @@ const showToolTip = (
         .selectAll('li.feature-item')
         .data(
             activeFeatures.length
-                ? [getFeatureAverage(data, activeFeatures).toLocaleString()]
+                ? [data.data.featureAverage.average.quantity]
                 : [],
             Math.random
         )
@@ -820,9 +830,16 @@ class RadialTree {
 
         this.nodes
             .selectAll('g.pie')
-            .data(d => (piesVisible ? [d] : []))
+            .data(
+                d => (piesVisible ? [d] : []),
+                d =>
+                    `${(d as TMCHierarchyDataNode).data.id}-${
+                        (d as TMCHierarchyDataNode).children ? 'a' : 'b'
+                    }`
+            )
             .join('g')
             .attr('class', 'pie')
+            .filter(d => !d.children)
             .style('cursor', 'pointer')
             .each(function (outer) {
                 select(this)
@@ -853,12 +870,10 @@ class RadialTree {
                     .join('path')
                     .attr('stroke', 'none')
                     .attr('d', d => {
-                        return !outer.children
-                            ? getPie(d, pieScale(outer.value!))
-                            : '';
+                        return getPie(d, pieScale(outer.value!));
                     })
                     .attr('fill', d => {
-                        return !outer.children ? colorScaleWrapper(d.data) : '';
+                        return colorScaleWrapper(d.data);
                     });
             })
             .on('click', (event, d) => {

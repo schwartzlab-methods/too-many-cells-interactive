@@ -1,10 +1,5 @@
 import React, { useRef, useState } from 'react';
-import {
-    ScaleOrdinal,
-    ScaleLinear,
-    ScaleThreshold,
-    ScaleSequential,
-} from 'd3-scale';
+import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
 import useClickAway from '../../../hooks/useClickAway';
@@ -19,6 +14,7 @@ import {
 } from '../../../redux/displayConfigSlice';
 import { scaleIsSequential } from '../../../types';
 import { Text } from '../../Typography';
+import { formatDigit } from '../../../util';
 
 const Legend: React.FC = () => {
     const { scale: colorScale } = useColorScale();
@@ -38,10 +34,6 @@ const Legend: React.FC = () => {
     );
 };
 
-const LegendDot = styled(DotIcon)`
-    cursor: pointer;
-`;
-
 interface LegendItemProps {
     color: string;
     label: string;
@@ -60,7 +52,8 @@ const LegendItem: React.FC<LegendItemProps> = ({
 
     return (
         <LegendItemContainer onClick={() => setPickerOpen(true)}>
-            <LegendDot
+            <DotIcon
+                pointer
                 fill={color}
                 stroke={color}
                 onClick={() => setPickerOpen(true)}
@@ -172,7 +165,7 @@ const LinearLegend: React.FC<{
                 </svg>
             </LinearLegendContainer>
             <LinearLegendLabel>
-                {Math.round(scale.domain().slice(-1)[0])}
+                {formatDigit(2, scale.domain().slice(-1)[0])}
             </LinearLegendLabel>
             <Popover ref={containerRef} open={pickerOpen}>
                 <ColorPicker

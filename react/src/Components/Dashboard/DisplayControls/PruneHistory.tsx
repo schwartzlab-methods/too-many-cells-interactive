@@ -1,7 +1,7 @@
 import React from 'react';
 import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
-import { formatDistance, formatInteger, pruneStepIsEmpty } from '../../../util';
+import { formatDigit, pruneStepIsEmpty } from '../../../util';
 import Button from '../../Button';
 import { Column, Row, WidgetTitle } from '../../Layout';
 import { Text } from '../../Typography';
@@ -126,9 +126,10 @@ const getPruneHistoryLabel = (pruneStep: PruneStep, index: number) => {
     const manualPruneCount = pruneStep.clickPruneHistory.length;
     const labels = [];
     if (key && value) {
-        const formatter = key.startsWith('minDistance')
-            ? formatDistance
-            : formatInteger;
+        const formatter = formatDigit.bind(
+            null,
+            key.startsWith('minDistance') ? 3 : 0
+        );
         labels.push(`${key}: ${formatter(value)}`);
     }
     if (manualPruneCount) {

@@ -32,6 +32,7 @@ import {
 } from '../util';
 import useAppSelector from './useAppSelector';
 import useAppDispatch from './useAppDispatch';
+import { getFeatureAverage } from './useScale';
 
 const usePrunedTree = (tree: TMCHierarchyDataNode) => {
     const [baseTree, setBaseTree] = useState(tree);
@@ -133,7 +134,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
             setBaseTree(annotatedTree);
         }
-    }, [featureHiLoThresholds]);
+    }, [activeFeatures, featureHiLoThresholds]);
 
     useEffect(() => {
         if (activeFeatures.length) {
@@ -141,10 +142,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
                 getFeatureDistributions(tree, activeFeatures)
             );
 
-            const featureAverages = getFeatureGradientDomain(
-                visibleNodes,
-                activeFeatures
-            );
+            const featureAverages = getFeatureGradientDomain(visibleNodes);
 
             updateColorScale({ featureGradientDomain: featureAverages });
         }
@@ -178,10 +176,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
         updateTreeMetadata(buildTreeMetadata(visibleNodes));
         if (activeFeatures.length) {
             updateColorScale({
-                featureGradientDomain: getFeatureGradientDomain(
-                    visibleNodes,
-                    activeFeatures
-                ),
+                featureGradientDomain: getFeatureGradientDomain(visibleNodes),
             });
             updateFeatureDistributions(
                 getFeatureDistributions(visibleNodes, activeFeatures)
@@ -197,21 +192,11 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
 export default usePrunedTree;
 
-export const getFeatureGradientDomain = (
-    tree: TMCHierarchyDataNode,
-    activeFeatures: string[]
-) =>
+export const getFeatureGradientDomain = (tree: TMCHierarchyDataNode) =>
     extent(
         tree
             .descendants()
-            .map(
-                d =>
-                    sum(
-                        Object.values(d.data.featureCount).map(
-                            v => v.scaleKey as number
-                        )
-                    ) / activeFeatures.length
-            )
+            .map(d => d.data.featureAverage?.average?.quantity || 0)
     ) as [number, number];
 
 export const addFeaturesToCells = (
@@ -493,18 +478,28 @@ const getFeatureDistributions = (
     return distributions;
 };
 
+/**
+ * Divide the feature counts into bins, each keyed by cumsum
+ * @param range: the feature counts;
+ */
 const getPlainFeatureGroups = (range: number[]) => {
-    const thresholds = ticks(0, max(range) || 0, Math.min(max(range) || 0, 25));
+    const thresholds = ticks(0, max(range) || 0, Math.max(max(range) || 0, 25));
 
-    return thresholds.reduce<Record<number, number>>(
+    const tx = thresholds.reduce<Record<number, number>>(
         (acc, curr) => ({
             ...acc,
             [curr]: range.filter(n => n > curr).length,
         }),
         {}
     );
+
+    return tx;
 };
 
+/**
+ * Divide the feature MAD count into bins, each keyed MAD count
+ * @param range: the feature counts;
+ */
 const getMadFeatureGroups = (range: number[], mad: number, median: number) => {
     const maxVal = max(range) || 0;
 
@@ -534,16 +529,17 @@ export const updateFeatureCounts = (
     nodes.eachAfter(n => {
         if (n.data.items) {
             features.forEach(f => {
-                const quantity =
-                    n.data.items!.reduce(
-                        (acc, curr) =>
-                            (acc += curr._barcode._featureCounts[f] || 0),
-                        0
-                    ) / n.value!;
+                const quantity = n.data.items!.reduce(
+                    (acc, curr) =>
+                        (acc += curr._barcode._featureCounts[f] || 0),
+                    0
+                );
+
+                const average = n.value ? quantity / n.value : 0;
 
                 n.data.featureCount[f] = {
                     quantity,
-                    scaleKey: quantity,
+                    scaleKey: average,
                 };
             });
         } else {
@@ -559,11 +555,20 @@ export const updateFeatureCounts = (
                 };
             });
         }
+
+        const quantity = getFeatureAverage(n, features);
+
+        n.data.featureAverage = {
+            average: {
+                quantity,
+                scaleKey: quantity,
+            },
+        };
     });
 
 /**
  *
- * @param nodes the base tree (not a pruned tree)
+ * @ram nodes the base tree (not a pruned tree)
  * @param thresholds the cutoff for hi/lo for each feature
  * @param activeFeatures the features currently visible
  * @returns TMCHierarchyDataNode (mutated argument)

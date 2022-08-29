@@ -107,6 +107,7 @@ const flatten = (
     node.significance = meta?._significance ?? null;
     node.featureHiLos = {};
     node.featureCount = {};
+    node.featureAverage = {};
     nodes.push(node);
     for (const item of data) {
         if (Array.isArray(item)) {

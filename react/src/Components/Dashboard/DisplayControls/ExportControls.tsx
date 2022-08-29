@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { saveAs } from 'file-saver';
 import { downloadPng, downloadSvg } from '../../../downloadImage';
 import {
+    useAppSelector,
     useColorScale,
     useDownloadNodeMeta,
     useExportState,
@@ -10,11 +11,14 @@ import {
 import Button from '../../Button';
 import { WidgetTitle } from '../../Layout';
 import SelectPanel from '../../SelectPanel';
+import { selectFeatureSlice } from '../../../redux/featureSlice';
 
 const ExportControls: React.FC = () => {
     const [panelOpen, setPanelOpen] = useState(false);
 
     const { scale: colorScale } = useColorScale();
+
+    const { activeFeatures } = useAppSelector(selectFeatureSlice);
 
     const state = useExportState();
 
@@ -26,13 +30,23 @@ const ExportControls: React.FC = () => {
         return {
             exportCsv: downloadMeta.bind(null, 'csv'),
             exportJson: downloadMeta.bind(null, 'json'),
-            exportPng: downloadPng.bind(null, colorScale, selector),
+            exportPng: downloadPng.bind(
+                null,
+                colorScale,
+                selector,
+                activeFeatures
+            ),
             exportState: saveAs.bind(
                 null,
                 `data:text/json,${encodeURIComponent(JSON.stringify(state))}`,
                 'tmc-state-export.json'
             ),
-            exportSvg: downloadSvg.bind(null, colorScale, selector),
+            exportSvg: downloadSvg.bind(
+                null,
+                colorScale,
+                selector,
+                activeFeatures
+            ),
         };
     }, [colorScale, downloadMeta, state]);
 

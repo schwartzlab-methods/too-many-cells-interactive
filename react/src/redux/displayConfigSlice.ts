@@ -18,11 +18,18 @@ export interface ToggleableDisplayElements {
     strokeVisible: boolean;
 }
 
-export type ColorScaleVariant = 'labelCount' | 'featureHiLos' | 'featureCount';
+//note that these are keys on node.data
+export type ColorScaleVariant =
+    | 'labelCount'
+    | 'featureAverage'
+    | 'featureHiLos';
+
+export type FeatureGradientScaleType = 'sequential' | 'symlogSequential';
 
 export interface ColorScaleConfig {
     //the base color for the gradient scale
     featureGradientColor: string;
+    featureGradientScaleType: FeatureGradientScaleType;
     //average feature counts for each node
     featureGradientDomain: number[];
     //the two-color range to interpolate between
@@ -63,6 +70,7 @@ const initialScales: Scales = {
         featureGradientDomain: [],
         featureGradientRange: [],
         featureGradientColor: '#E41A1C',
+        featureGradientScaleType: 'sequential',
         featureHiLoDomain: [],
         featureHiLoRange: [],
         featureHiLoThresholds: {},
@@ -100,12 +108,16 @@ export const displayConfigSlice = createSlice({
     name: 'displayConfig',
     initialState,
     reducers: {
-        activateFeatureColorScale: state => {
+        activateFeatureColorScale: (
+            state,
+            { payload }: PayloadAction<FeatureGradientScaleType>
+        ) => {
             state.scales.colorScale.featureGradientRange = [
                 '#D3D3D3',
                 state.scales.colorScale.featureGradientColor,
             ];
-            state.scales.colorScale.variant = 'featureCount';
+            state.scales.colorScale.featureGradientScaleType = payload;
+            state.scales.colorScale.variant = 'featureAverage';
         },
         toggleDisplayProperty: (
             state,

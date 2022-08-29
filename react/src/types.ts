@@ -44,6 +44,7 @@ export type AttributeMap = Record<string, AttributeMapValue>;
 export interface TMCFlatNode {
     distance: number | null;
     id: string;
+    featureAverage: AttributeMap;
     featureCount: AttributeMap;
     featureHiLos: AttributeMap;
     items: TMCNodeItem[] | null;

@@ -5,7 +5,8 @@ import { scaleIsSequential } from './types';
 
 const getSvgSrc = (
     colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
-    selector: string
+    selector: string,
+    activeFeatures: string[] = []
 ) => {
     const fontSize = 20;
 
@@ -18,7 +19,7 @@ const getSvgSrc = (
         .attr('version', 1.1);
 
     //we have to redraw/attach legend as SVG b/c display DOM legend is a react component
-    attachLegend(clonedSvg, colorScale, fontSize);
+    attachLegend(clonedSvg, colorScale, fontSize, activeFeatures);
 
     return `data:image/svg+xml;base64,\n${window.btoa(clonedParent.innerHTML)}`;
 };
@@ -29,7 +30,8 @@ const getSvgSrc = (
 export const attachLegend = (
     svg: Selection<SVGSVGElement, unknown, any, unknown>,
     colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
-    fontSize = 20
+    fontSize = 20,
+    activeFeatures: string[] = []
 ) => {
     const hasOrdinalScale = !scaleIsSequential(colorScale);
 
@@ -76,6 +78,8 @@ export const attachLegend = (
                 });
             });
     } else {
+        const legendHeight = 25;
+
         const gradient = legend
             .append('linearGradient')
             .attr('id', 'scaleGradientDownload');
@@ -103,28 +107,38 @@ export const attachLegend = (
         legend
             .append('rect')
             .attr('fill', "url('#scaleGradientDownload')")
-            .attr('height', 25)
-            .attr('width', legendWidth - 5);
+            .attr('height', legendHeight)
+            .attr('width', legendWidth - 15);
 
         legend
             .append('text')
             .style('font-size', fontSize)
             .attr('text-anchor', 'start')
-            .attr('transform', `translate(${legendWidth}, ${fontSize})`)
+            .attr('transform', `translate(${legendWidth - 5}, ${fontSize})`)
             .text(
                 Math.ceil(colorScale.domain()[colorScale.domain().length - 1])
             );
+
+        legend
+            .append('g')
+            .attr('transform', `translate(0,${legendHeight + fontSize + 5})`)
+            .selectAll('text.feature')
+            .data(activeFeatures)
+            .join('text')
+            .attr('y', (_, i) => fontSize * i)
+            .text(d => d);
     }
 };
 
 export const downloadPng = (
     colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
-    selector: string
+    selector: string,
+    activeFeatures: string[] = []
 ) => {
     const w = (select(selector).select('svg').node() as Element).clientWidth;
     const h = (select(selector).select('svg').node() as Element).clientHeight;
 
-    const src = getSvgSrc(colorScale, selector);
+    const src = getSvgSrc(colorScale, selector, activeFeatures);
 
     const canvas = document.createElement('canvas')!;
     const context = canvas.getContext('2d')!;
@@ -146,8 +160,9 @@ export const downloadPng = (
 
 export const downloadSvg = (
     colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
-    selector: string
+    selector: string,
+    activeFeatures: string[] = []
 ) => {
-    const svgSrc = getSvgSrc(colorScale, selector);
+    const svgSrc = getSvgSrc(colorScale, selector, activeFeatures);
     saveAs(svgSrc);
 };

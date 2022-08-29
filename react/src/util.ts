@@ -193,22 +193,8 @@ export const pruneStepIsEmpty = (ctx: Readonly<PruneStep>) =>
 export const getObjectIsEmpty = (obj: Record<any, any>) =>
     !Object.keys(obj).length;
 
-export const pruneContextsAreEqual = (
-    ctx1: Readonly<PruneStep>,
-    ctx2: Readonly<PruneStep>
-) =>
-    ctx1.clickPruneHistory.length === ctx2.clickPruneHistory.length &&
-    valuePrunersAreEqual(ctx1, ctx2);
-
-export const valuePrunersAreEqual = (
-    ctx1: Readonly<PruneStep>,
-    ctx2: Readonly<PruneStep>
-) =>
-    ctx1.valuePruner.key === ctx2.valuePruner.key &&
-    ctx1.valuePruner.value === ctx2.valuePruner.value;
-
-export const formatDistance = (distance: number) => format('.3f')(distance);
-export const formatInteger = (int: number) => format('.0f')(int);
+export const formatDigit = (dec: number, value: number) =>
+    format(`.${dec}f`)(value);
 
 /* merge two dictionaries by summing corresponding values */
 export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
