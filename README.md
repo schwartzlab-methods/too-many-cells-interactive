@@ -51,6 +51,14 @@ Example: `./start-and-load.sh --data-dir /home/data/my-matrices-and-trees --port
 
 **WARNING:** your matrix files will be mounted into the container and imported into a mongo database stored in a Docker volume on your machine. Depending on the size of your files, this may result in substantial disk usage. To free up space, consider regularly purging unneeded volumes, containers, and/or images using the [docker system prune](https://docs.docker.com/engine/reference/commandline/system_prune/) command.
 
+Once the container has been built and the matrices imported, you can restart the program without rebuilding and reloading by passing in the `no-init` argument. Because the files are already in the Mongo database, you can omit the `data-dir` option as well. Example:
+
+```bash
+
+`./start-and-load.sh --port 1234 --no-init`
+
+```
+
 
 ### Generating images from the command line
 

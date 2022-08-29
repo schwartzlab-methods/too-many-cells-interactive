@@ -5,6 +5,9 @@ services:
     build: ./
     depends_on:
       - mongo
+    #persist trees across runs
+    volumes:
+      - tree-data:/usr/app/static/files
     environment:
       - MONGO_CONNECTION_STRING=mongodb://mongo:27017/tmc
       - MONGO_DB=tmc
@@ -19,6 +22,7 @@ services:
 
 volumes:
   mongo-data:
+  tree-data:
 
 networks:
   tmc-network:
