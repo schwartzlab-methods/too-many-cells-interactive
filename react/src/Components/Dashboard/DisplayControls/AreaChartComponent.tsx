@@ -2,9 +2,10 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { Text } from '../../Typography';
 import { AreaChart } from '../../../Visualizations';
+import { CumSumBin } from '../../../Visualizations/AreaChart';
 
 interface AreaChartComponentProps {
-    counts: Record<number, number>;
+    counts: CumSumBin[];
     onBrush: (val: number) => void;
     title?: string;
     value?: number;

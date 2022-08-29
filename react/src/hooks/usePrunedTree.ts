@@ -33,6 +33,7 @@ import {
 import useAppSelector from './useAppSelector';
 import useAppDispatch from './useAppDispatch';
 import { getFeatureAverage } from './useScale';
+import { CumSumBin } from '../Visualizations/AreaChart';
 
 const usePrunedTree = (tree: TMCHierarchyDataNode) => {
     const [baseTree, setBaseTree] = useState(tree);
@@ -293,18 +294,13 @@ const buildTreeMetadata = (nodes: TMCHierarchyDataNode): TreeMetaData => ({
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `depth` <= n
  */
-const getDepthGroups = (tree: TMCHierarchyDataNode) => {
+const getDepthGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
     const maxSize = max(tree.descendants().map(n => n.depth))!;
 
-    return range(0, maxSize + 1)
-        .reverse()
-        .reduce<Record<number, number>>(
-            (acc, curr) => ({
-                ...acc,
-                [curr]: tree.descendants().filter(d => d.depth <= curr).length,
-            }),
-            {}
-        );
+    return range(0, maxSize + 1).map(value => ({
+        value,
+        count: tree.descendants().filter(d => d.depth <= value).length,
+    }));
 };
 
 /**
@@ -315,16 +311,13 @@ const getDistanceGroups = (
     cutoffDistance: number,
     pruneFn: (tree: TMCHierarchyDataNode, size: number) => TMCHierarchyDataNode,
     binCount = 50
-) => {
+): CumSumBin[] => {
     const bounds = ticks(0, cutoffDistance, binCount);
 
-    return bounds.reduce<Record<number, number>>(
-        (acc, curr) => ({
-            ...acc,
-            [curr]: pruneFn(tree, curr).descendants().length,
-        }),
-        {}
-    );
+    return bounds.map(value => ({
+        value,
+        count: pruneFn(tree, value).descendants().length,
+    }));
 };
 
 /**
@@ -334,7 +327,7 @@ const getDistanceMadGroups = (
     tree: TMCHierarchyDataNode,
     cutoffDistance: number,
     pruneFn: (tree: TMCHierarchyDataNode, size: number) => TMCHierarchyDataNode
-) => {
+): CumSumBin[] => {
     const values = tree
         .descendants()
         .map(d => d.data.distance!)
@@ -350,13 +343,10 @@ const getDistanceMadGroups = (
         mads: m,
     }));
 
-    return bounds.reduce<Record<number, number>>(
-        (acc, curr) => ({
-            ...acc,
-            [curr.mads]: pruneFn(tree, curr.size).descendants().length,
-        }),
-        {}
-    );
+    return bounds.map(b => ({
+        value: b.mads,
+        count: pruneFn(tree, b.size).descendants().length,
+    }));
 };
 
 /**
@@ -396,24 +386,24 @@ const getMaxCutoffNodeSize = (tree: TMCHierarchyDataNode) => {
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
  */
-const getSizeGroups = (tree: TMCHierarchyDataNode, binCount = 50) => {
+const getSizeGroups = (
+    tree: TMCHierarchyDataNode,
+    binCount = 50
+): CumSumBin[] => {
     const maxSize = getMaxCutoffNodeSize(tree)!;
 
     const bounds = ticks(0, maxSize, binCount);
 
-    return bounds.reduce<Record<number, number>>(
-        (acc, curr) => ({
-            ...acc,
-            [curr]: pruneTreeByMinValue(tree, curr).descendants().length,
-        }),
-        {}
-    );
+    return bounds.map(value => ({
+        value,
+        count: pruneTreeByMinValue(tree, value).descendants().length,
+    }));
 };
 
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `value` >= median + (n * MAD) in tree
  */
-const getSizeMadGroups = (tree: TMCHierarchyDataNode) => {
+const getSizeMadGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
     const maxSize = getMaxCutoffNodeSize(tree)!;
 
     const values = tree
@@ -431,14 +421,10 @@ const getSizeMadGroups = (tree: TMCHierarchyDataNode) => {
         mads: m,
     }));
 
-    return bounds.reduce<Record<number, number>>(
-        (acc, curr) => ({
-            ...acc,
-            [curr.mads]: pruneTreeByMinValue(tree, curr.size).descendants()
-                .length,
-        }),
-        {}
-    );
+    return bounds.map(b => ({
+        value: b.mads,
+        count: pruneTreeByMinValue(tree, b.size).descendants().length,
+    }));
 };
 
 const getFeatureDistributions = (
@@ -482,16 +468,13 @@ const getFeatureDistributions = (
  * Divide the feature counts into bins, each keyed by cumsum
  * @param range: the feature counts;
  */
-const getPlainFeatureGroups = (range: number[]) => {
+const getPlainFeatureGroups = (range: number[]): CumSumBin[] => {
     const thresholds = ticks(0, max(range) || 0, Math.max(max(range) || 0, 25));
 
-    const tx = thresholds.reduce<Record<number, number>>(
-        (acc, curr) => ({
-            ...acc,
-            [curr]: range.filter(n => n > curr).length,
-        }),
-        {}
-    );
+    const tx = thresholds.map(value => ({
+        value,
+        count: range.filter(n => n > value).length,
+    }));
 
     return tx;
 };
@@ -500,20 +483,21 @@ const getPlainFeatureGroups = (range: number[]) => {
  * Divide the feature MAD count into bins, each keyed MAD count
  * @param range: the feature counts;
  */
-const getMadFeatureGroups = (range: number[], mad: number, median: number) => {
+const getMadFeatureGroups = (
+    range: number[],
+    mad: number,
+    median: number
+): CumSumBin[] => {
     const maxVal = max(range) || 0;
 
     const maxMads = Math.ceil((maxVal - median) / mad);
 
     const thresholds = ticks(0, maxMads, Math.max(maxMads, 25));
 
-    return thresholds.reduce<Record<number, number>>(
-        (acc, curr) => ({
-            ...acc,
-            [curr]: range.filter(n => n > median + mad * curr).length,
-        }),
-        {}
-    );
+    return thresholds.map(value => ({
+        value,
+        count: range.filter(n => n > median + mad * value).length,
+    }));
 };
 
 /**

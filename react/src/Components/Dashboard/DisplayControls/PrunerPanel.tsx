@@ -18,6 +18,7 @@ import { useAppDispatch, useAppSelector } from '../../../hooks';
 import { Text } from '../../Typography';
 import SelectPanel from '../../SelectPanel';
 import { madCountToValue, valueToMadCount } from '../../../util';
+import { CumSumBin } from '../../../Visualizations/AreaChart';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -180,7 +181,7 @@ interface PrunerProps {
     expanded: boolean;
     label: string;
     onSubmit: (size: number) => void;
-    plainValues: Record<number, number>;
+    plainValues: CumSumBin[];
     xLabel: string;
     value?: number;
 }
@@ -239,9 +240,9 @@ interface SmartPrunerProps {
     id: string;
     label: JSX.Element;
     madSize: number;
-    madValues: Record<number, number>;
+    madValues: CumSumBin[];
     median: number;
-    plainValues: Record<number, number>;
+    plainValues: CumSumBin[];
     onSubmit: (size: number) => void;
     xLabel: string;
     value?: number;

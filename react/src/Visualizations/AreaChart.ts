@@ -5,6 +5,12 @@ import { ScaleLinear, scaleLinear } from 'd3-scale';
 import { select, Selection } from 'd3-selection';
 import { area, curveBasis } from 'd3-shape';
 
+/* object representing a cumulative count for some value in a list of numbers*/
+export interface CumSumBin {
+    value: number;
+    count: number;
+}
+
 /* assumes ascending order */
 const bisectDownSorted = (arr: number[], target: number) => {
     let i = 0;
@@ -14,19 +20,20 @@ const bisectDownSorted = (arr: number[], target: number) => {
     return i;
 };
 export default class Histogram {
-    counts: Record<number, number>;
-    selector: string;
-    svg: Selection<SVGGElement, unknown, any, any>;
-    w = 400;
+    /* We assume that these are already properly sorted [by .count, probably] */
+    counts: CumSumBin[];
     h = 240;
     margin = 40;
     onBrush: (val: number) => void;
+    selector: string;
+    svg: Selection<SVGGElement, unknown, any, any>;
     title?: string;
-    xScale!: ScaleLinear<number, number>;
     xLabel: string;
+    xScale!: ScaleLinear<number, number>;
+    w = 400;
     yScale!: ScaleLinear<number, number>;
     constructor(
-        counts: Record<number, number>,
+        counts: CumSumBin[],
         onBrush: (val: number) => void,
         selector: string,
         xLabel: string,
@@ -51,11 +58,11 @@ export default class Histogram {
         let startX = 0;
         let selectedIdx: number;
 
-        const counts = Array.from(Object.keys(this.counts)).map(Number);
+        const binThresholds = this.counts.map(c => c.value);
 
         /* store starting location of each bin*/
-        const ticks = counts
-            .sort((a, b) => (a < b ? -1 : 1))
+        const ticks = binThresholds
+            //.sort((a, b) => (a < b ? -1 : 1))
             .map(c => this.xScale(c));
 
         const brushed = function (this: SVGGElement, event: D3BrushEvent<any>) {
@@ -119,23 +126,18 @@ export default class Histogram {
     };
 
     render = (initialValue?: number) => {
-        const bins = Array.from(Object.keys(this.counts));
+        const bins = this.counts.map(c => c.value);
 
         this.xScale = scaleLinear([
             0 + this.margin + 12,
             this.w - this.margin,
-        ]).domain(
-            extent(Array.from(Object.keys(this.counts)).map(d => +d)) as [
-                number,
-                number
-            ]
-        );
+        ]).domain(extent(bins) as [number, number]);
 
         this.yScale = scaleLinear([
             this.h - this.margin,
             this.title ? this.margin : this.margin / 2,
         ])
-            .domain(extent(Object.values(this.counts)) as [number, number])
+            .domain(extent(this.counts.map(v => v.count)) as [number, number])
             .nice();
 
         if (this.title) {
@@ -158,7 +160,7 @@ export default class Histogram {
 
         this.svg
             .selectAll('path.area')
-            .data([Object.entries(this.counts)])
+            .data([this.counts.map(c => [c.value, c.count])])
             .join('path')
             .attr('class', 'area')
             .transition()

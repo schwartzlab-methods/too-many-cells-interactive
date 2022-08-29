@@ -1,11 +1,12 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { CumSumBin } from '../Visualizations/AreaChart';
 import type { RootState } from './store';
 
 export interface DistributionMetadata {
     mad: number;
-    madGroups: Record<number, number>;
+    madGroups: CumSumBin[];
     median: number;
-    plainGroups: Record<number, number>;
+    plainGroups: CumSumBin[];
 }
 
 type DistributionKeys = 'distance' | 'distanceSearch' | 'size';
@@ -13,7 +14,7 @@ type DistributionKeys = 'distance' | 'distanceSearch' | 'size';
 type DetailedDistributions = { [K in DistributionKeys]: DistributionMetadata };
 
 export interface Distributions extends DetailedDistributions {
-    depthGroups: Record<number, number>;
+    depthGroups: CumSumBin[];
 }
 
 export type PruneHistory = PruneStep[];
@@ -32,7 +33,7 @@ const makeFreshPruneStep = () => ({
 const initialState: PruneSliceState = {
     currentPruneStep: 0,
     distributionMetadata: {
-        depthGroups: {},
+        depthGroups: [],
         distance: {} as DistributionMetadata,
         distanceSearch: {} as DistributionMetadata,
         size: {} as DistributionMetadata,
