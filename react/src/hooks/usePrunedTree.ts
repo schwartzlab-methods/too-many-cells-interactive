@@ -23,6 +23,7 @@ import {
 } from '../redux/featureSlice';
 import {
     calculateTreeLayout,
+    formatDigit,
     getEntries,
     getMAD,
     pruneTreeByMinDistance,
@@ -30,10 +31,10 @@ import {
     pruneTreeByMinValue,
     runPrunes,
 } from '../util';
+import { CumSumBin } from '../Visualizations/AreaChart';
 import useAppSelector from './useAppSelector';
 import useAppDispatch from './useAppDispatch';
 import { getFeatureAverage } from './useScale';
-import { CumSumBin } from '../Visualizations/AreaChart';
 
 const usePrunedTree = (tree: TMCHierarchyDataNode) => {
     const [baseTree, setBaseTree] = useState(tree);
@@ -336,7 +337,7 @@ const getDistanceMadGroups = (
     const mad = getMAD(values)!;
     const med = median(values)!;
 
-    const maxMads = Math.ceil((cutoffDistance - med) / mad);
+    const maxMads = +formatDigit(3, (cutoffDistance - med) / mad);
 
     const bounds = range(0, maxMads).map(m => ({
         size: med + m * mad,

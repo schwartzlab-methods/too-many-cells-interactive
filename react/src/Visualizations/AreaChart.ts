@@ -1,4 +1,4 @@
-import { extent } from 'd3-array';
+import { extent, max } from 'd3-array';
 import { axisBottom, axisRight } from 'd3-axis';
 import { brushX, BrushSelection, D3BrushEvent } from 'd3-brush';
 import { ScaleLinear, scaleLinear } from 'd3-scale';
@@ -137,7 +137,7 @@ export default class Histogram {
             this.h - this.margin,
             this.title ? this.margin : this.margin / 2,
         ])
-            .domain(extent(this.counts.map(v => v.count)) as [number, number])
+            .domain([0, max(this.counts.map(v => v.count))] as [number, number])
             .nice();
 
         if (this.title) {
@@ -168,7 +168,7 @@ export default class Histogram {
             .attr('d', d => areaG(d.map(([d, e]) => [+d, e])))
             .attr('fill', '#009FFD');
 
-        const maxTicks = 15;
+        const maxTicks = 12;
 
         const ratio =
             bins.length > maxTicks ? Math.ceil(bins.length / maxTicks) : 1;

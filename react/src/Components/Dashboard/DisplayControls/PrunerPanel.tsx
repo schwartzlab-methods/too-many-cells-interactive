@@ -19,6 +19,7 @@ import { Text } from '../../Typography';
 import SelectPanel from '../../SelectPanel';
 import { madCountToValue, valueToMadCount } from '../../../util';
 import { CumSumBin } from '../../../Visualizations/AreaChart';
+import QuestionTip from '../../QuestionTip';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -141,7 +142,16 @@ const PrunerPanel: React.FC = () => {
                 <SmartPruner
                     expanded={selected === 'minDistance'}
                     id='minDistance'
-                    label={<Text>Prune by distance</Text>}
+                    label={
+                        <Row>
+                            <Text>Prune by distance </Text>{' '}
+                            <QuestionTip
+                                message='Distance values range from highest to lowest
+                                             value of a root grandchild (to prevent pruning 
+                                             entire tree when root child distance is small).'
+                            ></QuestionTip>
+                        </Row>
+                    }
                     madValues={distanceMeta.madGroups}
                     madSize={distanceMeta.mad}
                     median={distanceMeta.median}

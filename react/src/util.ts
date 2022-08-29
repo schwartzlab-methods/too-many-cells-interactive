@@ -132,13 +132,14 @@ export const pruneTreeByMinDistance = (
     tree: TMCHierarchyDataNode,
     distance: number
 ) =>
-    tree.copy().eachBefore(d => {
-        if (!d.data.distance || d.data.distance < distance) {
-            //keep the node, even though it's under the threshold, but eliminate the children
-            d.children = undefined;
-        }
-    });
-
+    distance
+        ? tree.copy().eachBefore(d => {
+              if (!d.data.distance || d.data.distance < distance) {
+                  //keep the node, even though it's under the threshold, but eliminate the children
+                  d.children = undefined;
+              }
+          })
+        : tree.copy();
 /* 
     Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, 
     keep that path, otherwise prune it. This argument assists in finding distant nodes."
@@ -148,13 +149,15 @@ export const pruneTreeByMinDistanceSearch = (
     tree: TMCHierarchyDataNode,
     distance: number
 ) =>
-    tree.copy().eachAfter(d => {
-        if (!d.data.distance || d.data.distance < distance) {
-            if (d.parent) {
-                d.parent.children = undefined;
-            }
-        }
-    });
+    distance
+        ? tree.copy().eachAfter(d => {
+              if (!d.data.distance || d.data.distance < distance) {
+                  if (d.parent) {
+                      d.parent.children = undefined;
+                  }
+              }
+          })
+        : tree.copy();
 
 export const setRootNode = (tree: TMCHierarchyDataNode, nodeId: string) => {
     const targetNode = tree.find(n => n.data.id === nodeId)!.copy();

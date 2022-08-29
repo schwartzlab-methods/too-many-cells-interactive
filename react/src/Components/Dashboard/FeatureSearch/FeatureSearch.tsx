@@ -23,7 +23,7 @@ import Button from '../../Button';
 import { Input } from '../../Input';
 import { Column, Row, WidgetTitle } from '../../Layout';
 import Modal from '../../Modal';
-import { Caption } from '../../Typography';
+import { Caption, Main } from '../../Typography';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectDisplayConfig,
@@ -39,6 +39,7 @@ import {
 } from '../../../redux/featureSlice';
 import { SmartPruner } from '../DisplayControls/PrunerPanel';
 import { CloseIcon } from '../../Icons';
+import ToolTip from '../../ToolTip';
 
 const FeatureSearch: React.FC = () => {
     const [loading, setLoading] = useState(false);
@@ -137,6 +138,7 @@ const FeatureSearch: React.FC = () => {
                     options={featureList || []}
                     onSelect={getFeature}
                 />
+
                 <Button ml='5px' onClick={clearActiveFeatures}>
                     Reset
                 </Button>

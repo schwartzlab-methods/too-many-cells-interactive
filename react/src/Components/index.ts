@@ -1,9 +1,11 @@
-export { default as TreeComponent } from './Dashboard/Chart/TreeComponent';
-export { default as Dashboard } from './Dashboard/Dashboard';
 export { default as AreaChartComponent } from './Dashboard/DisplayControls/AreaChartComponent';
 export { default as Button } from './Button';
+export { default as Dashboard } from './Dashboard/Dashboard';
 export { default as Checkbox } from './Checkbox';
+export { default as QuestionTip } from './QuestionTip';
 export { default as SelectPanel } from './SelectPanel';
+export { default as ToolTip } from './ToolTip';
+export { default as TreeComponent } from './Dashboard/Chart/TreeComponent';
 export * from './Icons';
 export * from './Typography';
 export * from './Input';
