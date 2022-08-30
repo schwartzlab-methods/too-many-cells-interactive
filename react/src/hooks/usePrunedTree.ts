@@ -194,12 +194,14 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
 export default usePrunedTree;
 
-export const getFeatureGradientDomain = (tree: TMCHierarchyDataNode) =>
-    extent(
+export const getFeatureGradientDomain = (tree: TMCHierarchyDataNode) => [
+    0,
+    max(
         tree
             .descendants()
             .map(d => d.data.featureAverage?.average?.quantity || 0)
-    ) as [number, number];
+    ) as number,
+];
 
 export const addFeaturesToCells = (
     tree: TMCHierarchyDataNode,
@@ -337,7 +339,7 @@ const getDistanceMadGroups = (
     const mad = getMAD(values)!;
     const med = median(values)!;
 
-    const maxMads = +formatDigit(3, (cutoffDistance - med) / mad);
+    const maxMads = +formatDigit((cutoffDistance - med) / mad);
 
     const bounds = range(0, maxMads).map(m => ({
         size: med + m * mad,

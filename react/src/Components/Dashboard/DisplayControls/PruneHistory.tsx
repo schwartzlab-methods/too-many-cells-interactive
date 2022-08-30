@@ -126,11 +126,7 @@ const getPruneHistoryLabel = (pruneStep: PruneStep, index: number) => {
     const manualPruneCount = pruneStep.clickPruneHistory.length;
     const labels = [];
     if (key && value) {
-        const formatter = formatDigit.bind(
-            null,
-            key.startsWith('minDistance') ? 3 : 0
-        );
-        labels.push(`${key}: ${formatter(value)}`);
+        labels.push(`${key}: ${formatDigit(value)}`);
     }
     if (manualPruneCount) {
         labels.push(

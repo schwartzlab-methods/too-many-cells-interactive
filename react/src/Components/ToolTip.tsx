@@ -43,9 +43,7 @@ const ToolTip: React.FC<ToolTipProps> = ({ message, children }) => {
                 {tipVisible && (
                     <ToolTipItem
                         bottom={getShowAtTop() ? getParentHeight() * 2 : 0}
-                        //bottom={0}
                         top={!getShowAtTop() ? 5 : 0}
-                        //top={0}
                     >
                         {React.isValidElement(message) ? (
                             message

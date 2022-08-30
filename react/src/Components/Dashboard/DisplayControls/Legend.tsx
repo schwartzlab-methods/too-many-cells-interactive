@@ -138,7 +138,7 @@ const LinearLegend: React.FC<{
     return (
         <LinearLegendRow>
             <LinearLegendLabel>
-                {Math.round(scale.domain()[0])}
+                {formatDigit(scale.domain()[0])}
             </LinearLegendLabel>
             <LinearLegendContainer onClick={() => setPickerOpen(true)}>
                 <svg viewBox='0 0 200 25'>
@@ -165,7 +165,7 @@ const LinearLegend: React.FC<{
                 </svg>
             </LinearLegendContainer>
             <LinearLegendLabel>
-                {formatDigit(2, scale.domain().slice(-1)[0])}
+                {formatDigit(scale.domain().slice(-1)[0])}
             </LinearLegendLabel>
             <Popover ref={containerRef} open={pickerOpen}>
                 <ColorPicker

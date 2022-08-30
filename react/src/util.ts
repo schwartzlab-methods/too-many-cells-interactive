@@ -196,8 +196,21 @@ export const pruneStepIsEmpty = (ctx: Readonly<PruneStep>) =>
 export const getObjectIsEmpty = (obj: Record<any, any>) =>
     !Object.keys(obj).length;
 
-export const formatDigit = (dec: number, value: number) =>
-    format(`.${dec}f`)(value);
+/* add commas to numbers greater than a thousand, otherwise use decimal notation, varying significant digits by size */
+export const formatDigit = (value: number) => {
+    let d: number;
+    if (value === 0) {
+        return value;
+    } else if (Math.abs(value) < 1) {
+        d = 3;
+    } else if (Math.abs(value) < 10) {
+        d = 2;
+    } else if (Math.abs(value) < 100) {
+        d = 1;
+    } else d = 0;
+
+    return format(`${d ? '.' : ','}${d}~r`)(value);
+};
 
 /* merge two dictionaries by summing corresponding values */
 export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>

@@ -152,8 +152,6 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
     const { variant: scaleType } = state.scales.colorScale!;
 
     if (scaleType === 'labelCount') {
-        let linearScale;
-
         let { labelRange, labelDomain } = state.scales.colorScale || {};
 
         if (!labelDomain || !labelRange) {
@@ -172,13 +170,16 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
         const domain = state.scales.colorScale?.featureHiLoDomain?.length
             ? state.scales.colorScale.featureHiLoDomain
             : getScaleCombinations(state.features);
+
         const range = state.scales.colorScale?.featureHiLoRange?.length
             ? state.scales.colorScale.featureHiLoRange
             : addGray(domain, interpolateColorScale(domain));
         const scale = makeOrdinalScale(range, domain);
-        const scaleFunction = (node: TMCHiearchyNode) => {
-            return getLabelColor(scale, node, 'featureHiLos').toString();
-        };
+        const scaleFunction = (node: TMCHiearchyNode) =>
+            getLabelColor(scale, node, 'featureHiLos').toString();
+
+        console.log('hilo scale function built');
+
         return { scale, scaleFunction };
     } else {
         const scale = buildFeatureColorScale(

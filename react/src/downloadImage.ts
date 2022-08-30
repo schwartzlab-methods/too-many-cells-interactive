@@ -2,6 +2,7 @@ import { saveAs } from 'file-saver';
 import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
 import { BaseType, select, Selection } from 'd3-selection';
 import { scaleIsSequential } from './types';
+import { formatDigit } from './util';
 
 const getSvgSrc = (
     colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
@@ -99,7 +100,7 @@ export const attachLegend = (
 
         legend
             .append('text')
-            .text(Math.floor(colorScale.domain()[0]))
+            .text(formatDigit(colorScale.domain()[0]))
             .style('font-size', fontSize)
             .attr('text-anchor', 'end')
             .attr('transform', `translate(-10, ${fontSize})`);
@@ -108,15 +109,15 @@ export const attachLegend = (
             .append('rect')
             .attr('fill', "url('#scaleGradientDownload')")
             .attr('height', legendHeight)
-            .attr('width', legendWidth - 15);
+            .attr('width', legendWidth - 25);
 
         legend
             .append('text')
             .style('font-size', fontSize)
             .attr('text-anchor', 'start')
-            .attr('transform', `translate(${legendWidth - 5}, ${fontSize})`)
+            .attr('transform', `translate(${legendWidth - 15}, ${fontSize})`)
             .text(
-                Math.ceil(colorScale.domain()[colorScale.domain().length - 1])
+                formatDigit(colorScale.domain()[colorScale.domain().length - 1])
             );
 
         legend

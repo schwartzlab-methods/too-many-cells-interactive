@@ -234,9 +234,7 @@ const showToolTip = (
             ['Node Id', data.data.nodeId],
             [
                 'Distance',
-                data.data.distance
-                    ? formatDigit(3, data.data.distance)
-                    : 'null',
+                data.data.distance ? formatDigit(data.data.distance) : 'null',
             ],
             ['Observation Count', data.value!.toLocaleString()],
         ])
