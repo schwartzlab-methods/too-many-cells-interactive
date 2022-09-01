@@ -12,6 +12,7 @@ import Button from '../../Button';
 import { WidgetTitle } from '../../Layout';
 import SelectPanel from '../../SelectPanel';
 import { selectFeatureSlice } from '../../../redux/featureSlice';
+import { selectDisplayConfig } from '../../../redux/displayConfigSlice';
 
 const ExportControls: React.FC = () => {
     const [panelOpen, setPanelOpen] = useState(false);
@@ -19,6 +20,12 @@ const ExportControls: React.FC = () => {
     const { scale: colorScale } = useColorScale();
 
     const { activeFeatures } = useAppSelector(selectFeatureSlice);
+
+    const {
+        scales: {
+            colorScale: { featureScaleSaturation },
+        },
+    } = useAppSelector(selectDisplayConfig);
 
     const state = useExportState();
 
@@ -34,7 +41,8 @@ const ExportControls: React.FC = () => {
                 null,
                 colorScale,
                 selector,
-                activeFeatures
+                activeFeatures,
+                featureScaleSaturation
             ),
             exportState: saveAs.bind(
                 null,
@@ -45,10 +53,18 @@ const ExportControls: React.FC = () => {
                 null,
                 colorScale,
                 selector,
-                activeFeatures
+                activeFeatures,
+                featureScaleSaturation
             ),
         };
-    }, [colorScale, downloadMeta, state]);
+    }, [
+        activeFeatures,
+        colorScale,
+        downloadMeta,
+        featureScaleSaturation,
+        selector,
+        state,
+    ]);
 
     const items = useMemo(() => {
         return [

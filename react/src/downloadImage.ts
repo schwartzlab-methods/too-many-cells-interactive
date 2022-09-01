@@ -3,11 +3,13 @@ import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
 import { BaseType, select, Selection } from 'd3-selection';
 import { scaleIsSequential } from './types';
 import { formatDigit } from './util';
+import { changeSaturation } from './hooks';
 
 const getSvgSrc = (
     colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
     selector: string,
-    activeFeatures: string[] = []
+    activeFeatures: string[],
+    featureScaleSaturation: number | undefined
 ) => {
     const fontSize = 20;
 
@@ -20,7 +22,13 @@ const getSvgSrc = (
         .attr('version', 1.1);
 
     //we have to redraw/attach legend as SVG b/c display DOM legend is a react component
-    attachLegend(clonedSvg, colorScale, fontSize, activeFeatures);
+    attachLegend(
+        clonedSvg,
+        colorScale,
+        fontSize,
+        activeFeatures,
+        featureScaleSaturation
+    );
 
     return `data:image/svg+xml;base64,\n${window.btoa(clonedParent.innerHTML)}`;
 };
@@ -32,7 +40,8 @@ export const attachLegend = (
     svg: Selection<SVGSVGElement, unknown, any, unknown>,
     colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
     fontSize = 20,
-    activeFeatures: string[] = []
+    activeFeatures: string[],
+    featureScaleSaturation: number | undefined
 ) => {
     const hasOrdinalScale = !scaleIsSequential(colorScale);
 
@@ -84,18 +93,21 @@ export const attachLegend = (
         const gradient = legend
             .append('linearGradient')
             .attr('id', 'scaleGradientDownload');
-        gradient
-            .append('stop')
-            .attr('offset', '5%')
+        gradient.append('stop').attr('offset', '5%').attr(
+            'stop-color',
             //@ts-ignore // bad typing -- todo: submit PR to DT
-            .attr('stop-color', colorScale.range()[0]);
+            changeSaturation(colorScale.range()[0], featureScaleSaturation)
+        );
         gradient
             .append('stop')
             .attr('offset', '95%')
             .attr(
                 'stop-color',
-                //@ts-ignore // bad typing
-                colorScale.range()[colorScale.range().length - 1]
+                changeSaturation(
+                    //@ts-ignore // bad typing
+                    colorScale.range()[colorScale.range().length - 1],
+                    featureScaleSaturation
+                )
             );
 
         legend
@@ -134,12 +146,18 @@ export const attachLegend = (
 export const downloadPng = (
     colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
     selector: string,
-    activeFeatures: string[] = []
+    activeFeatures: string[],
+    featureScaleSaturation: number | undefined
 ) => {
     const w = (select(selector).select('svg').node() as Element).clientWidth;
     const h = (select(selector).select('svg').node() as Element).clientHeight;
 
-    const src = getSvgSrc(colorScale, selector, activeFeatures);
+    const src = getSvgSrc(
+        colorScale,
+        selector,
+        activeFeatures,
+        featureScaleSaturation
+    );
 
     const canvas = document.createElement('canvas')!;
     const context = canvas.getContext('2d')!;
@@ -162,8 +180,14 @@ export const downloadPng = (
 export const downloadSvg = (
     colorScale: ScaleOrdinal<string, string> | ScaleSequential<string>,
     selector: string,
-    activeFeatures: string[] = []
+    activeFeatures: string[],
+    featureScaleSaturation: number | undefined
 ) => {
-    const svgSrc = getSvgSrc(colorScale, selector, activeFeatures);
+    const svgSrc = getSvgSrc(
+        colorScale,
+        selector,
+        activeFeatures,
+        featureScaleSaturation
+    );
     saveAs(svgSrc);
 };

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
@@ -6,7 +6,12 @@ import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
 import { Column, WidgetTitle } from '../../Layout';
 import { Input } from '../../Input';
-import { useAppDispatch, useAppSelector, useColorScale } from '../../../hooks';
+import {
+    changeSaturation,
+    useAppDispatch,
+    useAppSelector,
+    useColorScale,
+} from '../../../hooks';
 import {
     selectDisplayConfig,
     updateActiveOrdinalColorScale,
@@ -123,13 +128,29 @@ const LinearLegend: React.FC<{
     const containerRef = useRef<any>();
     const {
         scales: {
-            colorScale: { featureGradientColor },
+            colorScale: { featureGradientColor, featureScaleSaturation },
         },
     } = useAppSelector(selectDisplayConfig);
 
     const dispatch = useAppDispatch();
 
     useClickAway(containerRef, () => setPickerOpen(false));
+
+    const startColor = useMemo(() => {
+        return changeSaturation(
+            //bad source typing
+            (scale.range() as any)[0],
+            featureScaleSaturation
+        );
+    }, [featureScaleSaturation, scale]);
+
+    const endColor = useMemo(() => {
+        return changeSaturation(
+            //bad source typing
+            (scale.range() as any)[scale.range().length - 1],
+            featureScaleSaturation
+        );
+    }, [featureScaleSaturation, scale]);
 
     const updateColor = (newColor: string) => {
         dispatch(updateColorScale({ featureGradientColor: newColor }));
@@ -143,18 +164,8 @@ const LinearLegend: React.FC<{
             <LinearLegendContainer onClick={() => setPickerOpen(true)}>
                 <svg viewBox='0 0 200 25'>
                     <linearGradient id='scaleGradient'>
-                        <stop
-                            offset='5%'
-                            //bad source typing
-                            stopColor={(scale.range() as any)[0]}
-                        />
-                        <stop
-                            offset='95%'
-                            stopColor={
-                                //bad source typing
-                                (scale.range() as any)[scale.range().length - 1]
-                            }
-                        />
+                        <stop offset='5%' stopColor={startColor} />
+                        <stop offset='95%' stopColor={endColor} />
                     </linearGradient>
 
                     <rect

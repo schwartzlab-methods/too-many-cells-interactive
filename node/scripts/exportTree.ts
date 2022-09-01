@@ -27,6 +27,7 @@ import {
 import {
     buildFeatureColorScale,
     buildLabelColorFunction,
+    changeSaturation,
     getFeatureAverage,
     getLabelColor,
     makeLinearScale,
@@ -178,8 +179,6 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
         const scaleFunction = (node: TMCHiearchyNode) =>
             getLabelColor(scale, node, 'featureHiLos').toString();
 
-        console.log('hilo scale function built');
-
         return { scale, scaleFunction };
     } else {
         const scale = buildFeatureColorScale(
@@ -191,7 +190,10 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
 
         const scaleFunction = (node: TMCHiearchyNode) => {
             const featureAverage = getFeatureAverage(node, state.features);
-            return scale(featureAverage);
+            return changeSaturation(
+                scale(featureAverage),
+                state.scales.colorScale?.featureScaleSaturation
+            );
         };
 
         return { scale, scaleFunction };
@@ -247,7 +249,13 @@ const saveTree = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
 
     RadialTree.render();
 
-    attachLegend(selection.select('svg'), scale, state.fontsize);
+    attachLegend(
+        selection.select('svg'),
+        scale,
+        state.fontsize,
+        state.features,
+        state.scales.colorScale?.featureScaleSaturation
+    );
 
     selection
         .select('svg')

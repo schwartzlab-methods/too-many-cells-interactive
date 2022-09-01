@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { bindActionCreators, compose } from 'redux';
-import { extent, max, median, min, range, sum, ticks } from 'd3-array';
+import { max, median, min, range, sum, ticks } from 'd3-array';
 import { AttributeMap, TMCHiearchyNode, TMCHierarchyDataNode } from '../types';
 import {
     Distributions,

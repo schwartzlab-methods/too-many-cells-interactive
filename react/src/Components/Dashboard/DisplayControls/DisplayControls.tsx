@@ -1,6 +1,7 @@
 import React from 'react';
+import { hcl } from 'd3-color';
 import { bindActionCreators } from 'redux';
-import { Input } from '../../Input';
+import { NumberInput } from '../../Input';
 import { Column, Row } from '../../Layout';
 import { Label } from '../../Typography';
 import { selectFeatureSlice } from '../../../redux/featureSlice';
@@ -27,16 +28,21 @@ import Legend from './Legend';
 const DisplayControls: React.FC = () => {
     const {
         scales: {
-            colorScale: { variant: colorScaleType, featureGradientScaleType },
+            branchSizeScale,
+            colorScale: {
+                variant: colorScaleType,
+                featureGradientScaleType,
+                featureScaleSaturation,
+            },
+            pieScale,
         },
     } = useAppSelector(selectDisplayConfig);
-
-    const { activeFeatures } = useAppSelector(selectFeatureSlice);
 
     const {
         activateContinuousFeatureScale,
         updateColorScale,
         updateColorScaleType,
+        updateLinearScale,
     } = bindActionCreators(
         {
             activateContinuousFeatureScale: _activateContinuousFeatureScale,
@@ -46,6 +52,20 @@ const DisplayControls: React.FC = () => {
         },
         useAppDispatch()
     );
+
+    const handleScaleSilderChange =
+        (scaleType: 'branchSizeScale' | 'pieScale') =>
+        (value: number | undefined) => {
+            const scale =
+                scaleType === 'branchSizeScale' ? branchSizeScale : pieScale;
+            updateLinearScale({
+                [scaleType]: {
+                    range: [scale.range[0], value],
+                },
+            });
+        };
+
+    const { activeFeatures } = useAppSelector(selectFeatureSlice);
 
     const changeScaleType = (scaleType: typeof colorScaleType) => {
         updateColorScaleType(scaleType);
@@ -139,14 +159,36 @@ const DisplayControls: React.FC = () => {
                     <Column xs={12}>
                         <Slider
                             label='Adjust Max Width'
-                            scaleType='branchSizeScale'
                             max={50}
+                            min={branchSizeScale.range[0]}
+                            onChange={handleScaleSilderChange(
+                                'branchSizeScale'
+                            )}
+                            value={branchSizeScale.range[1]}
                         />
                         <Slider
                             label='Adjust Max Pie Size'
-                            scaleType='pieScale'
                             max={50}
+                            min={pieScale.range[0]}
+                            onChange={handleScaleSilderChange('pieScale')}
+                            value={pieScale.range[1]}
                         />
+                        {['featureAverage', 'featureHiLos'].includes(
+                            colorScaleType
+                        ) && (
+                            <Slider
+                                label='Adjust Saturation'
+                                max={5}
+                                min={0}
+                                onChange={featureScaleSaturation =>
+                                    updateColorScale({
+                                        featureScaleSaturation,
+                                    })
+                                }
+                                step={0.1}
+                                value={featureScaleSaturation ?? 0}
+                            />
+                        )}
                     </Column>
                 </Row>
             </Column>
@@ -168,51 +210,44 @@ const DisplayControls: React.FC = () => {
 export default DisplayControls;
 
 interface SliderProps {
-    scaleType: 'branchSizeScale' | 'pieScale';
     label: string;
+    min: number;
     max: number;
+    onChange: (val: number | undefined) => void;
+    step?: number;
+    value: number;
 }
 
-const Slider: React.FC<SliderProps> = ({ scaleType, label, max }) => {
-    const { scales } = useAppSelector(selectDisplayConfig);
-    const scale = scales[scaleType];
-
-    const dispatch = useAppDispatch();
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        dispatch(
-            _updateLinearScale({
-                [scaleType]: {
-                    range: [scale.range[0], +e.currentTarget.value],
-                },
-            })
-        );
-    };
-
+const Slider: React.FC<SliderProps> = ({
+    label,
+    max,
+    min,
+    onChange,
+    step,
+    value,
+}) => {
     return (
         <Row>
             <Column xs={12}>
                 <Row>
                     <Label>{label}</Label>
                 </Row>
-                {scale && (
-                    <Row>
-                        <input
-                            type='range'
-                            max={max}
-                            min={scale.range[0]}
-                            step={1}
-                            value={scale.range[1]}
-                            onChange={handleChange}
-                        />
-                        <Input
-                            ml='10px'
-                            onChange={handleChange}
-                            value={scale.range[1]}
-                            width='50px'
-                        />
-                    </Row>
-                )}
+                <Row>
+                    <input
+                        type='range'
+                        max={max}
+                        min={min}
+                        step={step || 1}
+                        value={value}
+                        onChange={e => onChange(+e.currentTarget.value)}
+                    />
+                    <NumberInput
+                        ml='10px'
+                        onChange={v => onChange(v)}
+                        value={value}
+                        width='50px'
+                    />
+                </Row>
             </Column>
         </Row>
     );

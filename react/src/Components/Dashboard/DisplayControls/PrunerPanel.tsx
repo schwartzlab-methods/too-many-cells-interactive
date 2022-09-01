@@ -399,7 +399,10 @@ const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => (
             }
         }}
     >
-        <NumberInput onChange={v => onChange(v)} value={value} />
+        <NumberInput
+            onChange={v => !!v && onChange(v)}
+            value={value as number}
+        />
         <SubmitButton onClick={() => onSubmit(value)}>Update</SubmitButton>
     </TextInputGroup>
 );

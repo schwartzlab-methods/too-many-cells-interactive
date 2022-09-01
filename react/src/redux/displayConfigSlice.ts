@@ -29,6 +29,7 @@ export type FeatureGradientScaleType = 'sequential' | 'symlogSequential';
 export interface ColorScaleConfig {
     //the base color for the gradient scale
     featureGradientColor: string;
+    featureScaleSaturation?: number;
     featureGradientScaleType: FeatureGradientScaleType;
     //average feature counts for each node
     featureGradientDomain: number[];
@@ -69,6 +70,7 @@ const initialScales: Scales = {
     colorScale: {
         featureGradientDomain: [],
         featureGradientRange: [],
+        featureScaleSaturation: undefined,
         featureGradientColor: '#E41A1C',
         featureGradientScaleType: 'sequential',
         featureHiLoDomain: [],

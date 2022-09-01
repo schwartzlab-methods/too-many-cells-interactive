@@ -198,18 +198,25 @@ export const getObjectIsEmpty = (obj: Record<any, any>) =>
 
 /* add commas to numbers greater than a thousand, otherwise use decimal notation, varying significant digits by size */
 export const formatDigit = (value: number) => {
-    let d: number;
-    if (value === 0) {
+    let d = 0;
+    if (!value) {
         return value;
     } else if (Math.abs(value) < 1) {
         d = 3;
     } else if (Math.abs(value) < 10) {
-        d = 2;
-    } else if (Math.abs(value) < 100) {
-        d = 1;
-    } else d = 0;
+        d = 4;
+    } else if (Math.abs(value) < 1000) {
+        d = 5;
+    }
+    let ret: string | number = value;
 
-    return format(`${d ? '.' : ','}${d}~r`)(value);
+    try {
+        ret = format(`${d ? `.${d}~r` : ',d'}`)(value);
+    } catch (e) {
+        console.error(e);
+    }
+
+    return ret;
 };
 
 /* merge two dictionaries by summing corresponding values */

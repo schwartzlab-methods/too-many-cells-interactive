@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { extent, sum } from 'd3-array';
-import { color, rgb } from 'd3-color';
+import { color, hsl, rgb } from 'd3-color';
 import { interpolateRgb } from 'd3-interpolate';
 import {
     scaleLinear,
@@ -60,6 +60,7 @@ export const useColorScale = (): {
                 featureGradientDomain,
                 featureGradientRange,
                 featureGradientScaleType,
+                featureScaleSaturation,
                 featureHiLoDomain,
                 featureHiLoRange,
                 labelDomain,
@@ -80,7 +81,12 @@ export const useColorScale = (): {
             featureGradientScaleType,
             featureGradientDomain
         );
-    }, [featureGradientColor, featureGradientRange, featureGradientDomain]);
+    }, [
+        featureGradientColor,
+        featureGradientDomain,
+        featureGradientRange,
+        featureGradientScaleType,
+    ]);
 
     const featureHiLoScale = useMemo(() => {
         return makeOrdinalScale(featureHiLoRange, featureHiLoDomain);
@@ -98,11 +104,13 @@ export const useColorScale = (): {
                 featureColorScale,
                 featureHiLoScale,
                 labelScale,
-                variant
+                variant,
+                featureScaleSaturation
             ),
         [
             activeFeatures,
             featureColorScale,
+            featureScaleSaturation,
             featureHiLoScale,
             labelScale,
             variant,
@@ -124,12 +132,29 @@ export const buildFeatureColorScale = (
     );
 };
 
+/* Change the saturation of the scale color 
+    We calculate this after the color has been returned by the scale, 
+    b/c altering the domain and range colors before computing scale only affects start/stop colors
+*/
+export const changeSaturation = (
+    color: string,
+    saturation: number | undefined
+) => {
+    if (saturation) {
+        const hslColor = hsl(color);
+        hslColor.s = saturation;
+        return hslColor.formatRgb();
+    }
+    return color;
+};
+
 export const makeColorScale = (
     activeFeatures: string[],
     featureColorScale: ScaleSequential<string>,
     featureHiLoScale: ScaleOrdinal<string, string>,
     labelScale: ScaleOrdinal<string, string>,
-    variant: ColorScaleVariant
+    variant: ColorScaleVariant,
+    featureScaleSaturation?: number
 ) => {
     let scale: ScaleOrdinal<string, string> | ScaleSequential<string>;
     let scaleFunction: (node: TMCHiearchyNode) => string;
@@ -142,18 +167,22 @@ export const makeColorScale = (
             scale = featureColorScale;
             scaleFunction = (node: TMCHiearchyNode) => {
                 const featureAverage = getFeatureAverage(node, activeFeatures);
-                return featureColorScale(featureAverage);
+                return changeSaturation(
+                    featureColorScale(featureAverage),
+                    featureScaleSaturation
+                );
             };
             break;
 
         case 'featureHiLos':
             scale = featureHiLoScale;
             scaleFunction = (node: TMCHiearchyNode) => {
-                return getLabelColor(
+                const color = getLabelColor(
                     featureHiLoScale,
                     node,
                     'featureHiLos'
                 ).toString();
+                return changeSaturation(color, featureScaleSaturation);
             };
             break;
     }
