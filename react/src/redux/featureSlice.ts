@@ -1,4 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { FeatureMap } from '../types';
+import { getKeys } from '../util';
 import { DistributionMetadata } from './pruneSlice';
 import type { RootState } from './store';
 
@@ -13,7 +15,7 @@ export interface FeatureDistribution extends DistributionMetadata {
 interface FeatureSliceState {
     activeFeatures: string[];
     featureDistributions: Record<string, FeatureDistribution>;
-    featureMaps: Record<string, Record<string, number>>;
+    featureMaps: FeatureMap;
 }
 
 const initialState: FeatureSliceState = {
@@ -26,14 +28,9 @@ export const expressionSlice = createSlice({
     name: 'expressionSlice',
     initialState,
     reducers: {
-        addFeature: (
-            state,
-            {
-                payload: { key, map },
-            }: PayloadAction<{ key: string; map: Record<string, number> }>
-        ) => {
-            state.featureMaps[key] = map;
-            state.activeFeatures.push(key);
+        addFeatures: (state, { payload: map }: PayloadAction<FeatureMap>) => {
+            state.featureMaps = map;
+            state.activeFeatures = state.activeFeatures.concat(getKeys(map));
         },
         clearFeatureMaps: state => {
             state.featureMaps = {};
@@ -59,7 +56,7 @@ export const expressionSlice = createSlice({
 });
 
 export const {
-    addFeature,
+    addFeatures,
     clearActiveFeatures,
     clearFeatureMaps,
     removeActiveFeature,

@@ -10,11 +10,43 @@ app.use('/', express.static('/usr/app/static'));
 
 app.use('/api/features', async (req, res) => {
     const { q } = req.query;
-    if (!q) {
-        res.status(422).json('no feature sent!');
+
+    if (!q || typeof q !== 'string') {
+        res.status(422).json('no query sent!');
+    } else {
+        const features = q.trim().split(',');
+
+        const r = await Feature.aggregate<{
+            _id: { feature: string };
+            items: { id: string | number; value: number }[];
+        }>([
+            {
+                $match: { feature: { $in: features } },
+            },
+            {
+                $group: {
+                    _id: { feature: '$feature' },
+                    items: { $push: { id: '$id', value: '$value' } },
+                },
+            },
+        ]);
+
+        const formatted = {} as Record<string, Record<string | number, number>>;
+
+        r.forEach(item => {
+            formatted[item._id.feature] = {};
+            item.items.forEach(element => {
+                formatted[item._id.feature][element.id] = element.value;
+            });
+        });
+
+        res.json(formatted);
     }
-    const r = await Feature.find({ feature: q });
-    res.json(r);
+
+    //this works too but is quite slow:
+    /* 
+        db.features.aggregate([{$match: {feature: {$in: ['Apoe', 'Brca2']}}}, { $group: {_id: {"feature": "$feature"}, count: {$sum: 1}, items: {$push: {k: "$id", v: "$value"}}  }  }, {$project: {items : {$arrayToObject: "$items"} }}])
+    */
 });
 
 app.use('/api/features-set', async (req, res) => {

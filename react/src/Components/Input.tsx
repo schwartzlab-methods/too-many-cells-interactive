@@ -21,6 +21,23 @@ export const Input = styled.input<InputProps>`
     max-width: ${props => props.width ?? '200px'};
 `;
 
+//typing is bad for reuse via attrs.as, so we'll just copy/paste for now
+
+export const TextArea = styled.textarea<InputProps>`
+    &:focus,
+    &:focus-visible {
+        border-color: ${props => props.theme.palette.grey};
+        outline: none;
+    }
+    background-color: ${props => props.theme.palette.white};
+    border: 0.1em solid ${props => props.theme.palette.lightGrey};
+    border-radius: 4px;
+    color: ${props => props.theme.palette.grey};
+    padding: 0.75em 0.5em;
+    margin-left: ${props => props.ml ?? 'inherit'};
+    max-width: ${props => props.width ?? '200px'};
+`;
+
 interface NumberInputProps extends InputProps {
     onChange: (arg: number | undefined) => void;
     value: number;

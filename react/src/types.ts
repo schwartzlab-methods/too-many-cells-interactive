@@ -75,3 +75,5 @@ export type TMCHierarchyPointNode = HierarchyPointNode<TMCNode>;
 /* Basic tree whose use has to do with data and doesn't depend on having coordinates set */
 export type TMCHierarchyDataNode = TMCHierarchyPointNode | TMCHiearchyNode;
 export type TMCHiearchyLink = HierarchyPointLink<TMCNode>;
+
+export type FeatureMap = Record<string, Record<string, number>>;

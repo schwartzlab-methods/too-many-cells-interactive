@@ -22,9 +22,15 @@ const GlobalStyle = createGlobalStyle`
     }
 `;
 
-const Container = styled.div`
+const MainContainer = styled.div`
+    display: flex;
+    justify-content: center;
+`;
+
+const ColumnContainer = styled.div`
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
     justify-content: center;
     max-width: 1800px;
     padding: 15px;
@@ -46,28 +52,30 @@ const Dashboard: React.FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <GlobalStyle />
-            <Container>
-                <Row>
-                    <Main>
-                        <Primary>TooManyCells</Primary>
-                        <Accent>Interactive</Accent>
-                    </Main>
-                </Row>
-                <Row alignItems='flex-start' justifyContent='center'>
-                    <Column xs={12} md={6}>
-                        <TreeControls />
-                        {baseTree && <TreeComponent baseTree={baseTree} />}
-                    </Column>
-                    <Column xs={12} md={6}>
-                        <Row>
-                            <PruneHistory />
-                        </Row>
-                        <Row alignItems='flex-start'>
-                            <DisplayControls />
-                        </Row>
-                    </Column>
-                </Row>
-            </Container>
+            <MainContainer>
+                <ColumnContainer>
+                    <Row>
+                        <Main>
+                            <Primary>TooManyCells</Primary>
+                            <Accent>Interactive</Accent>
+                        </Main>
+                    </Row>
+                    <Row alignItems='flex-start' justifyContent='center'>
+                        <Column xs={12} md={6}>
+                            <TreeControls />
+                            {baseTree && <TreeComponent baseTree={baseTree} />}
+                        </Column>
+                        <Column xs={12} md={6}>
+                            <Row>
+                                <PruneHistory />
+                            </Row>
+                            <Row alignItems='flex-start'>
+                                <DisplayControls />
+                            </Row>
+                        </Column>
+                    </Row>
+                </ColumnContainer>
+            </MainContainer>
         </ThemeProvider>
     );
 };

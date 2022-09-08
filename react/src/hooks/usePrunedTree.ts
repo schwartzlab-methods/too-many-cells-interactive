@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { bindActionCreators, compose } from 'redux';
 import { max, median, min, range, sum, ticks } from 'd3-array';
-import { AttributeMap, TMCHiearchyNode, TMCHierarchyDataNode } from '../types';
+import {
+    AttributeMap,
+    FeatureMap,
+    TMCHiearchyNode,
+    TMCHierarchyDataNode,
+} from '../types';
 import {
     Distributions,
     selectActivePruneStep,
@@ -205,7 +210,7 @@ export const getFeatureGradientDomain = (tree: TMCHierarchyDataNode) => [
 
 export const addFeaturesToCells = (
     tree: TMCHierarchyDataNode,
-    featureMaps: Record<string, Record<string, number>>
+    featureMaps: FeatureMap
 ) => {
     getEntries(featureMaps).map(([feature, featureMap]) => {
         const range: number[] = [];

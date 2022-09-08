@@ -34,7 +34,11 @@ import {
     makeOrdinalScale,
 } from '../../react/src/hooks/useScale';
 import { attachLegend } from '../../react/src/downloadImage';
-import { TMCHiearchyNode, TMCHierarchyPointNode } from '../../react/src/types';
+import {
+    FeatureMap,
+    TMCHiearchyNode,
+    TMCHierarchyPointNode,
+} from '../../react/src/types';
 import { StateExport } from '../../react/src/hooks/useExportState';
 import {
     addFeaturesToCells,
@@ -93,7 +97,7 @@ const clusterTree = JSON.parse(
 );
 
 const getFeatureMap = async (features: string[]) => {
-    const featureMap: Record<string, Record<string, number>> = {};
+    const featureMap: FeatureMap = {};
     for (const feature of features) {
         const res = await Feature.find({ feature });
         featureMap[feature] = {};

@@ -42,3 +42,8 @@ export const Label = styled.label`
     font-size: 16px;
     color: ${props => props.theme.palette.grey};
 `;
+
+export const ActionLink = styled.span`
+    cursor: pointer;
+    color: ${props => props.theme.palette.primary};
+`;
