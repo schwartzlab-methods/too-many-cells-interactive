@@ -28,7 +28,6 @@ services:
     image: mongo:5.0
     volumes:
       - mongo-data:/data/db
-      - ./mongo:/opt/appdata
     networks:
       - tmc-network
 
