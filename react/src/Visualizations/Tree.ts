@@ -13,6 +13,7 @@ import {
     TMCHierarchyPointNode,
     TMCHiearchyLink,
     TMCHierarchyDataNode,
+    AttributeMap,
 } from '../types';
 import { ClickPruner } from '../redux/pruneSlice';
 import {
@@ -207,15 +208,26 @@ const attachToolTip = () => {
         .style('padding', '5px');
 };
 
+const getHiLoValues = (hilos: AttributeMap) => {
+    const total = sum(Object.values(hilos).map(hl => hl.quantity));
+    return Object.values(hilos)
+        .sort((a, b) => (a.quantity < b.quantity ? 1 : -1))
+        .map(v => ({
+            ...v,
+            total,
+        }));
+};
+
 const showToolTip = (
     data: TMCHierarchyPointNode,
     activeFeatures: string[],
+    colorScaleKey: ColorScaleVariant,
     e: MouseEvent
 ) => {
     const cellCount = sum(
         Object.values(data.data.labelCount).map(v => v.quantity)
     );
-    const f = format('.1%');
+    const formatPercent = format('.1%');
 
     const container = select('.tooltip')
         .style('left', `${e.pageX + 15}px`)
@@ -259,7 +271,11 @@ const showToolTip = (
             const strong = s.append('strong');
             strong.html(`${v.scaleKey}: `);
             const val = s.append('span');
-            val.html(f(v.quantity / cellCount));
+            val.html(
+                `${formatPercent(v.quantity / cellCount)} (${formatDigit(
+                    v.quantity
+                )})`
+            );
         });
 
     if (Object.keys(data.data.featureHiLos).length) {
@@ -273,9 +289,9 @@ const showToolTip = (
     featuresContainer
         .selectAll('li.hi-lo-item')
         .data(
-            Object.values(data.data.featureHiLos).sort((a, b) =>
-                a.quantity < b.quantity ? 1 : -1
-            ),
+            colorScaleKey === 'featureHiLos'
+                ? getHiLoValues(data.data.featureHiLos)
+                : [],
             Math.random
         )
         .join('li')
@@ -285,13 +301,17 @@ const showToolTip = (
             const strong = s.append('strong');
             strong.html(`${d.scaleKey}: `);
             const val = s.append('span');
-            val.html(d.quantity.toLocaleString());
+            val.html(
+                `${formatPercent(d.quantity / d.total)} (${formatDigit(
+                    d.quantity
+                )})`
+            );
         });
 
     featuresContainer
         .selectAll('li.feature-item')
         .data(
-            activeFeatures.length
+            colorScaleKey === 'featureAverage' && activeFeatures.length
                 ? [data.data.featureAverage.average.quantity]
                 : [],
             Math.random
@@ -765,7 +785,7 @@ class RadialTree {
                         .on(
                             'mouseover',
                             (e: MouseEvent, d: TMCHierarchyPointNode) =>
-                                showToolTip(d, activeFeatures, e)
+                                showToolTip(d, activeFeatures, colorScaleKey, e)
                         )
                         .on('mouseout', () =>
                             selectAll('.tooltip').style('visibility', 'hidden')
@@ -802,7 +822,7 @@ class RadialTree {
             .call(this.renderLinks)
             .selectAll<SVGPolygonElement, TMCHiearchyLink>('polygon')
             .on('mouseover', (e: MouseEvent, d: TMCHiearchyLink) =>
-                showToolTip(d.target, activeFeatures, e)
+                showToolTip(d.target, activeFeatures, colorScaleKey, e)
             )
             .on('mouseout', () =>
                 selectAll('.tooltip').style('visibility', 'hidden')
@@ -901,7 +921,7 @@ class RadialTree {
             )
             .join('path')
             .on('mouseover', (e: MouseEvent, d: TMCHierarchyPointNode) =>
-                showToolTip(d, activeFeatures, e)
+                showToolTip(d, activeFeatures, colorScaleKey, e)
             )
             .on('mouseout', () =>
                 selectAll('.tooltip').style('visibility', 'hidden')
