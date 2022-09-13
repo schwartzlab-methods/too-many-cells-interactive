@@ -24,9 +24,10 @@ import Button from '../../Button';
 import { Input, TextArea } from '../../Input';
 import { Column, Row, WidgetTitle } from '../../Layout';
 import Modal from '../../Modal';
-import { ActionLink, Caption } from '../../Typography';
+import { ActionLink, Caption, Error, Text } from '../../Typography';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
+    activateFeatureColorScale as _activateFeatureColorScale,
     selectDisplayConfig,
     updateColorScale as _updateColorScale,
     updateColorScaleThresholds as _updateColorScaleThresholds,
@@ -58,6 +59,7 @@ const FeatureSearch: React.FC = () => {
         useAppSelector(selectFeatureSlice);
 
     const {
+        activateFeatureColorScale,
         addFeatures,
         clearActiveFeatures,
         removeActiveFeature,
@@ -66,6 +68,7 @@ const FeatureSearch: React.FC = () => {
         updateColorScaleType,
     } = bindActionCreators(
         {
+            activateFeatureColorScale: _activateFeatureColorScale,
             addFeatures: _addFeatures,
             clearActiveFeatures: _clearActiveFeatures,
             removeActiveFeature: _removeActiveFeature,
@@ -81,6 +84,14 @@ const FeatureSearch: React.FC = () => {
             setFeatureList(f);
         });
     }, []);
+
+    const bulkFeatureInputError = useMemo(() => {
+        if (!bulkFeatureInput) {
+            return false;
+        } else {
+            return !/^[A-Za-z0-9,]+$/.test(bulkFeatureInput);
+        }
+    }, [bulkFeatureInput]);
 
     const removeFeature = (featureName: string) => {
         removeActiveFeature(featureName);
@@ -136,7 +147,7 @@ const FeatureSearch: React.FC = () => {
             });
 
             if (!activeFeatures.length) {
-                updateColorScaleType('featureHiLos');
+                activateFeatureColorScale('sequential');
             }
 
             setLoading(false);
@@ -169,7 +180,7 @@ const FeatureSearch: React.FC = () => {
                         onChange={() => setLookupType('bulk')}
                         type='radio'
                     />
-                    <RadioLabel htmlFor='bulk'>Bulk Lookup</RadioLabel>
+                    <RadioLabel htmlFor='bulk'>Bulk Entry</RadioLabel>
                 </RadioGroup>
             </Row>
             <Row justifyContent='flex-start'>
@@ -179,21 +190,35 @@ const FeatureSearch: React.FC = () => {
                         onSelect={getFeatures}
                     />
                 ) : (
-                    <>
-                        <TextArea
-                            onChange={e =>
-                                setBulkFeatureInput(e.currentTarget.value)
-                            }
-                            rows={10}
-                        />
-                        <Button
-                            disabled={!bulkFeatureInput}
-                            ml='5px'
-                            onClick={() => getFeatures(bulkFeatureInput)}
-                        >
-                            Submit
-                        </Button>
-                    </>
+                    <Column xs={12}>
+                        <Row>
+                            <TextArea
+                                onChange={e =>
+                                    setBulkFeatureInput(e.currentTarget.value)
+                                }
+                                rows={10}
+                            />
+                            <Button
+                                disabled={
+                                    !!bulkFeatureInputError || !bulkFeatureInput
+                                }
+                                ml='5px'
+                                onClick={() => getFeatures(bulkFeatureInput)}
+                            >
+                                Submit
+                            </Button>
+                        </Row>
+                        {!!bulkFeatureInputError && (
+                            <Row>
+                                <Text>
+                                    <Error>
+                                        Feature list must be comma-separated
+                                        with no whitespace!
+                                    </Error>
+                                </Text>
+                            </Row>
+                        )}
+                    </Column>
                 )}
             </Row>
 

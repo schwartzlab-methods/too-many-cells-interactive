@@ -700,6 +700,11 @@
   resolved "https://registry.yarnpkg.com/@types/d3-color/-/d3-color-3.0.2.tgz#53f2d6325f66ee79afd707c05ac849e8ae0edbb0"
   integrity sha512-WVx6zBiz4sWlboCy7TCgjeyHpNjMsoF36yaagny1uXfbadc9f+5BeBf7U+lRmQqY3EHbGQpP8UdW8AC+cywSwQ==
 
+"@types/d3-color@^1":
+  version "1.4.2"
+  resolved "https://registry.yarnpkg.com/@types/d3-color/-/d3-color-1.4.2.tgz#944f281d04a0f06e134ea96adbb68303515b2784"
+  integrity sha512-fYtiVLBYy7VQX+Kx7wU/uOIkGQn8aAEY8oWMoyja3N4dLd8Yf6XgSIR/4yWvMuveNOH5VShnqCgRqqh/UNanBA==
+
 "@types/d3-dispatch@^3.0.1":
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/@types/d3-dispatch/-/d3-dispatch-3.0.1.tgz#a1b18ae5fa055a6734cb3bd3cbc6260ef19676e3"
@@ -721,6 +726,13 @@
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/@types/d3-hierarchy/-/d3-hierarchy-3.0.2.tgz#ca63f2f4da15b8f129c5b7dffd71d904cba6aca2"
   integrity sha512-+krnrWOZ+aQB6v+E+jEkmkAx9HvsNAD+1LCD0vlBY3t+HwjKnsBFbpVLx6WWzDzCIuiTWdAxXMEnGnVXpB09qQ==
+
+"@types/d3-hsv@^0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@types/d3-hsv/-/d3-hsv-0.1.4.tgz#e93585807d39c761a5355493d519e7a9ca1d709f"
+  integrity sha512-29bhqKebEYaos8AKijrxFEUTI8BWqsTFJk+jrJkJZdz0cNzWulXo9L/EZpSNfa8B+SiNStVKaDAPtE4xC32lmA==
+  dependencies:
+    "@types/d3-color" "^1"
 
 "@types/d3-interpolate@*", "@types/d3-interpolate@^3.0.1":
   version "3.0.1"
@@ -2012,6 +2024,11 @@ d3-brush@^3.0.0:
     d3-selection "3"
     d3-transition "3"
 
+d3-color@1:
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/d3-color/-/d3-color-1.4.1.tgz#c52002bf8846ada4424d55d97982fef26eb3bc8a"
+  integrity sha512-p2sTHSLCJI2QKunbGb7ocOh7DgTAn8IrLx21QRc/BSnodXM4sv6aLQlnfpvehFMLZEfBc6g9pH9SWQccFYfJ9Q==
+
 "d3-color@1 - 2":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/d3-color/-/d3-color-2.0.0.tgz#8d625cab42ed9b8f601a1760a389f7ea9189d62e"
@@ -2072,6 +2089,13 @@ d3-hierarchy@^3.1.1:
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/d3-hierarchy/-/d3-hierarchy-3.1.2.tgz#b01cd42c1eed3d46db77a5966cf726f8c09160c6"
   integrity sha512-FX/9frcub54beBdugHjDCdikxThEqjnR93Qt7PvQTOHxyiNCAlvMrHhclk3cD5VeAaq9fxmfRp+CnWw9rEMBuA==
+
+d3-hsv@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/d3-hsv/-/d3-hsv-0.1.0.tgz#c95be89b34177a29e70a0848db95d7f0261ea99b"
+  integrity sha512-HcIU73raRodnYiGDMzFbI8wyWkQtd+aAgX2sypAKnJ7UP93P9bOEhhrxWL4krcyp1ec2LFOUpvC8mFBt38YokQ==
+  dependencies:
+    d3-color "1"
 
 "d3-interpolate@1 - 2", "d3-interpolate@1.2.0 - 2":
   version "2.0.1"

@@ -1,5 +1,4 @@
 import React from 'react';
-import { hcl } from 'd3-color';
 import { bindActionCreators } from 'redux';
 import { NumberInput } from '../../Input';
 import { Column, Row } from '../../Layout';
@@ -89,9 +88,6 @@ const DisplayControls: React.FC = () => {
     return (
         <>
             <Column xs={6}>
-                <Row>
-                    <Legend />
-                </Row>
                 {!!activeFeatures.length && (
                     <Row>
                         <RadioGroup>
@@ -152,6 +148,10 @@ const DisplayControls: React.FC = () => {
                         </RadioGroup>
                     </Row>
                 )}
+                <Row>
+                    <Legend />
+                </Row>
+
                 <Row>
                     <DisplaySettings />
                 </Row>

@@ -21,6 +21,10 @@ export const Accent = styled.span`
     color: ${props => props.theme.palette.secondary};
 `;
 
+export const Error = styled.span`
+    color: red;
+`;
+
 export const Main = styled.h2`
     font-size: 32px;
     margin: 5px;

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { extent, sum } from 'd3-array';
-import { color, hsl, rgb } from 'd3-color';
+import { color, rgb } from 'd3-color';
+import { hsv } from 'd3-hsv';
 import { interpolateRgb } from 'd3-interpolate';
 import {
     scaleLinear,
@@ -141,9 +142,9 @@ export const changeSaturation = (
     saturation: number | undefined
 ) => {
     if (saturation) {
-        const hslColor = hsl(color);
-        hslColor.s = saturation;
-        return hslColor.formatRgb();
+        const hsvColor = hsv(color);
+        hsvColor.s = saturation;
+        return hsvColor.formatRgb();
     }
     return color;
 };
