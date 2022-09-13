@@ -2,7 +2,8 @@
 
 set -euo pipefail
 
-INIT=${1:-}
+init=${1:-}
+debug=${2:-}
 
 while true; do
     if ! curl -s mongo:27017; then
@@ -12,8 +13,8 @@ while true; do
     fi
 done
 
-if [[ $INIT == 'init' ]]; then
-    python3 import-matrix.py
+if [[ $init == 'init' ]]; then
+    python3 import-matrix.py $debug
 fi
 
 yarn run start

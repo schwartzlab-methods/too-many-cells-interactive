@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from os import path, walk, environ
 import re
 from shutil import copyfile
+from sys import argv
 from typing import List, Dict, Any
 import time
 
@@ -18,11 +19,14 @@ db = client[environ.get("MONGO_DB")]
 features_collection = db.features
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-ch = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+
+
+def configure_logger(debug = False):
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
 
 @dataclass
@@ -122,6 +126,7 @@ async def parse_matrices(root_dir: str):
                     )
                 }
                 i = 0
+                j = 1
                 chunk = []
                 #skip headers
                 [f.readline() for i in range(2)]
@@ -137,8 +142,11 @@ async def parse_matrices(root_dir: str):
                     )
                     i+=1
                     if i == 100000:  # 100k
+                        logger.debug(f"inserting chunk {j}...")
                         await insert_many(chunk)
+                        logger.debug(f"chunk {j} inserted.")
                         i = 0
+                        j += 1
                         chunk = []
                 #insert remaining rows
                 await insert_many(chunk)
@@ -152,7 +160,9 @@ async def parse_matrices(root_dir: str):
         if "labels.csv" in files:
             copyfile(path.join(root, "labels.csv"), "/usr/app/static/files/labels.csv")
 
-async def insert_features():
+async def insert_features(debug: bool):
+    configure_logger(debug=debug)
+    logger.debug("debugging enabled!")
     await bootstrap()
     logger.info("checking that required files are in the data directory...")
     await check_for_files("/usr/data")
@@ -164,4 +174,7 @@ async def insert_features():
 
 
 if __name__ == "__main__":
-    asyncio.run(insert_features())
+
+    debug = True if (len(argv) > 1 and argv[1] == "--debug") else False
+
+    asyncio.run(insert_features(debug))

@@ -9,6 +9,8 @@ if [[ $# < 3 ]]; then
     echo >&2 "USAGE: $0 --data-dir /path/to/matrices --port 1234 [--no-init]" && exit 1
 fi
 
+debug=""
+
 while [ ! -z "$1" ]; do
     if [[ "$1" == '--data-dir' ]]; then 
         shift
@@ -20,6 +22,10 @@ while [ ! -z "$1" ]; do
 
     elif [[ "$1" == '--no-init' ]]; then
         no_init=1
+        shift
+
+    elif [[ "$1" == '--debug' ]]; then
+        debug="--debug"
         shift
     
     else
@@ -47,6 +53,6 @@ else
 
     docker-compose build
 
-    docker-compose -f docker-compose.prod.yaml run -p ${port}:3000 -v ${data_dir}:/usr/data:ro --rm node init
+    docker-compose -f docker-compose.prod.yaml run -p ${port}:3000 -v ${data_dir}:/usr/data:ro --rm node init $debug
 
 fi
