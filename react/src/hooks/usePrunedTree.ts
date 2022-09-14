@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { bindActionCreators, compose } from 'redux';
-import { max, median, min, range, sum, ticks } from 'd3-array';
+import { extent, max, median, min, range, sum, ticks } from 'd3-array';
 import {
     AttributeMap,
     FeatureMap,
@@ -199,14 +199,12 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
 export default usePrunedTree;
 
-export const getFeatureGradientDomain = (tree: TMCHierarchyDataNode) => [
-    0,
-    max(
+export const getFeatureGradientDomain = (tree: TMCHierarchyDataNode) =>
+    extent(
         tree
             .descendants()
             .map(d => d.data.featureAverage?.average?.quantity || 0)
-    ) as number,
-];
+    ) as [number, number];
 
 export const addFeaturesToCells = (
     tree: TMCHierarchyDataNode,
