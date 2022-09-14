@@ -1,4 +1,5 @@
 import React from 'react';
+import { hsl } from 'd3-color';
 import { bindActionCreators } from 'redux';
 import { NumberInput } from '../../Input';
 import { Column, Row } from '../../Layout';
@@ -31,6 +32,7 @@ const DisplayControls: React.FC = () => {
             colorScale: {
                 variant: colorScaleType,
                 featureGradientScaleType,
+                featureGradientRange,
                 featureScaleSaturation,
             },
             pieScale,
@@ -185,8 +187,12 @@ const DisplayControls: React.FC = () => {
                                         featureScaleSaturation,
                                     })
                                 }
-                                step={0.1}
-                                value={featureScaleSaturation ?? 0}
+                                step={0.05}
+                                value={
+                                    featureScaleSaturation ??
+                                    hsl(featureGradientRange[1]).s ??
+                                    0
+                                }
                             />
                         )}
                     </Column>

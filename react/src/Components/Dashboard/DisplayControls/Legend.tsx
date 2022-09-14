@@ -1,17 +1,14 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
+import { select } from 'd3-selection';
+import { range } from 'd3-array';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
 import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
 import { Column, WidgetTitle } from '../../Layout';
 import { Input } from '../../Input';
-import {
-    changeSaturation,
-    useAppDispatch,
-    useAppSelector,
-    useColorScale,
-} from '../../../hooks';
+import { useAppDispatch, useAppSelector, useColorScale } from '../../../hooks';
 import {
     selectDisplayConfig,
     updateActiveOrdinalColorScale,
@@ -128,29 +125,13 @@ const LinearLegend: React.FC<{
     const containerRef = useRef<any>();
     const {
         scales: {
-            colorScale: { featureGradientColor, featureScaleSaturation },
+            colorScale: { featureGradientColor },
         },
     } = useAppSelector(selectDisplayConfig);
 
     const dispatch = useAppDispatch();
 
     useClickAway(containerRef, () => setPickerOpen(false));
-
-    const startColor = useMemo(() => {
-        return changeSaturation(
-            //bad source typing
-            (scale.range() as any)[0],
-            featureScaleSaturation
-        );
-    }, [featureScaleSaturation, scale]);
-
-    const endColor = useMemo(() => {
-        return changeSaturation(
-            //bad source typing
-            (scale.range() as any)[scale.range().length - 1],
-            featureScaleSaturation
-        );
-    }, [featureScaleSaturation, scale]);
 
     const updateColor = (newColor: string) => {
         dispatch(updateColorScale({ featureGradientColor: newColor }));
@@ -162,18 +143,7 @@ const LinearLegend: React.FC<{
                 {formatDigit(scale.domain()[0])}
             </LinearLegendLabel>
             <LinearLegendContainer onClick={() => setPickerOpen(true)}>
-                <svg viewBox='0 0 200 25'>
-                    <linearGradient id='scaleGradient'>
-                        <stop offset='5%' stopColor={startColor} />
-                        <stop offset='95%' stopColor={endColor} />
-                    </linearGradient>
-
-                    <rect
-                        fill="url('#scaleGradient')"
-                        height={25}
-                        width={200}
-                    />
-                </svg>
+                <LegendGradient scale={scale} height={25} width={200} />
             </LinearLegendContainer>
             <LinearLegendLabel>
                 {formatDigit(scale.domain().slice(-1)[0])}
@@ -223,3 +193,54 @@ const OrdinalLegend: React.FC<{ scale: ScaleOrdinal<string, string> }> = ({
     );
 };
 export default Legend;
+
+interface LegendGradientProps {
+    scale: ScaleSequential<string>;
+    height: number;
+    width: number;
+}
+
+const LegendGradient: React.FC<LegendGradientProps> = ({
+    height,
+    scale,
+    width,
+}) => {
+    const selector = 'legend-gradient';
+
+    useLayoutEffect(() => {
+        renderLinearLegend(`.${selector}`, scale, height, width);
+    }, [scale]);
+
+    return <span className={selector} />;
+};
+
+export const renderLinearLegend = (
+    selector: string,
+    scale: ScaleSequential<string>,
+    height: number,
+    width: number
+) => {
+    const gradientId = 'legendGradient';
+
+    const svg = select(selector)
+        .selectAll('svg')
+        .data([1], Math.random)
+        .join('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`);
+
+    svg.append('defs')
+        .append('linearGradient')
+        .attr('id', gradientId)
+        .selectAll('stop')
+        .data(range(0, 1, 0.01), Math.random)
+        .join('stop')
+        .attr('offset', d => `${d * 100}%`)
+        .attr('stop-color', d => scale.interpolator()(d));
+
+    svg.selectAll('rect')
+        .data([1], Math.random)
+        .join('rect')
+        .attr('height', height)
+        .attr('width', width)
+        .attr('fill', `url(#${gradientId})`);
+};

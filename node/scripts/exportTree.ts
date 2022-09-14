@@ -27,7 +27,6 @@ import {
 import {
     buildFeatureColorScale,
     buildLabelColorFunction,
-    changeSaturation,
     getFeatureAverage,
     getLabelColor,
     makeLinearScale,
@@ -179,7 +178,11 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
         const range = state.scales.colorScale?.featureHiLoRange?.length
             ? state.scales.colorScale.featureHiLoRange
             : addGray(domain, interpolateColorScale(domain));
-        const scale = makeOrdinalScale(range, domain);
+        const scale = makeOrdinalScale(
+            range,
+            domain,
+            state.scales.colorScale?.featureScaleSaturation
+        );
         const scaleFunction = (node: TMCHiearchyNode) =>
             getLabelColor(scale, node, 'featureHiLos').toString();
 
@@ -189,15 +192,13 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
             '#D3D3D3',
             state.scales.colorScale?.featureGradientColor || '#E41A1C',
             state.scales.colorScale?.featureGradientScaleType || 'sequential',
-            getFeatureGradientDomain(nodes)
+            getFeatureGradientDomain(nodes),
+            state.scales.colorScale?.featureScaleSaturation
         );
 
         const scaleFunction = (node: TMCHiearchyNode) => {
             const featureAverage = getFeatureAverage(node, state.features);
-            return changeSaturation(
-                scale(featureAverage),
-                state.scales.colorScale?.featureScaleSaturation
-            );
+            return scale(featureAverage);
         };
 
         return { scale, scaleFunction };
@@ -257,8 +258,7 @@ const saveTree = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
         selection.select('svg'),
         scale,
         state.fontsize,
-        state.features,
-        state.scales.colorScale?.featureScaleSaturation
+        state.features
     );
 
     selection

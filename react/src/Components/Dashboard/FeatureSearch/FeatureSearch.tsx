@@ -118,6 +118,7 @@ const FeatureSearch: React.FC = () => {
         updateColorScale({
             featureHiLoRange: [],
             featureHiLoDomain: [],
+            featureScaleSaturation: undefined,
         });
 
         updateColorScaleType('labelCount');
