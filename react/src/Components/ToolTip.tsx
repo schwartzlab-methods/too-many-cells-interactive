@@ -7,8 +7,8 @@ interface ToolTipProps {
 }
 
 const Container = styled.div`
+    display: flex;
     position: relative;
-    max-width: 500px;
 `;
 
 const ToolTipItem = styled.div<{ bottom?: number; top?: number }>`
@@ -16,7 +16,9 @@ const ToolTipItem = styled.div<{ bottom?: number; top?: number }>`
     border-radius: 5px;
     bottom: ${props => (props.bottom ? `${props.bottom}px` : 'inherit')};
     color: ${props => props.theme.palette.white};
-    display: flex;
+    flex-grow: 1;
+    flex-shrink: 1;
+    justify-content: flex-start;
     padding: 7px;
     position: absolute;
     top: ${props => (props.top ? `${props.top}px` : 'inherit')};
@@ -28,7 +30,7 @@ const ToolTip: React.FC<ToolTipProps> = ({ message, children }) => {
 
     const getShowAtTop = () =>
         !!containerRef.current &&
-        containerRef.current.getBoundingClientRect().top > 30;
+        containerRef.current.getBoundingClientRect().top > 150;
 
     const getParentHeight = () =>
         containerRef.current?.getBoundingClientRect().height || 0;
@@ -48,7 +50,9 @@ const ToolTip: React.FC<ToolTipProps> = ({ message, children }) => {
                         {React.isValidElement(message) ? (
                             message
                         ) : (
-                            <Text color={'white'}>{message}</Text>
+                            <Text color={'white'} fontSize='12px'>
+                                {message}
+                            </Text>
                         )}
                     </ToolTipItem>
                 )}

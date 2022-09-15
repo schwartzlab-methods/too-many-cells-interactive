@@ -1,12 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
 import displayConfigReducer from './displayConfigSlice';
 import pruneSliceReducer from './pruneSlice';
-import featureSliceReducer from './featureSlice';
+import annotationSliceReducer from './annotationSlice';
 
 const store = configureStore({
     reducer: {
         displayConfig: displayConfigReducer,
-        featureSlice: featureSliceReducer,
+        annotationSlice: annotationSliceReducer,
         pruneSlice: pruneSliceReducer,
     },
 });

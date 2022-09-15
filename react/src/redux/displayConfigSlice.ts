@@ -22,24 +22,26 @@ export interface ToggleableDisplayElements {
 export type ColorScaleVariant =
     | 'labelCount'
     | 'featureAverage'
-    | 'featureHiLos';
+    | 'featureHiLos'
+    | 'userAnnotation';
 
 export type FeatureGradientScaleType = 'sequential' | 'symlogSequential';
 
 export interface ColorScaleConfig {
     //the base color for the gradient scale
-    featureGradientColor: string;
     featureScaleSaturation?: number;
     featureGradientScaleType: FeatureGradientScaleType;
     //average feature counts for each node
     featureGradientDomain: number[];
     //the two-color range to interpolate between
-    featureGradientRange: string[];
+    featureGradientRange: [string, string];
     featureHiLoDomain: string[];
     featureHiLoRange: string[];
     featureHiLoThresholds: Record<string, number>;
     labelDomain: string[];
     labelRange: string[];
+    userAnnotationRange: [string, string];
+    userAnnotationDomain: number[];
     variant: ColorScaleVariant;
 }
 
@@ -69,15 +71,16 @@ const initialScales: Scales = {
     },
     colorScale: {
         featureGradientDomain: [],
-        featureGradientRange: [],
+        featureGradientRange: ['#D3D3D3', 'red'],
         featureScaleSaturation: undefined,
-        featureGradientColor: '#E41A1C',
         featureGradientScaleType: 'sequential',
         featureHiLoDomain: [],
         featureHiLoRange: [],
         featureHiLoThresholds: {},
         labelDomain: [],
         labelRange: [],
+        userAnnotationRange: ['#D3D3D3', '#FFA500'],
+        userAnnotationDomain: [],
         variant: 'labelCount',
     },
     pieScale: {
@@ -114,10 +117,6 @@ export const displayConfigSlice = createSlice({
             state,
             { payload }: PayloadAction<FeatureGradientScaleType>
         ) => {
-            state.scales.colorScale.featureGradientRange = [
-                '#D3D3D3',
-                state.scales.colorScale.featureGradientColor,
-            ];
             state.scales.colorScale.featureGradientScaleType = payload;
             state.scales.colorScale.variant = 'featureAverage';
         },

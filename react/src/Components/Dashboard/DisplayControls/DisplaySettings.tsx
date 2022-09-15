@@ -7,12 +7,12 @@ import {
     toggleDisplayProperty,
     updateLinearScale as _updateLinearScale,
 } from '../../../redux/displayConfigSlice';
-import { selectFeatureSlice } from '../../../redux/featureSlice';
+import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 import Checkbox from '../../Checkbox';
 import { Column, WidgetTitle } from '../../Layout';
 
 const DisplaySettings: React.FC = () => {
-    const { activeFeatures } = useAppSelector(selectFeatureSlice);
+    const { activeFeatures } = useAppSelector(selectAnnotationSlice);
     const {
         scales: {
             branchSizeScale,

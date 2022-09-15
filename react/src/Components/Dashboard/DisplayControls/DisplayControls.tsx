@@ -4,7 +4,7 @@ import { bindActionCreators } from 'redux';
 import { NumberInput } from '../../Input';
 import { Column, Row } from '../../Layout';
 import { Label } from '../../Typography';
-import { selectFeatureSlice } from '../../../redux/featureSlice';
+import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
@@ -20,6 +20,7 @@ import {
     getScaleCombinations,
     interpolateColorScale,
 } from '../../../util';
+import AnnotationControls from './AnnotationControls';
 import DisplaySettings from './DisplaySettings';
 import ExportControls from './ExportControls';
 import PrunerPanel from './PrunerPanel';
@@ -34,6 +35,7 @@ const DisplayControls: React.FC = () => {
                 featureGradientScaleType,
                 featureGradientRange,
                 featureScaleSaturation,
+                userAnnotationDomain,
             },
             pieScale,
         },
@@ -66,7 +68,7 @@ const DisplayControls: React.FC = () => {
             });
         };
 
-    const { activeFeatures } = useAppSelector(selectFeatureSlice);
+    const { activeFeatures } = useAppSelector(selectAnnotationSlice);
 
     const changeScaleType = (scaleType: typeof colorScaleType) => {
         updateColorScaleType(scaleType);
@@ -90,6 +92,23 @@ const DisplayControls: React.FC = () => {
     return (
         <>
             <Column xs={6}>
+                {(!!activeFeatures.length || !!userAnnotationDomain.length) && (
+                    <Row>
+                        <RadioGroup>
+                            <RadioButton
+                                checked={colorScaleType === 'labelCount'}
+                                id='labelCount'
+                                name='labelCount'
+                                onChange={changeScaleType.bind(
+                                    null,
+                                    'labelCount'
+                                )}
+                                type='radio'
+                            />
+                            <RadioLabel htmlFor='labelCount'>Labels</RadioLabel>
+                        </RadioGroup>
+                    </Row>
+                )}
                 {!!activeFeatures.length && (
                     <Row>
                         <RadioGroup>
@@ -103,17 +122,6 @@ const DisplayControls: React.FC = () => {
                             <RadioLabel htmlFor='featureHiLos'>
                                 Feature HiLo
                             </RadioLabel>
-                            <RadioButton
-                                checked={colorScaleType === 'labelCount'}
-                                id='labelCount'
-                                name='labelCount'
-                                onChange={changeScaleType.bind(
-                                    null,
-                                    'labelCount'
-                                )}
-                                type='radio'
-                            />
-                            <RadioLabel htmlFor='labelCount'>Labels</RadioLabel>
                             <RadioButton
                                 checked={
                                     colorScaleType === 'featureAverage' &&
@@ -150,6 +158,24 @@ const DisplayControls: React.FC = () => {
                         </RadioGroup>
                     </Row>
                 )}
+                {!!userAnnotationDomain.length && (
+                    <Row>
+                        <RadioGroup>
+                            <RadioButton
+                                checked={colorScaleType === 'userAnnotation'}
+                                id='user-annotation'
+                                name='user-annotation'
+                                onChange={() =>
+                                    updateColorScaleType('userAnnotation')
+                                }
+                                type='radio'
+                            />
+                            <RadioLabel htmlFor='user-annotation'>
+                                User Annotations
+                            </RadioLabel>
+                        </RadioGroup>
+                    </Row>
+                )}
                 <Row>
                     <Legend />
                 </Row>
@@ -175,9 +201,11 @@ const DisplayControls: React.FC = () => {
                             onChange={handleScaleSilderChange('pieScale')}
                             value={pieScale.range[1]}
                         />
-                        {['featureAverage', 'featureHiLos'].includes(
-                            colorScaleType
-                        ) && (
+                        {[
+                            'featureAverage',
+                            'featureHiLos',
+                            'userAnnotation',
+                        ].includes(colorScaleType) && (
                             <Slider
                                 label='Adjust Saturation'
                                 max={5}
@@ -199,6 +227,9 @@ const DisplayControls: React.FC = () => {
                 </Row>
             </Column>
             <Column xs={6}>
+                <Row>
+                    <AnnotationControls />
+                </Row>
                 <Row>
                     <ExportControls />
                 </Row>

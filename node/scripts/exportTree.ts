@@ -23,9 +23,10 @@ import {
     getScaleCombinations,
     interpolateColorScale,
     runPrunes,
+    textToAnnotations,
 } from '../../react/src/util';
 import {
-    buildFeatureColorScale,
+    buildSequentialScale,
     buildLabelColorFunction,
     getFeatureAverage,
     getLabelColor,
@@ -34,6 +35,7 @@ import {
 } from '../../react/src/hooks/useScale';
 import { attachLegend } from '../../react/src/downloadImage';
 import {
+    AttributeMap,
     FeatureMap,
     TMCHiearchyNode,
     TMCHierarchyPointNode,
@@ -41,6 +43,7 @@ import {
 import { StateExport } from '../../react/src/hooks/useExportState';
 import {
     addFeaturesToCells,
+    addUserAnnotations,
     getFeatureGradientDomain,
     updateFeatureCounts,
     updatefeatureHiLos,
@@ -65,6 +68,11 @@ const argv = yargs(process.argv.slice(2))
         },
         configPath: {
             description: 'Path to the display_config.json file',
+            type: 'string',
+            nargs: 1,
+        },
+        annotationPath: {
+            description: 'Path to the annotations csv file',
             type: 'string',
             nargs: 1,
         },
@@ -94,6 +102,19 @@ const clusterTree = JSON.parse(
         encoding: 'utf-8',
     })
 );
+
+let annotations: AttributeMap;
+
+if ((argv as { [key: string]: string }).annotationPath) {
+    const text = readFileSync(
+        (argv as { [key: string]: string }).annotationPath,
+        {
+            encoding: 'utf-8',
+        }
+    );
+
+    annotations = textToAnnotations(text);
+}
 
 const getFeatureMap = async (features: string[]) => {
     const featureMap: FeatureMap = {};
@@ -168,7 +189,7 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
         }
 
         const scale = makeOrdinalScale(labelRange, labelDomain);
-        const scaleFunction = buildLabelColorFunction(state.features, scale);
+        const scaleFunction = buildLabelColorFunction(scale);
         return { scale, scaleFunction };
     } else if (scaleType === 'featureHiLos') {
         const domain = state.scales.colorScale?.featureHiLoDomain?.length
@@ -187,19 +208,33 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
             getLabelColor(scale, node, 'featureHiLos').toString();
 
         return { scale, scaleFunction };
-    } else {
-        const scale = buildFeatureColorScale(
-            '#D3D3D3',
-            state.scales.colorScale?.featureGradientColor || '#E41A1C',
-            state.scales.colorScale?.featureGradientScaleType || 'sequential',
+    } else if (scaleType === 'featureAverage') {
+        const scale = buildSequentialScale(
+            state.scales.colorScale?.featureGradientRange as [string, string],
             getFeatureGradientDomain(nodes),
-            state.scales.colorScale?.featureScaleSaturation
+            state.scales.colorScale?.featureScaleSaturation,
+            state.scales.colorScale?.featureGradientScaleType || 'sequential'
         );
 
         const scaleFunction = (node: TMCHiearchyNode) => {
             const featureAverage = getFeatureAverage(node, state.features);
             return scale(featureAverage);
         };
+
+        return { scale, scaleFunction };
+    } else {
+        const scale = buildSequentialScale(
+            state.scales.colorScale?.userAnnotationRange as [string, string],
+            getExtent(
+                nodes
+                    .descendants()
+                    .map(n => Object.values(n.data.userAnnotation)[0].quantity)
+            ),
+            state.scales.colorScale?.featureScaleSaturation
+        );
+
+        const scaleFunction = (node: TMCHiearchyNode) =>
+            scale(Object.values(node.data.userAnnotation)[0]?.quantity);
 
         return { scale, scaleFunction };
     }
@@ -230,6 +265,9 @@ const saveTree = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
 
     const { variant: scaleType } = state.scales!.colorScale!;
     await addFeatures(state, nodes);
+    if (annotations) {
+        addUserAnnotations(nodes, annotations);
+    }
     const visibleNodes = pruneAndCalculateLayout(state, nodes);
     const { scale, scaleFunction } = getScale(visibleNodes, state);
     const treeScales = getTreeScales(scaleFunction, state, nodes);
@@ -318,10 +356,19 @@ const validateScales = (scales: ChartConfig['scales']) => {
         const { variant } = colorScale;
         if (variant === 'featureAverage') {
             if (
-                colorScale.featureGradientColor &&
-                typeof colorScale.featureGradientColor !== 'string'
+                colorScale.featureGradientRange &&
+                colorScale.featureGradientRange[1] &&
+                typeof colorScale.featureGradientRange[1] !== 'string'
             ) {
                 errors += 'featureGradientColor must be a string!\n';
+            }
+        } else if (variant === 'userAnnotation') {
+            if (
+                colorScale.userAnnotationRange &&
+                colorScale.userAnnotationRange[1] &&
+                typeof colorScale.userAnnotationRange[1] !== 'string'
+            ) {
+                errors += 'userAnnotationColor must be a string!\n';
             }
         } else if (variant === 'featureHiLos') {
             const { featureHiLoDomain, featureHiLoRange } = colorScale;
@@ -373,6 +420,14 @@ const validateInput = (config: ChartConfig) => {
             ', '
         )}!\n`;
     }
+    if (
+        config.scales.colorScale?.variant === 'userAnnotation' &&
+        !annotations
+    ) {
+        errors +=
+            'An annotation file path must be passed in order to use the annotation scale';
+    }
+
     errors += validateScales(config.scales);
     return errors;
 };

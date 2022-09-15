@@ -15,11 +15,12 @@ import {
 import { AttributeMap, TMCHierarchyDataNode, TMCNode } from './types';
 
 /* typescript-friendly */
-export const getEntries = <T>(obj: T) =>
+export const getEntries = <T extends Record<string, unknown>>(obj: T) =>
     Object.entries(obj) as [keyof T, T[keyof T]][];
 
 /* typescript-friendly */
-export const getKeys = <T>(obj: T) => Object.keys(obj) as (keyof T)[];
+export const getKeys = <T extends Record<string, unknown>>(obj: T) =>
+    Object.keys(obj) as (keyof T)[];
 
 /**
  * Calculate the distance from the origin, used to get radius value for polar coordinates
@@ -402,4 +403,32 @@ export const addGray = (domain: string[], range: string[]) => {
         range[allLowIdx] = '#D3D3D3';
     }
     return range;
+};
+
+export const textToAnnotations = (text: string) => {
+    const rows = text.split(/\r?\n/).filter(Boolean);
+
+    const headers = rows[0].split(',');
+    if (headers.length !== 2) {
+        throw 'CSV must have exactly 2 columns.';
+    }
+
+    if (!headers.includes('node_id')) {
+        throw 'CSV must have one column called `node_id`.';
+    }
+
+    const idIdx = headers.findIndex(h => h === 'node_id');
+    const dataIdx = idIdx ? 0 : 1;
+
+    const annotations = {} as AttributeMap;
+
+    for (const ann of rows.slice(1)) {
+        const data = ann.split(',');
+        annotations[+data[idIdx]] = {
+            quantity: +data[dataIdx],
+            scaleKey: +data[dataIdx],
+        };
+    }
+
+    return annotations;
 };

@@ -15,7 +15,7 @@ const QuestionContainer = styled.span`
 const QuestionTip: React.FC<QuestionTipProps> = ({ message }) => (
     <QuestionContainer>
         <ToolTip message={message}>
-            <QuestionMarkIcon pointer />
+            <QuestionMarkIcon size={'15px'} pointer />
         </ToolTip>
     </QuestionContainer>
 );

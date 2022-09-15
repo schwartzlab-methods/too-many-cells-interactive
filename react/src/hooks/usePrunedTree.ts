@@ -22,10 +22,11 @@ import {
 } from '../redux/displayConfigSlice';
 import {
     clearFeatureMaps as _clearFeatureMaps,
+    clearUserAnnotationMaps as _clearUserAnnotationMaps,
     FeatureDistribution,
-    selectFeatureSlice,
+    selectAnnotationSlice,
     updateFeatureDistributions as _updateFeatureDistributions,
-} from '../redux/featureSlice';
+} from '../redux/annotationSlice';
 import {
     calculateTreeLayout,
     formatDigit,
@@ -41,6 +42,10 @@ import useAppSelector from './useAppSelector';
 import useAppDispatch from './useAppDispatch';
 import { getFeatureAverage } from './useScale';
 
+/* This hook has become the site of most tree transformations -- it reacts to changes in state that require the tree to be altered in some way,
+    including prunes, user annotations, and feature additions.    
+*/
+
 const usePrunedTree = (tree: TMCHierarchyDataNode) => {
     const [baseTree, setBaseTree] = useState(tree);
 
@@ -48,6 +53,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
     const {
         clearFeatureMaps,
+        clearUserAnnotationMaps,
         updateColorScale,
         updateColorScaleThresholds,
         updateDistributions,
@@ -56,6 +62,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
     } = bindActionCreators(
         {
             clearFeatureMaps: _clearFeatureMaps,
+            clearUserAnnotationMaps: _clearUserAnnotationMaps,
             updateColorScale: _updateColorScale,
             updateColorScaleThresholds: _updateColorScaleThresholds,
             updateDistributions: _updateDistributions,
@@ -82,7 +89,9 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
         setVisibleNodes(calculateTreeLayout(newTree, width));
     }, [baseTree]);
 
-    const { activeFeatures, featureMaps } = useAppSelector(selectFeatureSlice);
+    const { activeFeatures, featureMaps, userAnnoationMap } = useAppSelector(
+        selectAnnotationSlice
+    );
 
     const { step, index: activePruneIndex } = useAppSelector(
         selectActivePruneStep
@@ -124,6 +133,27 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
             clearFeatureMaps();
         }
     }, [featureMaps]);
+
+    //USER ANNOTATION EFFECTS
+
+    useEffect(() => {
+        if (Object.values(userAnnoationMap).length) {
+            //annotate nodes with user values
+            const treeWithUserAnnotations = addUserAnnotations(
+                baseTree.copy(),
+                userAnnoationMap
+            );
+
+            updateColorScale({
+                userAnnotationDomain: extent(
+                    Object.values(userAnnoationMap).map(v => v.quantity)
+                ) as [number, number],
+            });
+
+            setBaseTree(treeWithUserAnnotations);
+            clearUserAnnotationMaps();
+        }
+    }, [userAnnoationMap]);
 
     /* when thresholds change or a new feature is added, we need to re-annotate nodes */
     useEffect(() => {
@@ -229,6 +259,17 @@ export const addFeaturesToCells = (
 
     return tree;
 };
+
+export const addUserAnnotations = (
+    tree: TMCHierarchyDataNode,
+    userAnnoationMap: AttributeMap
+) =>
+    tree.each(
+        n =>
+            (n.data.userAnnotation = {
+                userAnnotation: userAnnoationMap[n.data.nodeId],
+            })
+    );
 
 const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
     depthGroups: getDepthGroups(nodes),

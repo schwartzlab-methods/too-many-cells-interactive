@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import QuestionTip from './QuestionTip';
 import { Caption, Title } from './Typography';
 
 interface RowProps {
@@ -59,12 +60,22 @@ const TitleContainer = styled(Column)`
 
 interface WidgetTitleProps {
     caption?: string;
+    helpText?: React.ReactNode;
     title: string;
 }
 
-export const WidgetTitle: React.FC<WidgetTitleProps> = ({ caption, title }) => (
+export const WidgetTitle: React.FC<WidgetTitleProps> = ({
+    caption,
+    helpText,
+    title,
+}) => (
     <TitleContainer xs={12}>
-        <Title>{title}</Title>
-        <Caption>{caption}</Caption>
+        <Row>
+            <Title>{title}</Title>
+            {!!helpText && <QuestionTip message={helpText} />}
+        </Row>
+        <Row>
+            <Caption>{caption}</Caption>
+        </Row>
     </TitleContainer>
 );

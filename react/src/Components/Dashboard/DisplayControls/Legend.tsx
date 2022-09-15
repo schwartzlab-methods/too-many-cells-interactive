@@ -125,7 +125,11 @@ const LinearLegend: React.FC<{
     const containerRef = useRef<any>();
     const {
         scales: {
-            colorScale: { featureGradientColor },
+            colorScale: {
+                featureGradientRange,
+                userAnnotationRange,
+                variant: scaleType,
+            },
         },
     } = useAppSelector(selectDisplayConfig);
 
@@ -134,7 +138,21 @@ const LinearLegend: React.FC<{
     useClickAway(containerRef, () => setPickerOpen(false));
 
     const updateColor = (newColor: string) => {
-        dispatch(updateColorScale({ featureGradientColor: newColor }));
+        const startColor =
+            scaleType === 'userAnnotation'
+                ? userAnnotationRange[0]
+                : featureGradientRange[0];
+
+        const key =
+            scaleType === 'userAnnotation'
+                ? 'userAnnotationRange'
+                : 'featureGradientRange';
+
+        dispatch(
+            updateColorScale({
+                [key]: [startColor, newColor],
+            })
+        );
     };
 
     return (
@@ -150,7 +168,11 @@ const LinearLegend: React.FC<{
             </LinearLegendLabel>
             <Popover ref={containerRef} open={pickerOpen}>
                 <ColorPicker
-                    color={featureGradientColor}
+                    color={
+                        scaleType === 'userAnnotation'
+                            ? userAnnotationRange[1]
+                            : featureGradientRange[1]
+                    }
                     updateColor={updateColor}
                 />
             </Popover>

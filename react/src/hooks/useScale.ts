@@ -18,7 +18,7 @@ import {
     selectDisplayConfig,
 } from '../redux/displayConfigSlice';
 import { AttributeMap, TMCHiearchyNode } from '../types';
-import { selectFeatureSlice } from '../redux/featureSlice';
+import { selectAnnotationSlice } from '../redux/annotationSlice';
 import { useAppSelector } from './index';
 
 type ScaleType = {
@@ -73,7 +73,6 @@ export const useColorScale = (): {
     const {
         scales: {
             colorScale: {
-                featureGradientColor,
                 featureGradientDomain,
                 featureGradientRange,
                 featureGradientScaleType,
@@ -82,25 +81,25 @@ export const useColorScale = (): {
                 featureHiLoRange,
                 labelDomain,
                 labelRange,
+                userAnnotationDomain,
+                userAnnotationRange,
                 variant,
             },
         },
     } = useAppSelector(selectDisplayConfig);
 
-    const { activeFeatures } = useAppSelector(selectFeatureSlice);
+    const { activeFeatures } = useAppSelector(selectAnnotationSlice);
 
     /* define the color scales */
 
     const featureColorScale = useMemo(() => {
-        return buildFeatureColorScale(
-            featureGradientRange[0],
-            featureGradientColor,
-            featureGradientScaleType,
+        return buildSequentialScale(
+            featureGradientRange,
             featureGradientDomain,
-            featureScaleSaturation
+            featureScaleSaturation,
+            featureGradientScaleType
         );
     }, [
-        featureGradientColor,
         featureGradientDomain,
         featureGradientRange,
         featureGradientScaleType,
@@ -119,6 +118,14 @@ export const useColorScale = (): {
         return makeOrdinalScale(labelRange, labelDomain);
     }, [labelDomain, labelRange]);
 
+    const userAnnotationScale = useMemo(() => {
+        return buildSequentialScale(
+            userAnnotationRange,
+            userAnnotationDomain,
+            featureScaleSaturation
+        );
+    }, [userAnnotationDomain, userAnnotationRange, featureScaleSaturation]);
+
     /* return the active scale with wrapper function to handle node-level blending logic */
     return useMemo(
         () =>
@@ -127,6 +134,7 @@ export const useColorScale = (): {
                 featureColorScale,
                 featureHiLoScale,
                 labelScale,
+                userAnnotationScale,
                 variant
             ),
         [
@@ -134,20 +142,24 @@ export const useColorScale = (): {
             featureColorScale,
             featureHiLoScale,
             labelScale,
+            userAnnotationScale,
             variant,
         ]
     );
 };
 
-export const buildFeatureColorScale = (
-    colorStart: string,
-    colorEnd: string,
-    scaleType: FeatureGradientScaleType,
-    featureDomain: number[],
-    saturation: number | undefined
+export const buildSequentialScale = (
+    range: [string, string],
+    domain: number[],
+    saturation: number | undefined,
+    scaleType?: FeatureGradientScaleType
 ) => {
+    const [colorStart, colorEnd] = range;
+
     const scale =
-        scaleType === 'sequential' ? scaleSequential : scaleSequentialSymlog;
+        scaleType && scaleType === 'symlogSequential'
+            ? scaleSequentialSymlog
+            : scaleSequential;
 
     const end = hsl(colorEnd);
     if (saturation) {
@@ -156,7 +168,7 @@ export const buildFeatureColorScale = (
 
     //color must be hsl or s values will be clamped at 1
     return scale<string>(interpolateHsl(colorStart, end)).domain(
-        extent(featureDomain) as [number, number]
+        extent(domain) as [number, number]
     );
 };
 
@@ -165,6 +177,7 @@ export const makeColorScale = (
     featureColorScale: ScaleSequential<string>,
     featureHiLoScale: ScaleOrdinal<string, string>,
     labelScale: ScaleOrdinal<string, string>,
+    userAnnotationScale: ScaleSequential<string>,
     variant: ColorScaleVariant
 ) => {
     let scale: ScaleOrdinal<string, string> | ScaleSequential<string>;
@@ -172,7 +185,7 @@ export const makeColorScale = (
     switch (variant) {
         case 'labelCount':
             scale = labelScale;
-            scaleFunction = buildLabelColorFunction(activeFeatures, labelScale);
+            scaleFunction = buildLabelColorFunction(labelScale);
             break;
         case 'featureAverage':
             scale = featureColorScale;
@@ -192,6 +205,14 @@ export const makeColorScale = (
                 ).toString();
             };
             break;
+
+        case 'userAnnotation':
+            scale = userAnnotationScale;
+            scaleFunction = (node: TMCHiearchyNode) =>
+                userAnnotationScale(
+                    Object.values(node.data.userAnnotation)[0]?.quantity
+                );
+            break;
     }
     return { scaleFunction, scale };
 };
@@ -208,7 +229,6 @@ export const getFeatureAverage = (
     ) / activeFeatures.length;
 
 export const buildLabelColorFunction = (
-    activeFeatures: string[],
     labelScale: ScaleOrdinal<string, string>
 ): ((node: TMCHiearchyNode) => string) => {
     return (node: TMCHiearchyNode) => {

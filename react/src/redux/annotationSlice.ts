@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { FeatureMap } from '../types';
+import { AttributeMap, FeatureMap } from '../types';
 import { getKeys } from '../util';
 import { DistributionMetadata } from './pruneSlice';
 import type { RootState } from './store';
@@ -12,28 +12,39 @@ export interface FeatureDistribution extends DistributionMetadata {
     total: number;
 }
 
-interface FeatureSliceState {
+interface AnnotationSliceState {
     activeFeatures: string[];
     featureDistributions: Record<string, FeatureDistribution>;
     featureMaps: FeatureMap;
+    userAnnoationMap: AttributeMap;
 }
 
-const initialState: FeatureSliceState = {
+const initialState: AnnotationSliceState = {
     activeFeatures: [],
     featureDistributions: {},
     featureMaps: {},
+    userAnnoationMap: {},
 };
 
-export const expressionSlice = createSlice({
-    name: 'expressionSlice',
+export const annotationSlice = createSlice({
+    name: 'annotationSlice',
     initialState,
     reducers: {
         addFeatures: (state, { payload: map }: PayloadAction<FeatureMap>) => {
             state.featureMaps = map;
             state.activeFeatures = state.activeFeatures.concat(getKeys(map));
         },
+        addUserAnnotation: (
+            state,
+            { payload: map }: PayloadAction<AttributeMap>
+        ) => {
+            state.userAnnoationMap = map;
+        },
         clearFeatureMaps: state => {
             state.featureMaps = {};
+        },
+        clearUserAnnotationMaps: state => {
+            state.userAnnoationMap = {};
         },
         clearActiveFeatures: state => {
             state.activeFeatures = [];
@@ -57,12 +68,15 @@ export const expressionSlice = createSlice({
 
 export const {
     addFeatures,
+    addUserAnnotation,
     clearActiveFeatures,
     clearFeatureMaps,
+    clearUserAnnotationMaps,
     removeActiveFeature,
     updateFeatureDistributions,
-} = expressionSlice.actions;
+} = annotationSlice.actions;
 
-export const selectFeatureSlice = (state: RootState) => state.featureSlice;
+export const selectAnnotationSlice = (state: RootState) =>
+    state.annotationSlice;
 
-export default expressionSlice.reducer;
+export default annotationSlice.reducer;

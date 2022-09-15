@@ -3,12 +3,7 @@ import {
     HierarchyPointLink,
     HierarchyPointNode,
 } from 'd3-hierarchy';
-import {
-    ScaleLinear,
-    ScaleOrdinal,
-    ScaleSequential,
-    ScaleThreshold,
-} from 'd3-scale';
+import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
 
 export interface RoseNodeItem {
     _barcode: { unCell: string };
@@ -39,7 +34,7 @@ export interface AttributeMapValue {
     scaleKey: string | number;
 }
 
-export type AttributeMap = Record<string, AttributeMapValue>;
+export type AttributeMap = Record<string | number, AttributeMapValue>;
 
 export interface TMCFlatNode {
     distance: number | null;
@@ -52,6 +47,7 @@ export interface TMCFlatNode {
     nodeId?: number;
     parentId: string | undefined;
     significance: number | null;
+    userAnnotation: AttributeMap;
 }
 
 export interface TMCNode extends TMCFlatNode {

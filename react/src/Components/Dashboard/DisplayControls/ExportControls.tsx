@@ -11,7 +11,7 @@ import {
 import Button from '../../Button';
 import { WidgetTitle } from '../../Layout';
 import SelectPanel from '../../SelectPanel';
-import { selectFeatureSlice } from '../../../redux/featureSlice';
+import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 import { selectDisplayConfig } from '../../../redux/displayConfigSlice';
 
 const ExportControls: React.FC = () => {
@@ -19,7 +19,7 @@ const ExportControls: React.FC = () => {
 
     const { scale: colorScale } = useColorScale();
 
-    const { activeFeatures } = useAppSelector(selectFeatureSlice);
+    const { activeFeatures } = useAppSelector(selectAnnotationSlice);
 
     const {
         scales: {

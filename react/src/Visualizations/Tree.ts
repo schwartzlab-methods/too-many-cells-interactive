@@ -325,6 +325,24 @@ const showToolTip = (
             const val = s.append('span');
             val.html(d.toLocaleString());
         });
+
+    featuresContainer
+        .selectAll('li.user-annotation')
+        .data(
+            colorScaleKey === 'userAnnotation'
+                ? [data.data.userAnnotation.quantity]
+                : [],
+            Math.random
+        )
+        .join('li')
+        .attr('class', 'user-annotation')
+        .each(function (d) {
+            const s = select(this).append('span');
+            const strong = s.append('strong');
+            strong.html(`User Annotation: `);
+            const val = s.append('span');
+            val.html(d.toLocaleString());
+        });
 };
 
 const makeLinkId = (link: TMCHiearchyLink) =>

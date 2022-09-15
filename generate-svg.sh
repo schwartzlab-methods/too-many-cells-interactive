@@ -11,12 +11,13 @@ set -eo pipefail
 
 build=true
 
-if [[ $# < 8 ]]; then
+if [[ $# -lt 7 ]]; then
     echo -e >&2 "USAGE: $0 
         --label-path /path/to/labels.csv  
         --tree-path /path/to/cluster_tree.json 
         --config-path /path/to/state-config.json 
         --out-path /path/to/save-file.svg 
+        [--annotation-path /path/to/annotation.csv]
         [--no-build] " && exit 1
 fi
 
@@ -36,6 +37,14 @@ while [ ! -z $1 ]; do
            echo >&2 "${1} does not exist!" && exit 1
         fi
         target_out_dir=/tmp/results/"$(basename "${1}")"
+
+    elif [[ $1 == '--annotation-path' ]]; then
+        shift
+        if [[ ! -f "${1}" ]]; then
+           echo >&2 "${1} does not exist!" && exit 1
+        fi
+        host_annotation_path="${1}"
+        target_annotation_path=/tmp/results/"$(basename "${1}")"
 
     elif [[ $1 == '--no-build' ]]; then
         build=false
@@ -73,6 +82,16 @@ else
     config_volume_mount="-v "${host_config_path}":"${target_config_path}":ro"
 fi
 
+if [[ -z $host_annotation_path ]]; then 
+    annnotation_volume_mount=' '
+    annotation_arg=""
+else
+    annnotation_volume_mount="-v "${host_annotation_path}":"${target_annotation_path}":ro"
+    annotation_arg="--annotation-path "${target_annotation_path}""
+fi
+
+
+
 if [[ $build == true ]]; then
     docker-compose build node
 fi
@@ -83,11 +102,13 @@ docker-compose -f docker-compose.prod.yaml \
     -v "${host_tree_path}":"${target_tree_path}":ro \
     -v "${host_out_dir}":/tmp/results \
     $config_volume_mount \
+    $annnotation_volume_mount \
     node dist/export-tree.js \
     --labelPath "${target_label_path}" \
     --treePath "${target_tree_path}" \
     --configPath="${target_config_path}" \
-    --outPath "${target_out_dir}" 
+    --outPath "${target_out_dir}" \
+    ${annotation_arg}
 
 # bash generate-svg.sh --label-path ~/too-many-cells/data/tabula_muris/all_simple/labels.csv --config-path ~/too-many-cells/data/tabula_muris/all_simple/state.json --tree-path ~/too-many-cells/data/tabula_muris/all_simple/cluster_tree.json --out-path ~/too-many-cells/data/tabula_muris/sample-output.svg --no-build
 # echo '{"width": 2000, "filenameOverride": "somefile.svg"}' | bash generate-svg.sh --label-path ~/too-many-cells/data/tabula_muris/all_simple/labels.csv --config-path - -p

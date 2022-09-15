@@ -37,8 +37,8 @@ import {
     addFeatures as _addFeatures,
     clearActiveFeatures as _clearActiveFeatures,
     removeActiveFeature as _removeActiveFeature,
-    selectFeatureSlice,
-} from '../../../redux/featureSlice';
+    selectAnnotationSlice,
+} from '../../../redux/annotationSlice';
 import { SmartPruner } from '../DisplayControls/PrunerPanel';
 import { CloseIcon } from '../../Icons';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
@@ -55,8 +55,9 @@ const FeatureSearch: React.FC = () => {
         },
     } = useAppSelector(selectDisplayConfig);
 
-    const { activeFeatures, featureDistributions } =
-        useAppSelector(selectFeatureSlice);
+    const { activeFeatures, featureDistributions } = useAppSelector(
+        selectAnnotationSlice
+    );
 
     const {
         activateFeatureColorScale,

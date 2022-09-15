@@ -4,15 +4,13 @@ import {
     selectDisplayConfig,
     ToggleableDisplayElements,
 } from '../redux/displayConfigSlice';
-import { selectFeatureSlice } from '../redux/featureSlice';
+import { selectAnnotationSlice } from '../redux/annotationSlice';
 import { selectPruneSlice, ValuePruner } from '../redux/pruneSlice';
 import useAppSelector from './useAppSelector';
 
 export interface ScaleExport {
     branchsizeScaleRange?: [number, number];
-    colorScale?: Partial<
-        Omit<ColorScaleConfig, 'featureGradientRange' | 'featureGradientDomain'>
-    >;
+    colorScale?: Partial<Omit<ColorScaleConfig, 'featureGradientDomain'>>;
     pieScaleRange?: [number, number];
 }
 
@@ -26,7 +24,7 @@ export interface StateExport {
 }
 
 const useExportState = () => {
-    const { activeFeatures } = useAppSelector(selectFeatureSlice);
+    const { activeFeatures } = useAppSelector(selectAnnotationSlice);
     const displayConfig = useAppSelector(selectDisplayConfig);
     const { pruneHistory: pruneState } = useAppSelector(selectPruneSlice);
 
