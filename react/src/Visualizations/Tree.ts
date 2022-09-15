@@ -330,7 +330,7 @@ const showToolTip = (
         .selectAll('li.user-annotation')
         .data(
             colorScaleKey === 'userAnnotation'
-                ? [data.data.userAnnotation.quantity]
+                ? [Object.values(data.data.userAnnotation)[0].quantity]
                 : [],
             Math.random
         )
