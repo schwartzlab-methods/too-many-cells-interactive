@@ -54,7 +54,7 @@ class FileSet:
 
 
 async def insert_many(docs: List[Dict[Any, Any]]):
-    await features_collection.insert_many(docs)
+    await features_collection.insert_many(docs, ordered=False)
 
 
 async def bootstrap():
@@ -101,6 +101,13 @@ async def parse_matrices(root_dir: str):
     for root, dirs, files in walk(root_dir):
         if await contains_matrix_files(files):
             matrix_file = next(f for f in files if re.match(r"^matrix.mtx",f))
+            linecount = None
+            chunksize = 100000 #100k, which is bulk insert limit
+            if(logger.level == logging.DEBUG):
+                with await open_maybe_compressed(path.join(root, matrix_file)) as f:
+                    for linecount, _ in enumerate(f):
+                        pass
+
             with await open_maybe_compressed(path.join(root, matrix_file)) as f:
                 logger.info(f"loading {root}")
                 feature_file = next(f for f in files if re.match(r"^(features|genes).tsv",f))
@@ -141,8 +148,9 @@ async def parse_matrices(root_dir: str):
                         }
                     )
                     i+=1
-                    if i == 100000:  # 100k
-                        logger.debug(f"inserting chunk {j}...")
+                    if i == chunksize:
+                        if(logger.level == logging.DEBUG):
+                            logger.debug(f"inserting chunk {j} ({((j*chunksize) / linecount) * 100:.2f}%)...")
                         await insert_many(chunk)
                         logger.debug(f"chunk {j} inserted.")
                         i = 0
