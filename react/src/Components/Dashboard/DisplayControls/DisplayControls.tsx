@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { hsl } from 'd3-color';
 import { bindActionCreators } from 'redux';
 import { NumberInput } from '../../Input';
@@ -187,7 +187,7 @@ const DisplayControls: React.FC = () => {
                     <Column xs={12}>
                         <Slider
                             label='Adjust Max Width'
-                            max={50}
+                            max={Math.max(50, branchSizeScale.range[1])}
                             min={branchSizeScale.range[0]}
                             onChange={handleScaleSilderChange(
                                 'branchSizeScale'
@@ -196,7 +196,7 @@ const DisplayControls: React.FC = () => {
                         />
                         <Slider
                             label='Adjust Max Pie Size'
-                            max={50}
+                            max={Math.max(50, pieScale.range[1])}
                             min={pieScale.range[0]}
                             onChange={handleScaleSilderChange('pieScale')}
                             value={pieScale.range[1]}
@@ -263,6 +263,15 @@ const Slider: React.FC<SliderProps> = ({
     step,
     value,
 }) => {
+    const [internalMax, setInternalMax] = useState(max);
+
+    const onManualInputchange = (val?: number) => {
+        if (val) {
+            setInternalMax(val);
+        }
+        onChange(val);
+    };
+
     return (
         <Row>
             <Column xs={12}>
@@ -272,15 +281,16 @@ const Slider: React.FC<SliderProps> = ({
                 <Row>
                     <input
                         type='range'
-                        max={max}
+                        max={internalMax}
                         min={min}
                         step={step || 1}
                         value={value}
                         onChange={e => onChange(+e.currentTarget.value)}
                     />
+
                     <NumberInput
                         ml='10px'
-                        onChange={v => onChange(v)}
+                        onChange={v => onManualInputchange(v)}
                         value={value}
                         width='50px'
                     />

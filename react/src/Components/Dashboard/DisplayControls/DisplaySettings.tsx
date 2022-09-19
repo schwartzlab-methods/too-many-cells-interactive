@@ -7,17 +7,12 @@ import {
     toggleDisplayProperty,
     updateLinearScale as _updateLinearScale,
 } from '../../../redux/displayConfigSlice';
-import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 import Checkbox from '../../Checkbox';
 import { Column, WidgetTitle } from '../../Layout';
 
 const DisplaySettings: React.FC = () => {
-    const { activeFeatures } = useAppSelector(selectAnnotationSlice);
     const {
-        scales: {
-            branchSizeScale,
-            colorScale: { variant: colorScaleType },
-        },
+        scales: { branchSizeScale, pieScale },
         treeMetadata: { minValue, maxValue },
     } = useAppSelector(selectDisplayConfig);
 
@@ -49,6 +44,11 @@ const DisplaySettings: React.FC = () => {
                 onClick={() =>
                     updateLinearScale({
                         branchSizeScale: {
+                            domain: branchScalingDisabled
+                                ? [minValue, maxValue]
+                                : [1, 1],
+                        },
+                        pieScale: {
                             domain: branchScalingDisabled
                                 ? [minValue, maxValue]
                                 : [1, 1],
