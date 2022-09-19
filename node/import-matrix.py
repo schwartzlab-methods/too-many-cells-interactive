@@ -169,6 +169,11 @@ async def parse_matrices(root_dir: str):
             copyfile(path.join(root, "labels.csv"), "/usr/app/static/files/labels.csv")
 
 async def insert_features(debug: bool):
+    """Import files into mongo.
+        Note that the files are expected to be located in the `/usr/data` directory.
+        As this script is expected to be executed as part of a `docker run` command, the user should 
+        bind-mount the needed files into the /usr/data directory.
+    """
     configure_logger(debug=debug)
     logger.debug("debugging enabled!")
     await bootstrap()
