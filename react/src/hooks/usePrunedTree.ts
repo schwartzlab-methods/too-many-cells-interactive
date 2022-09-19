@@ -267,7 +267,10 @@ export const addUserAnnotations = (
     tree.each(
         n =>
             (n.data.userAnnotation = {
-                userAnnotation: userAnnoationMap[n.data.nodeId],
+                userAnnotation: userAnnoationMap[n.data.nodeId] ?? {
+                    quantity: null,
+                    scaleKey: null,
+                },
             })
     );
 
@@ -368,6 +371,9 @@ const getDistanceGroups = (
 };
 
 /**
+ * @param tree the pruned tree (we calculate new distributions for each prune)
+ * @param cutoffDistance the MAXIMUM distance that can be pruned before the tree collapses into one generation of nodes.
+ *  This is the smalled value of a root-grandchild node.
  * @returns object keyed by integer `n` whose value is count of nodes with `distance` >= median + (n * MAD) in tree
  */
 const getDistanceMadGroups = (

@@ -341,7 +341,7 @@ const showToolTip = (
             const strong = s.append('strong');
             strong.html(`User Annotation: `);
             const val = s.append('span');
-            val.html(d.toLocaleString());
+            val.html(d === null ? 'null' : d.toLocaleString());
         });
 };
 
