@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 export interface FeatureType {
     feature: string;
     feature_type: string;
-    ide: string;
+    id: string;
     value: number;
 }
 
