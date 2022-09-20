@@ -1,4 +1,4 @@
-# /usr/bin/env bash
+#! /usr/bin/env bash
 
 # Simple wrapper script for running the browser program locally via docker
 # Note that script will bind-mount the provided file paths into the container in readonly mode
@@ -8,7 +8,7 @@ set -eo pipefail
 if [[ $# < 7 ]]; then
     echo >&2 "USAGE: $0 --matrix-dir /path/to/matrices \
                         --tree-path /path/to/tree \
-                        --label-path /path/to/labels \ 
+                        --label-path /path/to/labels \
                         --port 1234 \
                         [--debug]" && exit 1
 fi

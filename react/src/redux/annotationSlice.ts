@@ -32,7 +32,9 @@ export const annotationSlice = createSlice({
     reducers: {
         addFeatures: (state, { payload: map }: PayloadAction<FeatureMap>) => {
             state.featureMaps = map;
-            state.activeFeatures = state.activeFeatures.concat(getKeys(map));
+            state.activeFeatures = state.activeFeatures
+                .concat(getKeys(map))
+                .filter((f, i, o) => o.findIndex(r => r === f) === i);
         },
         addUserAnnotation: (
             state,

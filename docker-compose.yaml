@@ -9,7 +9,7 @@ services:
       - ${REACT_PORT:-1212}:${REACT_PORT:-1212}
     environment:
       - REACT_PORT
-    entrypoint: "yarn start"
+    entrypoint: "yarn run start"
     networks:
       - tmc-network
   node:
@@ -17,22 +17,28 @@ services:
     build: ./
     volumes:
       - ./node:/usr/app
-    depends_on:
-      - mongo
+    depends_on: 
+      - postgres
     environment:
-      - MONGO_CONNECTION_STRING=${MONGO_CONNECTION_STRING:-mongodb://mongo:27017/tmc}
-      - MONGO_DB=${MONGO_DB:-tmc}
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=tmc
     networks:
       - tmc-network
-  mongo:
-    image: mongo:5.0
+    entrypoint: "yarn run start"
+  postgres:
+    image: postgres:14.5
+    environment:
+      - POSTGRES_DB=tmc
+      - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - mongo-data:/data/db
+      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - tmc-network
 
 volumes:
-  mongo-data:
+  postgres-data:
 
 networks:
   tmc-network:

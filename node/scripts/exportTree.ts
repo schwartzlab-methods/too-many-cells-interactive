@@ -4,9 +4,9 @@ import * as path from 'path';
 import { JSDOM } from 'jsdom';
 import yargs from 'yargs';
 import concatStream from 'concat-stream';
-import mongoose from 'mongoose';
+import { Pool } from 'pg';
 
-import { Feature } from '../src/models';
+import { queryFeatures } from '../src';
 import Tree, {
     d3select,
     TreeContext,
@@ -36,7 +36,6 @@ import {
 import { attachLegend } from '../../react/src/downloadImage';
 import {
     AttributeMap,
-    FeatureMap,
     TMCHiearchyNode,
     TMCHierarchyPointNode,
 } from '../../react/src/types';
@@ -54,8 +53,8 @@ type StateConfig = StateExport & { filenameOverride?: string };
 type ChartConfig = Required<StateExport> & { filenameOverride?: string };
 
 const argv = yargs(process.argv.slice(2))
-    .usage('Usage: $0 <cmd> [options]')
-    .command('render-tree', 'renders the tree', {
+    .usage('Usage: $0 [options]')
+    .command('exportTree', 'renders the tree', {
         labelPath: {
             description: 'Path to the labels.csv file',
             type: 'string',
@@ -82,7 +81,8 @@ const argv = yargs(process.argv.slice(2))
             nargs: 1,
         },
     })
-    .demandOption(['labelPath', 'treePath', 'configPath', 'outPath']).argv;
+    .demandOption(['labelPath', 'treePath', 'configPath', 'outPath'])
+    .argv as Record<string, string>;
 
 const parse = (buf: string) => {
     if (!buf) {
@@ -91,40 +91,32 @@ const parse = (buf: string) => {
     return JSON.parse(buf);
 };
 
-const outPath = (argv as { [key: string]: string }).outPath;
+const outPath = argv.outPath;
 
-const labels = readFileSync((argv as { [key: string]: string }).labelPath, {
+const labels = readFileSync(argv.labelPath, {
     encoding: 'utf-8',
 });
 
 const clusterTree = JSON.parse(
-    readFileSync((argv as { [key: string]: string }).treePath, {
+    readFileSync(argv.treePath, {
         encoding: 'utf-8',
     })
 );
 
 let annotations: AttributeMap;
 
-if ((argv as { [key: string]: string }).annotationPath) {
-    const text = readFileSync(
-        (argv as { [key: string]: string }).annotationPath,
-        {
-            encoding: 'utf-8',
-        }
-    );
+if (argv.annotationPath) {
+    const text = readFileSync(argv.annotationPath, {
+        encoding: 'utf-8',
+    });
 
     annotations = textToAnnotations(text);
 }
 
 const getFeatureMap = async (features: string[]) => {
-    const featureMap: FeatureMap = {};
-    for (const feature of features) {
-        const res = await Feature.find({ feature });
-        featureMap[feature] = {};
-        for (const f of res) {
-            featureMap[feature][f.id] = f.value;
-        }
-    }
+    const pool = new Pool();
+    const featureMap = await queryFeatures(features, pool);
+
     return featureMap;
 };
 
@@ -135,7 +127,6 @@ const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
     const { variant: scaleType } = state.scales!.colorScale!;
 
     if (state.features.length && scaleType !== 'labelCount') {
-        await mongoose.connect(process.env.MONGO_CONNECTION_STRING!);
         const featureMap = await getFeatureMap(state.features);
         addFeaturesToCells(nodes, featureMap);
 
@@ -477,7 +468,7 @@ const provideDefaults = (state: StateConfig): ChartConfig => {
 /* If state config was passed as stdin (and --config switch was `--config=-`) read from there, otherwise read from file */
 const getState = async (): Promise<StateConfig> =>
     new Promise(resolve => {
-        (argv as { [key: string]: string }).configPath === '-'
+        argv.configPath === '-'
             ? process.stdin.pipe(
                   concatStream({ encoding: 'string' }, (arg: string) =>
                       resolve(parse(arg))
@@ -485,12 +476,9 @@ const getState = async (): Promise<StateConfig> =>
               )
             : resolve(
                   parse(
-                      readFileSync(
-                          (argv as { [key: string]: string }).configPath,
-                          {
-                              encoding: 'utf-8',
-                          }
-                      )
+                      readFileSync(argv.configPath, {
+                          encoding: 'utf-8',
+                      })
                   )
               );
     });

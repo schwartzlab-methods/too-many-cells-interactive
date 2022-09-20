@@ -4,7 +4,7 @@ set -eo pipefail
 
 # Simple wrapper script for generating the svg in "headless" mode via docker and saving on host filesystem.
 # Calls /node/dist/exportTree.js within the container, binding the input file paths as volume mounts.
-# Assumes that mongo database has already been provisioned, either by running ./start-and-load.sh or manually.
+# Assumes the database has already been provisioned, either by running ./start-and-load.sh or manually.
 # Note that by default the user running the container process is `node`, which has UID 1000, please ensure that this user has the proper
 # permissions to access the mounted files and directories; alternately, a different user can be configured to run the container
 # using the --user argument to the docker run command or by passing arguments directly to the build command
@@ -103,7 +103,7 @@ docker-compose -f docker-compose.prod.yaml \
     -v "${host_out_dir}":/tmp/results \
     $config_volume_mount \
     $annnotation_volume_mount \
-    node dist/export-tree.js \
+    node dist/exportTree.js \
     --labelPath "${target_label_path}" \
     --treePath "${target_tree_path}" \
     --configPath="${target_config_path}" \

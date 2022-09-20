@@ -1,20 +1,34 @@
 #! /usr/bin/env bash
 
-set -euo pipefail
+set -eo pipefail
 
-init=${1:-}
-debug=${2:-}
+init=false
+debug=''
+prod=false
 
-while true; do
-    if ! curl -s mongo:27017; then
-        sleep 1
-    else    
-        break
+while [ ! -z "$1" ]; do
+    if [[ "$1" == '--init' ]]; then 
+        shift
+        init=true
+
+    elif [[ "$1" == '--debug' ]]; then 
+        shift
+        debug='--debug'
+
+    elif [[ "$1" == '--prod' ]]; then 
+        shift
+        prod=true
+    else
+        shift
     fi
 done
 
-if [[ $init == 'init' ]]; then
-    python3 import-matrix.py $debug
+if [[ $init ]]; then
+    node ./dist/importMatrix.js $debug
 fi
 
-yarn run start
+if [[ prod ]]; then
+    yarn run start-prod
+else
+    yarn run start
+fi

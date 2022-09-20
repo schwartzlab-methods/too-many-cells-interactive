@@ -1,8 +1,13 @@
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = {
     mode: 'development',
-    entry: path.resolve(__dirname, 'scripts/exportTree.ts'),
+    entry: {
+        exportTree: path.resolve(__dirname, 'scripts', 'exportTree.ts'),
+        importMatrix: path.resolve(__dirname, 'scripts', 'importMatrix.ts'),
+        server: path.resolve(__dirname, 'src', 'index.ts'),
+    },
     target: 'node',
     externals: {
         bufferutil: 'bufferutil',
@@ -32,9 +37,9 @@ module.exports = {
     experiments: {
         topLevelAwait: true,
     },
-
     output: {
-        filename: 'export-tree.js',
+        filename: '[name].js',
         path: path.resolve(__dirname, 'dist'),
     },
+    plugins: [new webpack.IgnorePlugin({ resourceRegExp: /^pg-native$/ })],
 };

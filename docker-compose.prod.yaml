@@ -4,24 +4,29 @@ services:
     image: too-many-cells-js:latest
     build: ./
     depends_on:
-      - mongo
-    #persist trees across runs
+      - postgres
+    # persist trees across runs
     volumes:
       - tree-data:/usr/app/static/files
     environment:
-      - MONGO_CONNECTION_STRING=mongodb://mongo:27017/tmc
-      - MONGO_DB=tmc
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=tmc
     networks:
       - tmc-network
-  mongo:
-    image: mongo:5.0
+  postgres:
+    image: postgres:14.5
+    environment:
+      - POSTGRES_DB=tmc
+      - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - mongo-data:/data/db
+      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - tmc-network
 
 volumes:
-  mongo-data:
+  postgres-data:
   tree-data:
 
 networks:

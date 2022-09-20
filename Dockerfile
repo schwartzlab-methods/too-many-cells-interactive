@@ -4,11 +4,6 @@ WORKDIR /usr/app
 
 USER root
 
-RUN wget https://bootstrap.pypa.io/get-pip.py && \
-    python3 get-pip.py && \
-    pip install motor && \ 
-    rm get-pip.py
-
 # for canvas dep
 RUN apt-get update && apt-get install -y libpixman-1-dev libcairo2-dev libpangocairo-1.0-0 libpango1.0-dev 
 
@@ -27,19 +22,18 @@ RUN yarn install && \
     yarn run build && \
     cp -a dist/* /usr/app/node/static/ 
 
-
 WORKDIR /usr/app/node
 
 # build base node app
 RUN yarn install && yarn run build
 
-#compile headless
-RUN yarn run build-scripts
-
-RUN chmod +x dist/export-tree.js
+RUN chmod -R +x dist
 
 WORKDIR /usr/app/
 
-RUN cp -a /usr/app/node/* /usr/app/ && rm -r /usr/app/node && rm -r react
+RUN cp -a /usr/app/node/* /usr/app/ && \
+    rm -r /usr/app/node && \
+    # remove react directory only once node scripts with imports from the react app have been built
+    rm -r /usr/app/react 
 
-ENTRYPOINT ["bash", "entrypoint.sh"]
+ENTRYPOINT ["bash", "entrypoint.sh", "--prod"]

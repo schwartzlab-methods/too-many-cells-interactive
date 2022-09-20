@@ -15,16 +15,17 @@ fi
 #build the node image
 docker-compose build node
 
-# in general should move to a switch-like entrypoint script
-
 #install react dependencies
 docker-compose run --rm --entrypoint="yarn" react
 
-#bring up mongo
-docker-compose up -d mongo
+#bring up postgres in the background
+docker-compose up -d postgres
 
-#load data into mongo
+#load data into postgres
 docker-compose run -v ${DATA_DIR}:/usr/data --entrypoint="python3 import-matrix.py" --rm node
 
-#start remaining services
+#bring down postgres so it can be restarted with the other services in the foreground
+docker-compose stop postgres
+
+#start services in the foreground
 docker-compose up
