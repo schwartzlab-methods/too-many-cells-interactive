@@ -1,14 +1,12 @@
 import { opendir } from 'fs/promises';
 import { createGunzip } from 'zlib';
-import { copyFileSync, existsSync, createReadStream } from 'fs';
+import { existsSync, createReadStream } from 'fs';
 import path from 'path';
 
 import split2 from 'split2';
 import yargs from 'yargs';
 import { Pool } from 'pg';
 import { from as copyFrom } from 'pg-copy-streams';
-
-const pool = new Pool();
 
 interface Feature {
     feature: string;
@@ -31,20 +29,33 @@ const debug = (msg: string) => {
     }
 };
 
+const getPool = async (remainingTries = 5) => {
+    let client;
+    let pool;
+    try {
+        pool = new Pool();
+        client = await pool.connect();
+    } catch (e) {
+        console.error(e);
+        if (remainingTries) {
+            await new Promise(resolve =>
+                setTimeout(() => resolve(getPool(remainingTries - 1)), 1000)
+            );
+        } else {
+            throw 'Could not connect to database!';
+        }
+    } finally {
+        client?.release();
+    }
+    return pool as Pool;
+};
+
 const verifyMatrixFilesPresent = async (rootDir: string) => {
     const missingFiles = {
-        labelsFile: 'Labels.csv not found!',
-        clusterFile: 'Cluster_tree.json not found!',
-        matrixFiles: 'Matrix files not found',
+        matrixFiles: 'matrix files not found',
     } as Partial<Record<string, string>>;
 
     for await (const filelist of walkTree(rootDir)) {
-        if (filelist.find(f => /labels.csv$/.test(f))) {
-            delete missingFiles.labelsFile;
-        }
-        if (filelist.find(f => /cluster_tree.json$/.test(f))) {
-            delete missingFiles.clusterFile;
-        }
         if (containsMatrixFiles(filelist)) {
             delete missingFiles.matrixFiles;
         }
@@ -55,14 +66,14 @@ const verifyMatrixFilesPresent = async (rootDir: string) => {
     }
 };
 
-const truncateDatabase = async () => {
+const truncateDatabase = async (pool: Pool) => {
     const client = await pool.connect();
     await client.query('TRUNCATE features;');
     await client.query('DROP INDEX IF EXISTS feature_idx;');
     client.release();
 };
 
-const createIndex = async () => {
+const createIndex = async (pool: Pool) => {
     const client = await pool.connect();
     await client.query(
         'CREATE INDEX IF NOT EXISTS feature_idx ON features (feature);'
@@ -70,7 +81,7 @@ const createIndex = async () => {
     client.release();
 };
 
-const insertMany = async (chunk: string) => {
+const insertMany = async (chunk: string, pool: Pool) => {
     const query = 'COPY features (id, feature, feature_type, value) FROM STDIN';
 
     const client = await pool.connect();
@@ -184,6 +195,7 @@ const openMaybeCompressed = (filepath: string) => {
  * @returns
  */
 const insertMatrix = async (
+    pool: Pool,
     barcodes: Record<string, string>,
     features: Record<string, Feature>,
     matrixFilepath: string,
@@ -213,14 +225,14 @@ const insertMatrix = async (
                 );
             }
 
-            await insertMany(chunk);
+            await insertMany(chunk, pool);
             debug(`Chunk ${j} inserted.`);
             i = 0;
             j++;
             chunk = '';
         }
     });
-    await insertMany(chunk);
+    await insertMany(chunk, pool);
 
     return true;
 };
@@ -260,7 +272,7 @@ const mtxRegex = /(features\.tsv|genes\.tsv|barcodes\.tsv|matrix\.mtx)(\.gz)?$/;
 const containsMatrixFiles = (files: string[]) =>
     files.filter(f => mtxRegex.test(f)).length === 3;
 
-const importData = async (rootDir: string) => {
+const importData = async (rootDir: string, pool: Pool) => {
     if (!existsSync(rootDir) || !path.isAbsolute(rootDir)) {
         throw `${rootDir} does not exist! Is the path absolute?`;
     }
@@ -288,16 +300,7 @@ const importData = async (rootDir: string) => {
 
             const barcodes = await getBarcodesDict(barcodesFile);
 
-            await insertMatrix(barcodes, features, matrixFile, lineCount);
-        }
-        if (filelist.find(f => /cluster_tree.json$/.test(f))) {
-            const cluster = filelist.find(f => /cluster_tree.json$/.test(f))!;
-            copyFileSync(cluster, '/usr/app/static/files/cluster_tree.json');
-        }
-
-        if (filelist.find(f => /labels.csv$/.test(f))) {
-            const labels = filelist.find(f => /labels.csv$/.test(f))!;
-            copyFileSync(labels, '/usr/app/static/files/labels.csv');
+            await insertMatrix(pool, barcodes, features, matrixFile, lineCount);
         }
     }
 };
@@ -310,17 +313,17 @@ const importData = async (rootDir: string) => {
  */
 const run = async () => {
     const dataDir = '/usr/data';
-
+    const pool = await getPool();
     console.log('Data import started');
     debug('verifying data');
     await verifyMatrixFilesPresent(dataDir);
     debug('truncating database');
-    await truncateDatabase();
+    await truncateDatabase(pool);
     debug('uploading files');
     const start = new Date().getTime();
-    await importData(dataDir);
+    await importData(dataDir, pool);
     debug('creating index');
-    await createIndex();
+    await createIndex(pool);
     const end = new Date().getTime();
     console.log(`finished in ${(end - start) / 1000} seconds`);
 };

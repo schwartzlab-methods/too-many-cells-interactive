@@ -2,14 +2,14 @@
 
 set -eo pipefail
 
-init=false
+init=''
 debug=''
-prod=false
+prod=''
 
 while [ ! -z "$1" ]; do
     if [[ "$1" == '--init' ]]; then 
         shift
-        init=true
+        init=1
 
     elif [[ "$1" == '--debug' ]]; then 
         shift
@@ -17,17 +17,18 @@ while [ ! -z "$1" ]; do
 
     elif [[ "$1" == '--prod' ]]; then 
         shift
-        prod=true
+        prod=1
     else
         shift
     fi
 done
 
-if [[ $init ]]; then
+if [[ -n $init ]]; then
     node ./dist/importMatrix.js $debug
+    exit 0
 fi
 
-if [[ prod ]]; then
+if [[ -n $prod ]]; then
     yarn run start-prod
 else
     yarn run start

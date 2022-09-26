@@ -5,9 +5,6 @@ services:
     build: ./
     depends_on:
       - postgres
-    # persist trees across runs
-    volumes:
-      - tree-data:/usr/app/static/files
     environment:
       - PGUSER=postgres
       - PGHOST=postgres
@@ -27,7 +24,6 @@ services:
 
 volumes:
   postgres-data:
-  tree-data:
 
 networks:
   tmc-network:
