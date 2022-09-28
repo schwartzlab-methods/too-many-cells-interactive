@@ -39,6 +39,7 @@ const DisplayControls: React.FC = () => {
             },
             pieScale,
         },
+        toggleableFeatures: { widthScalingDisabled },
     } = useAppSelector(selectDisplayConfig);
 
     const {
@@ -186,6 +187,7 @@ const DisplayControls: React.FC = () => {
                 <Row>
                     <Column xs={12}>
                         <Slider
+                            disabled={widthScalingDisabled}
                             label='Adjust Max Width'
                             max={Math.max(50, branchSizeScale.range[1])}
                             min={branchSizeScale.range[0]}
@@ -195,6 +197,7 @@ const DisplayControls: React.FC = () => {
                             value={branchSizeScale.range[1]}
                         />
                         <Slider
+                            disabled={widthScalingDisabled}
                             label='Adjust Max Pie Size'
                             max={Math.max(50, pieScale.range[1])}
                             min={pieScale.range[0]}
@@ -247,6 +250,7 @@ const DisplayControls: React.FC = () => {
 export default DisplayControls;
 
 interface SliderProps {
+    disabled?: boolean;
     label: string;
     min: number;
     max: number;
@@ -256,6 +260,7 @@ interface SliderProps {
 }
 
 const Slider: React.FC<SliderProps> = ({
+    disabled,
     label,
     max,
     min,
@@ -280,12 +285,13 @@ const Slider: React.FC<SliderProps> = ({
                 </Row>
                 <Row>
                     <input
-                        type='range'
+                        disabled={!!disabled}
                         max={internalMax}
                         min={min}
-                        step={step || 1}
-                        value={value}
                         onChange={e => onChange(+e.currentTarget.value)}
+                        step={step || 1}
+                        type='range'
+                        value={value}
                     />
 
                     <NumberInput

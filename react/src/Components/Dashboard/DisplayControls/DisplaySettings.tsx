@@ -1,10 +1,10 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { bindActionCreators } from 'redux';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
     selectDisplayConfig,
     ToggleableDisplayElements,
-    toggleDisplayProperty,
+    toggleDisplayProperty as _toggleDisplayProperty,
     updateLinearScale as _updateLinearScale,
 } from '../../../redux/displayConfigSlice';
 import Checkbox from '../../Checkbox';
@@ -13,19 +13,42 @@ import { Column, WidgetTitle } from '../../Layout';
 const DisplaySettings: React.FC = () => {
     const {
         scales: { branchSizeScale, pieScale },
-        treeMetadata: { minValue, maxValue },
+        toggleableFeatures: { widthScalingDisabled },
     } = useAppSelector(selectDisplayConfig);
 
-    const branchScalingDisabled = useMemo(() => {
-        return branchSizeScale.domain[0] === branchSizeScale.domain[1];
-    }, [branchSizeScale]);
-
-    const { updateLinearScale } = bindActionCreators(
+    const { toggleDisplayProperty, updateLinearScale } = bindActionCreators(
         {
             updateLinearScale: _updateLinearScale,
+            toggleDisplayProperty: _toggleDisplayProperty,
         },
         useAppDispatch()
     );
+
+    const disableWidthScales = () => {
+        toggleDisplayProperty('widthScalingDisabled');
+        updateLinearScale({
+            branchSizeScale: {
+                defaultRange: branchSizeScale.range,
+                range: [branchSizeScale.range[1], branchSizeScale.range[1]],
+            },
+            pieScale: {
+                defaultRange: pieScale.range,
+                range: [pieScale.range[1], pieScale.range[1]],
+            },
+        });
+    };
+
+    const enableWidthScales = () => {
+        toggleDisplayProperty('widthScalingDisabled');
+        updateLinearScale({
+            branchSizeScale: {
+                range: branchSizeScale.defaultRange,
+            },
+            pieScale: {
+                range: pieScale.defaultRange,
+            },
+        });
+    };
 
     return (
         <Column xs={12}>
@@ -39,21 +62,12 @@ const DisplaySettings: React.FC = () => {
             <ToggleCheckbox label='Show Distance' propName='distanceVisible' />
             <ToggleCheckbox label='Show Pies' propName='piesVisible' />
             <Checkbox
-                checked={branchScalingDisabled}
+                checked={widthScalingDisabled}
                 label='Disable branch width scaling'
-                onClick={() =>
-                    updateLinearScale({
-                        branchSizeScale: {
-                            domain: branchScalingDisabled
-                                ? [minValue, maxValue]
-                                : [1, 1],
-                        },
-                        pieScale: {
-                            domain: branchScalingDisabled
-                                ? [minValue, maxValue]
-                                : [1, 1],
-                        },
-                    })
+                onClick={
+                    widthScalingDisabled
+                        ? enableWidthScales
+                        : disableWidthScales
                 }
             />
         </Column>
@@ -75,7 +89,7 @@ const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({ propName, label }) => {
     return (
         <Checkbox
             checked={isVisible}
-            onClick={dipatch.bind(null, toggleDisplayProperty(propName))}
+            onClick={dipatch.bind(null, _toggleDisplayProperty(propName))}
             label={label}
         />
     );

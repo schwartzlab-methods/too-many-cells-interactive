@@ -11,6 +11,7 @@ export interface TreeMetaData {
     nodeCount: number;
 }
 export interface ToggleableDisplayElements {
+    widthScalingDisabled: boolean;
     distanceVisible: boolean;
     nodeCountsVisible: boolean;
     nodeIdsVisible: boolean;
@@ -46,6 +47,8 @@ export interface ColorScaleConfig {
 }
 
 export interface LinearScaleConfig {
+    defaultDomain: [number, number];
+    defaultRange: [number, number];
     domain: [number, number];
     range: [number, number];
 }
@@ -68,6 +71,8 @@ const initialScales: Scales = {
     branchSizeScale: {
         domain: [0, 0],
         range: [0, 0],
+        defaultDomain: [0, 0],
+        defaultRange: [0, 0],
     },
     colorScale: {
         featureGradientDomain: [],
@@ -86,6 +91,8 @@ const initialScales: Scales = {
     pieScale: {
         domain: [0, 0],
         range: [0, 0],
+        defaultDomain: [0, 0],
+        defaultRange: [0, 0],
     },
 };
 
@@ -95,6 +102,7 @@ const initialToggleableValues: ToggleableDisplayElements = {
     nodeIdsVisible: false,
     piesVisible: true,
     strokeVisible: false,
+    widthScalingDisabled: false,
 };
 
 const initialState: DisplayConfigState = {

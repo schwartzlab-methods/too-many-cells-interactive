@@ -429,6 +429,7 @@ const defaultToggleableFeatures = {
     nodeIdsVisible: false,
     piesVisible: true,
     strokeVisible: false,
+    widthScalingDisabled: false,
 };
 
 const defaultScales: StateExport['scales'] = {
