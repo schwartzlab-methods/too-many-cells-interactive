@@ -120,7 +120,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
                     .leaves()
                     .flatMap(l =>
                         (l.data.items || []).map(
-                            item => item._barcode._featureCounts![k] || 0
+                            item => item._barcode._featureValues![k] || 0
                         )
                     );
 
@@ -247,9 +247,9 @@ export const addFeaturesToCells = (
             if (n.data.items) {
                 n.data.items = n.data.items.map(cell => {
                     //add the new feature to cell-level raw feature counts
-                    const fcounts = cell._barcode._featureCounts || {};
+                    const fcounts = cell._barcode._featureValues || {};
                     fcounts[feature] = featureMap[cell._barcode.unCell] || 0;
-                    cell._barcode._featureCounts = fcounts;
+                    cell._barcode._featureValues = fcounts;
                     range.push(fcounts[feature] as number);
                     return cell;
                 });
@@ -491,7 +491,7 @@ const getFeatureDistributions = (
             .leaves()
             .flatMap(l =>
                 (l.data.items || []).map(
-                    item => item._barcode._featureCounts![f] || 0
+                    item => item._barcode._featureValues![f] || 0
                 )
             );
 
@@ -568,7 +568,7 @@ export const updateFeatureCounts = (
             features.forEach(f => {
                 const quantity = n.data.items!.reduce(
                     (acc, curr) =>
-                        (acc += curr._barcode._featureCounts[f] || 0),
+                        (acc += curr._barcode._featureValues[f] || 0),
                     0
                 );
 
@@ -605,10 +605,10 @@ export const updateFeatureCounts = (
 
 /**
  *
- * @ram nodes the base tree (not a pruned tree)
- * @param thresholds the cutoff for hi/lo for each feature
- * @param activeFeatures the features currently visible
- * @returns TMCHierarchyDataNode (mutated argument)
+ * @param nodes The base tree (not a pruned tree)
+ * @param thresholds The cutoff for hi/lo for each feature
+ * @param activeFeatures The features currently visible
+ * @returns TMCHierarchyDataNode (argument will be mutated)
  */
 export const updatefeatureHiLos = (
     nodes: TMCHierarchyDataNode,
@@ -622,7 +622,7 @@ export const updatefeatureHiLos = (
         if (n.data.items) {
             n.data.items.forEach(cell => {
                 //reduce cells for each node to hi/lows
-                const key = getEntries(cell._barcode._featureCounts)
+                const key = getEntries(cell._barcode._featureValues)
                     .filter(([k, _]) => activeFeatures.includes(k))
                     //alphabetize keys for standardization
                     .sort(([k1], [k2]) => (k1 < k2 ? -1 : 1))
@@ -635,9 +635,9 @@ export const updatefeatureHiLos = (
                     );
                 //add to node's running total of hilos
                 if (key) {
-                    hilo[key] = hilo[key]
-                        ? { ...hilo[key], quantity: hilo[key].quantity + 1 }
-                        : { scaleKey: key, quantity: 1 };
+                    hilo[key] = !hilo[key]
+                        ? { scaleKey: key, quantity: 1 }
+                        : { ...hilo[key], quantity: hilo[key].quantity + 1 };
                 }
             });
         } else {
@@ -645,7 +645,7 @@ export const updatefeatureHiLos = (
             n.children!.map(node => node.data.featureHiLos).forEach(count => {
                 for (const featurekey in count) {
                     if (!hilo[featurekey]) {
-                        hilo[featurekey] = count[featurekey];
+                        hilo[featurekey] = { ...count[featurekey] };
                     } else {
                         hilo[featurekey].quantity += count[featurekey].quantity;
                     }
