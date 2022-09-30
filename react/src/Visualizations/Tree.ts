@@ -227,6 +227,7 @@ const showToolTip = (
     const cellCount = sum(
         Object.values(data.data.labelCount).map(v => v.quantity)
     );
+
     const formatPercent = format('.1%');
 
     const container = select('.tooltip')

@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
 import { select } from 'd3-selection';
 import { range } from 'd3-array';
@@ -15,8 +15,9 @@ import {
     updateColorScale,
 } from '../../../redux/displayConfigSlice';
 import { scaleIsSequential } from '../../../types';
-import { Text } from '../../Typography';
+import { ActionLink, Text } from '../../Typography';
 import { formatDigit } from '../../../util';
+import { FlexPanel } from '../../SelectPanel';
 
 const Legend: React.FC = () => {
     const { scale: colorScale } = useColorScale();
@@ -104,8 +105,9 @@ const Popover = styled.div<{ open: boolean }>`
 `;
 
 const LinearLegendContainer = styled.div`
-    width: 200px;
+    cursor: pointer;
     height: 25px;
+    width: 200px;
 `;
 
 const LinearLegendLabel = styled(Text)`
@@ -121,62 +123,85 @@ const LinearLegendRow = styled.div`
 const LinearLegend: React.FC<{
     scale: ScaleSequential<string>;
 }> = ({ scale }) => {
-    const [pickerOpen, setPickerOpen] = useState(false);
+    const [basePickerOpen, setBasePickerOpen] = useState(false);
+    const [targetPickerOpen, setIndicatorPickerOpen] = useState(false);
+    const [panelOpen, setPanelOpen] = useState(false);
     const containerRef = useRef<any>();
     const {
-        scales: {
-            colorScale: {
-                featureGradientRange,
-                userAnnotationRange,
-                variant: scaleType,
-            },
-        },
+        scales: { colorScale },
     } = useAppSelector(selectDisplayConfig);
 
     const dispatch = useAppDispatch();
 
-    useClickAway(containerRef, () => setPickerOpen(false));
+    const closePanels = () => {
+        setBasePickerOpen(false);
+        setIndicatorPickerOpen(false);
+        setPanelOpen(false);
+    };
+
+    const pickerColor = useMemo(() => {
+        const idx = basePickerOpen ? 0 : 1;
+        return colorScale.variant === 'userAnnotation'
+            ? colorScale.userAnnotationRange[idx]
+            : colorScale.featureGradientRange[idx];
+    }, [basePickerOpen, colorScale]);
+
+    useClickAway(containerRef, closePanels);
 
     const updateColor = (newColor: string) => {
-        const startColor =
-            scaleType === 'userAnnotation'
-                ? userAnnotationRange[0]
-                : featureGradientRange[0];
+        const range =
+            colorScale.variant === 'userAnnotation'
+                ? colorScale.userAnnotationRange.slice()
+                : colorScale.featureGradientRange.slice();
 
         const key =
-            scaleType === 'userAnnotation'
+            colorScale.variant === 'userAnnotation'
                 ? 'userAnnotationRange'
                 : 'featureGradientRange';
 
+        const newColorIdx = basePickerOpen ? 0 : 1;
+
+        range[newColorIdx] = newColor;
+
         dispatch(
             updateColorScale({
-                [key]: [startColor, newColor],
+                [key]: range,
             })
         );
     };
 
     return (
-        <LinearLegendRow>
-            <LinearLegendLabel>
-                {formatDigit(scale.domain()[0])}
-            </LinearLegendLabel>
-            <LinearLegendContainer onClick={() => setPickerOpen(true)}>
-                <LegendGradient scale={scale} height={25} width={200} />
-            </LinearLegendContainer>
-            <LinearLegendLabel>
-                {formatDigit(scale.domain().slice(-1)[0])}
-            </LinearLegendLabel>
-            <Popover ref={containerRef} open={pickerOpen}>
-                <ColorPicker
-                    color={
-                        scaleType === 'userAnnotation'
-                            ? userAnnotationRange[1]
-                            : featureGradientRange[1]
-                    }
-                    updateColor={updateColor}
-                />
-            </Popover>
-        </LinearLegendRow>
+        <div ref={containerRef}>
+            {panelOpen && (
+                <>
+                    <FlexPanel onClose={() => setPanelOpen(false)}>
+                        <Text onClick={() => setBasePickerOpen(true)}>
+                            <ActionLink>Set base color</ActionLink>
+                        </Text>
+                        <Text onClick={() => setIndicatorPickerOpen(true)}>
+                            <ActionLink>Set indicator color</ActionLink>
+                        </Text>
+                    </FlexPanel>
+                </>
+            )}
+            <LinearLegendRow>
+                <LinearLegendLabel>
+                    {formatDigit(scale.domain()[0])}
+                </LinearLegendLabel>
+                <LinearLegendContainer onClick={() => setPanelOpen(true)}>
+                    <LegendGradient scale={scale} height={25} width={200} />
+                </LinearLegendContainer>
+                <LinearLegendLabel>
+                    {formatDigit(scale.domain().slice(-1)[0])}
+                </LinearLegendLabel>
+                <Popover open={basePickerOpen || targetPickerOpen}>
+                    <ColorPicker
+                        color={pickerColor}
+                        updateColor={updateColor}
+                    />
+                </Popover>
+            </LinearLegendRow>
+        </div>
     );
 };
 

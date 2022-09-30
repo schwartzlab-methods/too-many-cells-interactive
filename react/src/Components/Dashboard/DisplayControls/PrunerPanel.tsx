@@ -16,7 +16,7 @@ import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import { Column, Row, WidgetTitle } from '../../Layout';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import { Text } from '../../Typography';
-import SelectPanel from '../../SelectPanel';
+import { SelectPanel } from '../..';
 import { madCountToValue, valueToMadCount } from '../../../util';
 import { CumSumBin } from '../../../Visualizations/AreaChart';
 import QuestionTip from '../../QuestionTip';

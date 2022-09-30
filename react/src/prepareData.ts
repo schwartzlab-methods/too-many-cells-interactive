@@ -99,7 +99,7 @@ const flatten = (
               ...i,
               _barcode: {
                   ...i._barcode,
-                  _featureCounts: {},
+                  _featureValues: {},
               },
           }))
         : null;

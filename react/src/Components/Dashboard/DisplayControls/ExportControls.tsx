@@ -10,7 +10,7 @@ import {
 } from '../../../hooks';
 import Button from '../../Button';
 import { WidgetTitle } from '../../Layout';
-import SelectPanel from '../../SelectPanel';
+import { SelectPanel } from '../..';
 import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 import { selectDisplayConfig } from '../../../redux/displayConfigSlice';
 

@@ -3,7 +3,7 @@ export { default as Button } from './Button';
 export { default as Dashboard } from './Dashboard/Dashboard';
 export { default as Checkbox } from './Checkbox';
 export { default as QuestionTip } from './QuestionTip';
-export { default as SelectPanel } from './SelectPanel';
+export * from './SelectPanel';
 export { default as ToolTip } from './ToolTip';
 export { default as TreeComponent } from './Dashboard/Chart/TreeComponent';
 export * from './Icons';

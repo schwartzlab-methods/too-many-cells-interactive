@@ -63,12 +63,12 @@ interface SelectPanelProps {
     selected?: string;
 }
 
-export default function SelectPanel({
+export const SelectPanel: React.FC<SelectPanelProps> = ({
     onClose,
     onSelect,
     items,
     selected,
-}: SelectPanelProps) {
+}) => {
     const containerRef = useRef<any>();
 
     useClickAway(containerRef, onClose);
@@ -89,4 +89,20 @@ export default function SelectPanel({
             </SelectPanelPanel>
         </SelectPanelContainer>
     );
+};
+
+interface FlexPanelProps {
+    onClose: () => void;
 }
+
+export const FlexPanel: React.FC<FlexPanelProps> = ({ onClose, children }) => {
+    const containerRef = useRef<any>();
+
+    useClickAway(containerRef, onClose);
+
+    return (
+        <SelectPanelContainer ref={containerRef}>
+            <SelectPanelPanel>{children}</SelectPanelPanel>
+        </SelectPanelContainer>
+    );
+};

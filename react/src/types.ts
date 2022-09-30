@@ -11,13 +11,13 @@ export interface RoseNodeItem {
 }
 
 /* 
-    _featureCounts here is raw count for cell, which must persist on object for further processing
+    _featureValues here is raw count for cell, which must persist on object for further processing
     node.featureHiLos contains calculated display values that may change according to user interaction
 */
 export interface TMCNodeItem extends RoseNodeItem {
     _barcode: {
         unCell: string;
-        _featureCounts: Record<string, number | undefined>;
+        _featureValues: Record<string, number | undefined>;
     };
 }
 

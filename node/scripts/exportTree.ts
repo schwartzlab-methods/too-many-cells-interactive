@@ -319,6 +319,7 @@ const OPTIONAL_DISPLAY_ELEMENTS: (keyof ToggleableDisplayElements)[] = [
     'nodeIdsVisible',
     'piesVisible',
     'strokeVisible',
+    'widthScalingDisabled',
 ];
 
 const validateRange = (range: any) =>

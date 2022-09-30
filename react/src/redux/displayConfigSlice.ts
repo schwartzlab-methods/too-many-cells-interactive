@@ -76,7 +76,7 @@ const initialScales: Scales = {
     },
     colorScale: {
         featureGradientDomain: [],
-        featureGradientRange: ['#D3D3D3', 'red'],
+        featureGradientRange: ['#D3D3D3', '#ff0000'],
         featureScaleSaturation: undefined,
         featureGradientScaleType: 'sequential',
         featureHiLoDomain: [],
