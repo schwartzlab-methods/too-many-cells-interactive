@@ -56,6 +56,8 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
 
     const { activeFeatures } = useAppSelector(selectAnnotationSlice);
 
+    const { scales } = useAppSelector(selectDisplayConfig);
+
     const {
         step: { clickPruneHistory },
     } = useAppSelector(selectActivePruneStep);
@@ -109,17 +111,17 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
                     domain: extent(
                         visibleNodes.descendants().map(d => +(d.value || 0))
                     ) as [number, number],
-                    range: [0.1, 20],
+                    range: scales.branchSizeScale.defaultRange,
                 },
             })
         );
         dispatch(
             updateLinearScale({
                 pieScale: {
-                    range: [5, 20],
                     domain: extent(
                         visibleNodes.leaves().map(d => d.value!)
                     ) as [number, number],
+                    range: scales.pieScale.defaultRange,
                 },
             })
         );

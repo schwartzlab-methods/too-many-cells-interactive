@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { hsl } from 'd3-color';
 import { bindActionCreators } from 'redux';
 import { NumberInput } from '../../Input';
 import { Column, Row } from '../../Layout';
-import { Label } from '../../Typography';
+import { Caption, Error, Label } from '../../Typography';
 import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
@@ -269,10 +269,27 @@ const Slider: React.FC<SliderProps> = ({
     value,
 }) => {
     const [internalMax, setInternalMax] = useState(max);
+    const [error, setError] = useState('');
 
-    const onManualInputchange = (val?: number) => {
-        if (val) {
-            setInternalMax(val);
+    const onManualInputchange = useCallback(
+        (val?: number) => {
+            if (val) {
+                setInternalMax(val);
+            }
+            if (!!val && +val < min) {
+                setError(`Value ${val} is below the minimum of ${min}`);
+                return;
+            } else {
+                setError('');
+            }
+            onChange(val);
+        },
+        [min, onChange]
+    );
+
+    const handleSlide = (val: number) => {
+        if (error) {
+            setError('');
         }
         onChange(val);
     };
@@ -288,7 +305,7 @@ const Slider: React.FC<SliderProps> = ({
                         disabled={!!disabled}
                         max={internalMax}
                         min={min}
-                        onChange={e => onChange(+e.currentTarget.value)}
+                        onChange={e => handleSlide(+e.currentTarget.value)}
                         step={step || 1}
                         type='range'
                         value={value}
@@ -296,11 +313,18 @@ const Slider: React.FC<SliderProps> = ({
 
                     <NumberInput
                         ml='10px'
-                        onChange={v => onManualInputchange(v)}
+                        onChange={onManualInputchange}
                         value={value}
                         width='50px'
                     />
                 </Row>
+                {!!error && (
+                    <Row>
+                        <Caption>
+                            <Error>{error}</Error>
+                        </Caption>
+                    </Row>
+                )}
             </Column>
         </Row>
     );

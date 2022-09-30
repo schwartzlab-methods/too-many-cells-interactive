@@ -34,6 +34,7 @@ export const useLinearScale = <K extends keyof Omit<Scales, 'colorScale'>>(
 ) => {
     const { domain, range } =
         useAppSelector(selectDisplayConfig)['scales'][scaleName];
+
     return useMemo(() => {
         return makeLinearScale(range, domain);
     }, [domain, range]) as ScaleType[K];

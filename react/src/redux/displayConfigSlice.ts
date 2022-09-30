@@ -70,9 +70,9 @@ export interface DisplayConfigState {
 const initialScales: Scales = {
     branchSizeScale: {
         domain: [0, 0],
-        range: [0, 0],
+        range: [1, 20],
         defaultDomain: [0, 0],
-        defaultRange: [0, 0],
+        defaultRange: [1, 20],
     },
     colorScale: {
         featureGradientDomain: [],
@@ -90,9 +90,9 @@ const initialScales: Scales = {
     },
     pieScale: {
         domain: [0, 0],
-        range: [0, 0],
+        range: [5, 20],
         defaultDomain: [0, 0],
-        defaultRange: [0, 0],
+        defaultRange: [5, 20],
     },
 };
 
