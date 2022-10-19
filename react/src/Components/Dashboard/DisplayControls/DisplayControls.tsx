@@ -26,7 +26,7 @@ import ExportControls from './ExportControls';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
 
-const DisplayControls: React.FC = () => {
+const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
     const {
         scales: {
             branchSizeScale,
@@ -92,7 +92,7 @@ const DisplayControls: React.FC = () => {
 
     return (
         <>
-            <Column xs={6}>
+            <Column xs={6} style={{ maxHeight: maxHeight || 'auto' }}>
                 {(!!activeFeatures.length || !!userAnnotationDomain.length) && (
                     <Row>
                         <RadioGroup>
@@ -177,7 +177,7 @@ const DisplayControls: React.FC = () => {
                         </RadioGroup>
                     </Row>
                 )}
-                <Row>
+                <Row style={{ maxHeight: '25%', overflowY: 'auto' }}>
                     <Legend />
                 </Row>
 

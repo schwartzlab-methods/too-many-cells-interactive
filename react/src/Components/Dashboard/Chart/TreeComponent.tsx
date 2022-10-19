@@ -1,4 +1,10 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, {
+    forwardRef,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useState,
+} from 'react';
 import { bindActionCreators } from 'redux';
 import { extent } from 'd3-array';
 import { select } from 'd3-selection';
@@ -26,9 +32,10 @@ import {
 } from '../../../redux/pruneSlice';
 import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 
-const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
-    baseTree,
-}) => {
+const TreeComponent = forwardRef<
+    HTMLDivElement,
+    { baseTree: TMCHierarchyPointNode }
+>(({ baseTree }, ref) => {
     const [Tree, setTree] = useState<TreeViz>();
 
     const { className, selector } = useSelectTree();
@@ -153,10 +160,13 @@ const TreeComponent: React.FC<{ baseTree: TMCHierarchyPointNode }> = ({
 
     return (
         <div
+            ref={ref}
             className={className}
             style={{ border: 'thin gray solid', width: '100%' }}
         />
     );
-};
+});
+
+TreeComponent.displayName = 'TreeComponent';
 
 export default TreeComponent;

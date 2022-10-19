@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
 import { Column, Row } from '../Layout';
 import { Accent, Main, Primary } from '../Typography';
 import { calculateTreeLayout } from '../../util';
-import { useAppSelector } from '../../hooks';
+import { useAppSelector, useElementResize } from '../../hooks';
 import { selectDisplayConfig } from '../../redux/displayConfigSlice';
 import { getData } from '../../prepareData';
 import { TMCHierarchyPointNode } from '../../types';
@@ -41,6 +41,21 @@ const Dashboard: React.FC = () => {
 
     const { width } = useAppSelector(selectDisplayConfig);
 
+    const {
+        setRef,
+        ref,
+        size: { height },
+    } = useElementResize();
+
+    const treeViewportRef = useRef<HTMLDivElement | null>(null);
+
+    useLayoutEffect(() => {
+        if (treeViewportRef.current && !ref) {
+            setRef(treeViewportRef.current);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [treeViewportRef.current, ref, setRef]);
+
     useEffect(() => {
         const cb = async () => {
             const data = await getData();
@@ -63,14 +78,19 @@ const Dashboard: React.FC = () => {
                     <Row alignItems='flex-start' justifyContent='center'>
                         <Column xs={12} md={6}>
                             <TreeControls />
-                            {baseTree && <TreeComponent baseTree={baseTree} />}
+                            {baseTree && (
+                                <TreeComponent
+                                    ref={treeViewportRef}
+                                    baseTree={baseTree}
+                                />
+                            )}
                         </Column>
                         <Column xs={12} md={6}>
                             <Row>
                                 <PruneHistory />
                             </Row>
                             <Row alignItems='flex-start'>
-                                <DisplayControls />
+                                <DisplayControls maxHeight={height} />
                             </Row>
                         </Column>
                     </Row>

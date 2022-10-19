@@ -32,7 +32,7 @@ const useExportState = () => {
         () => ({
             features: activeFeatures,
             optionalDisplayElements: displayConfig.toggleableFeatures,
-            pruneState: pruneState.map(ps => ({ valuePruner: ps.valuePruner })),
+            pruneState: pruneState.map(({ valuePruner }) => ({ valuePruner })),
             scales: {
                 branchsizeScaleRange:
                     displayConfig.scales.branchSizeScale.range,
