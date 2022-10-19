@@ -47,12 +47,26 @@ export const transformData = (data: RoseNode, labels: string) => {
 
 const addLabels = (tree: HierarchyNode<TMCNode>, labels: string) => {
     const labelMap: Record<string, string> = {};
-    labels.split('\n').forEach((l: string, i: number) => {
-        if (i == 0) {
-            return;
-        }
-        const [k, v] = l.split(',');
-        labelMap[k] = v;
+
+    const [headers, ...rows] = labels.split('\n');
+
+    const itemIdx = headers.split(',').findIndex(r => r === 'item');
+    const labelIdx = headers.split(',').findIndex(r => r === 'label');
+
+    if (itemIdx === undefined) {
+        throw "Could not find column 'item' in labels csv!";
+    }
+
+    if (labelIdx === undefined) {
+        throw "Could not find column 'label' in labels csv!";
+    }
+
+    rows.forEach((r: string) => {
+        const item = r.split(',')[itemIdx];
+        const label = r.split(',')[labelIdx];
+        labelMap[item] = ['', null, undefined].includes(label)
+            ? 'Label Not Provided'
+            : label;
     });
 
     /* compute the values for leaf nodes, merge children for non-leaves */
@@ -62,11 +76,16 @@ const addLabels = (tree: HierarchyNode<TMCNode>, labels: string) => {
                 ? n.data.items.reduce<AttributeMap>(
                       (acc, curr) => ({
                           ...acc,
-                          [labelMap[curr._barcode.unCell]]: {
+                          [labelMap[curr._barcode.unCell] ||
+                          'Label Not Provided']: {
                               quantity:
                                   (acc[labelMap[curr._barcode.unCell]]
                                       ?.quantity || 0) + 1,
-                              scaleKey: labelMap[curr._barcode.unCell],
+                              scaleKey:
+                                  labelMap[
+                                      curr._barcode.unCell ||
+                                          'Label Not Provided'
+                                  ],
                           },
                       }),
                       {}

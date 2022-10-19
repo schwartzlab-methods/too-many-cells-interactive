@@ -229,7 +229,7 @@ export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
             ...acc,
             [k]: {
                 quantity: (obj1[k]?.quantity || 0) + (obj2[k]?.quantity || 0),
-                scaleKey: obj1[k]?.scaleKey || obj2[k].scaleKey,
+                scaleKey: obj1[k]?.scaleKey || obj2[k]?.scaleKey,
             },
         }),
         {}
@@ -279,7 +279,15 @@ export const calculateOrdinalColorScaleRangeAndDomain = (
         ),
     ].sort((a, b) => (a < b ? -1 : 1)) as string[];
 
-    const range = interpolateColorScale(domain);
+    let range = interpolateColorScale(domain);
+
+    const missingLabelIndex = domain.findIndex(d => d === 'Label Not Provided');
+
+    if (missingLabelIndex !== undefined) {
+        const newRange = range.slice();
+        newRange[missingLabelIndex] = '#000000';
+        range = newRange;
+    }
 
     return { range, domain };
 };
