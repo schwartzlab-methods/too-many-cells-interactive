@@ -5,7 +5,7 @@
 
 set -eo pipefail
 
-help()
+function help()
 {
    echo "Start the TMC containers and mount label and tree files, optionally loading in matrix data."
    echo
@@ -72,10 +72,22 @@ fi
 
 docker-compose build
 
+# start postgres in the background so we can exec commands to it
+docker-compose -f docker-compose.prod.yaml up -d postgres
+
+# make sure that postgres is up before proceeding
+for i in {1..5}; do docker-compose exec postgres psql -U postgres -d tmc -c "SELECT NOW();" > /dev/null 2>&1 && break || sleep 2; done
+
 if [[ -n "${matrix_dir}" ]]; then
-    docker-compose -f docker-compose.prod.yaml run --rm -p ${port}:3000 \
+
+    docker-compose -f docker-compose.prod.yaml run --rm \
         -v "${matrix_dir}":/usr/data/matrices:ro \
         node --init $debug
+
+else
+    # reset the database in case a prior run inserted data that's no longer needed
+    docker-compose exec postgres psql -U postgres -d tmc -c 'TRUNCATE features;'
+
 fi
 
 docker-compose -f docker-compose.prod.yaml run --rm -p ${port}:3000 \

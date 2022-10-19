@@ -25,11 +25,14 @@ The simplest way to get your `cluster_tree.json` and `labels.csv` onto the app s
 
 Example: `./start-and-load.sh --matrix-dir /data/my-matrices --tree-path /data/my-results/cluster_tree.json --label-path /data/my-results/labels.csv --port 1234` 
 
+When you are finished with the application, the postgres container will need to be stopped manually by running `docker-compose stop postgres` from the project ruoot.
+
 **WARNING:** your matrix files will be mounted into the container and imported into a database stored in a Docker volume on your host machine. Depending on the size of your files, this may result in substantial disk usage. To free up space, consider regularly purging unneeded volumes, containers, and/or images using the [docker system prune](https://docs.docker.com/engine/reference/commandline/system_prune/) command.
+
 
 Once the container has been built and the matrices imported, you can restart the program without rebuilding and reloading by omitting the matrix file path `./start-and-load.sh --tree-path /data/my-results/cluster_tree.json --label-path /data/my-results/labels.csv --port 1234` 
 
-Note that the node image must be rebuilt locally any time there is a code change.
+Note that the node image must be rebuilt locally any time there is a code change. This is handled by the `start-and-load.sh` script. 
 
 ## Generating images from the command line
 

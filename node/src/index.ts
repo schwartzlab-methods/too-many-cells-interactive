@@ -1,5 +1,6 @@
 import express from 'express';
 import { Pool } from 'pg';
+import path from 'path';
 
 const app = express();
 
@@ -12,7 +13,9 @@ export interface Feature {
 
 const pool = new Pool();
 
-app.use('/', express.static('/usr/app/static'));
+const staticPath = path.resolve(__dirname, '..', 'static');
+
+app.use('/', express.static(staticPath));
 
 app.use('/api/features', async (req, res) => {
     const { q } = req.query;

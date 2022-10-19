@@ -3,8 +3,6 @@ services:
   node:
     image: too-many-cells-js:latest
     build: ./
-    depends_on:
-      - postgres
     environment:
       - PGUSER=postgres
       - PGHOST=postgres

@@ -7,7 +7,7 @@ set -eo pipefail
 # Assumes the database has already been provisioned, either by running ./start-and-load.sh or manually.
 # Note that by default the user running the container process is `node`, which has UID 1000, please ensure that this user has the proper
 # permissions to access the mounted files and directories; alternately, a different user can be configured to run the container
-# using the --user argument to the docker run command or by passing arguments directly to the build command
+# using the --user argument to the docker run command or by passing arguments directly to the build command.
 
 build=true
 

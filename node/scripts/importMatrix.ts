@@ -17,6 +17,11 @@ const argv = yargs(process.argv.slice(2))
     .option('debug', {
         describe: 'Provide verbose output',
     })
+    .option('matrixPath', {
+        describe: 'path to matrix files',
+        //default to /usr/data b/c that's the location of our docker matrix data mount, might want to decouple eventually
+        default: '/usr/data',
+    })
     .help().argv as Record<string, string>;
 
 const DEBUG = !!argv.debug;
@@ -307,12 +312,9 @@ const importData = async (rootDir: string, pool: Pool) => {
 
 /**
  * Import files into postgres.
- *  Note that the files are expected to be located in the `/usr/data` directory.
- *  As this script is expected to be executed as part of a `docker run` command, the user should
- *  bind-mount the needed files into the /usr/data directory.
  */
 const run = async () => {
-    const dataDir = '/usr/data';
+    const dataDir = argv.matrixPath;
     const pool = await getPool();
     console.log('Data import started');
     debug('verifying data');
@@ -325,7 +327,7 @@ const run = async () => {
     debug('creating index');
     await createIndex(pool);
     const end = new Date().getTime();
-    console.log(`finished in ${(end - start) / 1000} seconds`);
+    console.log(`finished import in ${(end - start) / 1000} seconds`);
 };
 
 run();
