@@ -54,6 +54,13 @@ export const Row = styled.div<RowProps>`
     width: 100%;
 `;
 
+export const List = styled.ul`
+    list-style-type: none;
+    margin-block-start: 0px;
+    margin-block-end: 0px;
+    padding-inline-start: 0;
+`;
+
 const TitleContainer = styled(Column)`
     margin-bottom: 10px;
 `;

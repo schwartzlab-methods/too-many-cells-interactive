@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { saveAs } from 'file-saver';
 import { downloadPng, downloadSvg } from '../../../downloadImage';
 import {
@@ -97,19 +97,22 @@ const ExportControls: React.FC = () => {
                 title='Export Controls'
                 caption='Download chart and metadata'
             />
-            <Button onClick={() => setPanelOpen(true)}>Select Export</Button>
-            {panelOpen && (
-                <SelectPanel
-                    items={items}
-                    onClose={() => setPanelOpen(false)}
-                    onSelect={selection => {
-                        if (selection) {
-                            downloads[selection]();
-                            setPanelOpen(false);
-                        }
-                    }}
-                />
-            )}
+
+            <SelectPanel
+                items={items}
+                onClose={() => setPanelOpen(false)}
+                onSelect={selection => {
+                    if (selection) {
+                        downloads[selection]();
+                        setPanelOpen(false);
+                    }
+                }}
+                open={panelOpen}
+            >
+                <Button onClick={() => setPanelOpen(true)}>
+                    Select Export
+                </Button>
+            </SelectPanel>
         </>
     );
 };

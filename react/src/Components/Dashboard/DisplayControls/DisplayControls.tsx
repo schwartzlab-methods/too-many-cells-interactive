@@ -92,7 +92,7 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
 
     return (
         <>
-            <Column xs={6} style={{ maxHeight: maxHeight || 'auto' }}>
+            <Column xs={6}>
                 {(!!activeFeatures.length || !!userAnnotationDomain.length) && (
                     <Row>
                         <RadioGroup>
@@ -177,8 +177,10 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
                         </RadioGroup>
                     </Row>
                 )}
-                <Row style={{ maxHeight: '25%', overflowY: 'auto' }}>
-                    <Legend />
+                <Row>
+                    <Legend
+                        maxHeight={maxHeight ? +maxHeight / 4 : undefined}
+                    />
                 </Row>
 
                 <Row>

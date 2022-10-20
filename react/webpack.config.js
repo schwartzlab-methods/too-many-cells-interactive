@@ -1,5 +1,6 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const path = require('path');
+const ESLintPlugin = require('eslint-webpack-plugin');
 
 module.exports = {
     entry: './src/index.tsx',
@@ -33,6 +34,9 @@ module.exports = {
         new HtmlWebpackPlugin({
             favicon: './public/favicon.ico',
             template: './src/template.ejs',
+        }),
+        new ESLintPlugin({
+            extensions: ['ts', 'tsx'],
         }),
     ],
     devServer: {

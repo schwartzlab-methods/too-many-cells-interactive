@@ -279,12 +279,6 @@ const showToolTip = (
             );
         });
 
-    if (Object.keys(data.data.featureHiLos).length) {
-        labelContainer.style('border-right', 'thin white solid');
-    } else {
-        labelContainer.style('border-right', 'none');
-    }
-
     const featuresContainer = detail.select('div.features ul');
 
     featuresContainer

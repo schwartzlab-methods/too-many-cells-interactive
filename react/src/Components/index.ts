@@ -1,7 +1,8 @@
 export { default as AreaChartComponent } from './Dashboard/DisplayControls/AreaChartComponent';
 export { default as Button } from './Button';
-export { default as Dashboard } from './Dashboard/Dashboard';
 export { default as Checkbox } from './Checkbox';
+export { default as Dashboard } from './Dashboard/Dashboard';
+export { default as Popover } from './Popover';
 export { default as QuestionTip } from './QuestionTip';
 export * from './SelectPanel';
 export { default as ToolTip } from './ToolTip';

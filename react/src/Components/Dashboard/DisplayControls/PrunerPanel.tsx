@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'd3-format';
 import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
@@ -111,21 +111,21 @@ const PrunerPanel: React.FC = () => {
                 caption='Reduce node count by distance, size, or depth'
             />
             <Row>
-                <Button onClick={() => setPanelVisible(true)}>
-                    Select Pruner
-                </Button>
-            </Row>
-            {panelVisible && (
                 <SelectPanel
                     onClose={() => setPanelVisible(false)}
                     onSelect={(pruner: string | undefined) => {
                         setSelected(pruner as ValuePruneType);
                         setPanelVisible(false);
                     }}
+                    open={panelVisible}
                     items={pruners}
                     selected={selected}
-                />
-            )}
+                >
+                    <Button onClick={() => setPanelVisible(true)}>
+                        Select Pruner
+                    </Button>
+                </SelectPanel>
+            </Row>
             <Row>
                 <SmartPruner
                     expanded={selected === 'minSize'}

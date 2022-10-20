@@ -1,12 +1,18 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, {
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
+import { range } from 'd3-array';
+import { color as d3Color } from 'd3-color';
 import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
 import { select } from 'd3-selection';
-import { range } from 'd3-array';
 import styled from 'styled-components';
 import { HexColorPicker } from 'react-colorful';
-import useClickAway from '../../../hooks/useClickAway';
 import { DotIcon } from '../../Icons';
-import { Column, WidgetTitle } from '../../Layout';
+import { Column, List, WidgetTitle } from '../../Layout';
 import { Input } from '../../Input';
 import { useAppDispatch, useAppSelector, useColorScale } from '../../../hooks';
 import {
@@ -17,19 +23,28 @@ import {
 import { scaleIsSequential } from '../../../types';
 import { ActionLink, Text } from '../../Typography';
 import { formatDigit } from '../../../util';
-import { FlexPanel } from '../../SelectPanel';
+import { Popover } from '../../../Components';
 
-const Legend: React.FC = () => {
+const LegendContainer = styled.div<{ maxHeight?: number }>`
+    max-height: ${props => (props.maxHeight ? `${props.maxHeight}px` : 'auto')};
+    overflow-y: auto;
+    padding: 3px;
+    width: 100%;
+`;
+
+const Legend: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
     const { scale: colorScale } = useColorScale();
 
     return (
         <Column xs={12} className='legend'>
             <WidgetTitle title='Legend' />
-            {colorScale && !scaleIsSequential(colorScale) && (
-                <OrdinalLegend
-                    scale={colorScale as ScaleOrdinal<string, string>}
-                />
-            )}
+            <LegendContainer maxHeight={maxHeight}>
+                {colorScale && !scaleIsSequential(colorScale) && (
+                    <OrdinalLegend
+                        scale={colorScale as ScaleOrdinal<string, string>}
+                    />
+                )}
+            </LegendContainer>
             {colorScale && scaleIsSequential(colorScale) && (
                 <LinearLegend scale={colorScale} />
             )}
@@ -49,22 +64,25 @@ const LegendItem: React.FC<LegendItemProps> = ({
     updateColor,
 }) => {
     const [pickerOpen, setPickerOpen] = useState(false);
-    const containerRef = useRef<any>();
-
-    useClickAway(containerRef, () => setPickerOpen(false));
 
     return (
         <LegendItemContainer onClick={() => setPickerOpen(true)}>
-            <DotIcon
-                pointer
-                fill={color}
-                stroke={color}
-                onClick={() => setPickerOpen(true)}
+            <Popover
+                open={pickerOpen}
+                onOpenChange={() => setPickerOpen(!pickerOpen)}
+                Anchor={
+                    <DotIcon
+                        pointer
+                        fill={color}
+                        stroke={color}
+                        onClick={() => setPickerOpen(true)}
+                    />
+                }
+                Content={
+                    <ColorPicker color={color} updateColor={updateColor} />
+                }
             />
             {label}
-            <Popover ref={containerRef} open={pickerOpen}>
-                <ColorPicker color={color} updateColor={updateColor} />
-            </Popover>
         </LegendItemContainer>
     );
 };
@@ -79,12 +97,22 @@ interface ColorPickerProps {
 }
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ color, updateColor }) => {
+    // use a wrapper to prevent submission of invalid values
+    const [internalVal, setInternalVal] = useState(color);
+
+    useEffect(() => {
+        setInternalVal(color);
+    }, [color]);
+
+    const _updateColor = (color: string) =>
+        d3Color(color) ? updateColor(color) : setInternalVal(color);
+
     return (
         <Column xs={12}>
             <HexColorPicker color={color} onChange={updateColor} />
             <PickerInput
-                value={color}
-                onChange={e => updateColor(e.currentTarget.value)}
+                value={internalVal}
+                onChange={e => _updateColor(e.currentTarget.value)}
             />
         </Column>
     );
@@ -94,14 +122,6 @@ const LegendItemContainer = styled.span`
     align-items: center;
     display: flex;
     position: relative;
-`;
-
-const Popover = styled.div<{ open: boolean }>`
-    background-color: ${props => props.theme.palette.white};
-    display: ${props => (props.open ? 'flex' : 'none')};
-    position: absolute;
-    bottom: 15px;
-    left: 0;
 `;
 
 const LinearLegendContainer = styled.div`
@@ -120,24 +140,24 @@ const LinearLegendRow = styled.div`
     position: relative;
 `;
 
+const LinearLegendList = styled(List)`
+    width: max-content;
+    li + li {
+        margin-top: 5px;
+    }
+`;
+
 const LinearLegend: React.FC<{
     scale: ScaleSequential<string>;
 }> = ({ scale }) => {
     const [basePickerOpen, setBasePickerOpen] = useState(false);
-    const [targetPickerOpen, setIndicatorPickerOpen] = useState(false);
+    const [indicatorPickerOpen, setIndicatorPickerOpen] = useState(false);
     const [panelOpen, setPanelOpen] = useState(false);
-    const containerRef = useRef<any>();
     const {
         scales: { colorScale },
     } = useAppSelector(selectDisplayConfig);
 
     const dispatch = useAppDispatch();
-
-    const closePanels = () => {
-        setBasePickerOpen(false);
-        setIndicatorPickerOpen(false);
-        setPanelOpen(false);
-    };
 
     const pickerColor = useMemo(() => {
         const idx = basePickerOpen ? 0 : 1;
@@ -145,8 +165,6 @@ const LinearLegend: React.FC<{
             ? colorScale.userAnnotationRange[idx]
             : colorScale.featureGradientRange[idx];
     }, [basePickerOpen, colorScale]);
-
-    useClickAway(containerRef, closePanels);
 
     const updateColor = (newColor: string) => {
         const range =
@@ -171,35 +189,79 @@ const LinearLegend: React.FC<{
     };
 
     return (
-        <div ref={containerRef}>
-            {panelOpen && (
-                <>
-                    <FlexPanel onClose={() => setPanelOpen(false)}>
-                        <Text onClick={() => setBasePickerOpen(true)}>
-                            <ActionLink>Set base color</ActionLink>
-                        </Text>
-                        <Text onClick={() => setIndicatorPickerOpen(true)}>
-                            <ActionLink>Set indicator color</ActionLink>
-                        </Text>
-                    </FlexPanel>
-                </>
-            )}
+        <div>
             <LinearLegendRow>
-                <LinearLegendLabel>
-                    {formatDigit(scale.domain()[0])}
-                </LinearLegendLabel>
+                <Popover
+                    open={basePickerOpen}
+                    onOpenChange={() => setBasePickerOpen(false)}
+                    Anchor={
+                        <LinearLegendLabel>
+                            {formatDigit(scale.domain()[0])}
+                        </LinearLegendLabel>
+                    }
+                    Content={
+                        <ColorPicker
+                            color={pickerColor}
+                            updateColor={updateColor}
+                        />
+                    }
+                />
                 <LinearLegendContainer onClick={() => setPanelOpen(true)}>
-                    <LegendGradient scale={scale} height={25} width={200} />
-                </LinearLegendContainer>
-                <LinearLegendLabel>
-                    {formatDigit(scale.domain().slice(-1)[0])}
-                </LinearLegendLabel>
-                <Popover open={basePickerOpen || targetPickerOpen}>
-                    <ColorPicker
-                        color={pickerColor}
-                        updateColor={updateColor}
+                    <Popover
+                        open={panelOpen}
+                        onOpenChange={() => setPanelOpen(!panelOpen)}
+                        Content={
+                            <LinearLegendList>
+                                <li>
+                                    <Text>
+                                        <ActionLink
+                                            onClick={() => {
+                                                setBasePickerOpen(true);
+                                                setIndicatorPickerOpen(false);
+                                            }}
+                                        >
+                                            Set base color
+                                        </ActionLink>
+                                    </Text>
+                                </li>
+                                <li>
+                                    <Text>
+                                        <ActionLink
+                                            onClick={() => {
+                                                setIndicatorPickerOpen(true);
+                                                setBasePickerOpen(false);
+                                            }}
+                                        >
+                                            Set indicator color
+                                        </ActionLink>
+                                    </Text>
+                                </li>
+                            </LinearLegendList>
+                        }
+                        Anchor={
+                            <LegendGradient
+                                scale={scale}
+                                height={25}
+                                width={200}
+                            />
+                        }
                     />
-                </Popover>
+                </LinearLegendContainer>
+                <Popover
+                    open={indicatorPickerOpen}
+                    onOpenChange={() => setIndicatorPickerOpen(false)}
+                    Anchor={
+                        <LinearLegendLabel>
+                            {formatDigit(scale.domain().slice(-1)[0])}
+                        </LinearLegendLabel>
+                    }
+                    Content={
+                        <ColorPicker
+                            color={pickerColor}
+                            updateColor={updateColor}
+                        />
+                    }
+                />
             </LinearLegendRow>
         </div>
     );
