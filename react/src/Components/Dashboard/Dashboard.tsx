@@ -62,6 +62,7 @@ const Dashboard: React.FC = () => {
             setBaseTree(calculateTreeLayout(data, width));
         };
         cb();
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (

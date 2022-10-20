@@ -67,6 +67,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
             return onChange(+arg);
         }
         //otherwise (e.g., input is not a number) do nothing
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (

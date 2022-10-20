@@ -224,8 +224,10 @@ export const getFeatureAverage = (
 ) =>
     sum(
         Object.entries(node.data.featureCount)
+            //eslint-disable-next-line @typescript-eslint/no-unused-vars
             .filter(([k, v]) => activeFeatures.includes(k))
             //`quantity` is raw value, scaleKey is divided by descendant count
+            //eslint-disable-next-line @typescript-eslint/no-unused-vars
             .flatMap(([k, v]) => v.scaleKey as number)
     ) / activeFeatures.length;
 

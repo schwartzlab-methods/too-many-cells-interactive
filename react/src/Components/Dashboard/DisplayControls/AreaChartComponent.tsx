@@ -30,6 +30,7 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
         if (Chart) {
             Chart.onBrush = onBrush;
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [onBrush]);
 
     useLayoutEffect(() => {
@@ -42,6 +43,7 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
         );
         setChart(Chart);
         Chart.render(value);
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -49,6 +51,7 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
             Chart.counts = counts;
             Chart.render(value);
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [counts, value]);
 
     return (

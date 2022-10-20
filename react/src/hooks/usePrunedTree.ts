@@ -87,6 +87,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
     useEffect(() => {
         const newTree = recalculateLayout();
         setVisibleNodes(calculateTreeLayout(newTree, width));
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [baseTree]);
 
     const { activeFeatures, featureMaps, userAnnoationMap } = useAppSelector(
@@ -132,6 +133,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
             setBaseTree(treeWithCells);
             clearFeatureMaps();
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [featureMaps]);
 
     //USER ANNOTATION EFFECTS
@@ -153,6 +155,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
             setBaseTree(treeWithUserAnnotations);
             clearUserAnnotationMaps();
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userAnnoationMap]);
 
     /* when thresholds change or a new feature is added, we need to re-annotate nodes */
@@ -171,6 +174,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
             setBaseTree(annotatedTree);
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeFeatures, featureHiLoThresholds]);
 
     useEffect(() => {
@@ -183,6 +187,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
             updateColorScale({ featureGradientDomain: featureAverages });
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeFeatures]);
 
     /* PRUNING EFFECTS */
@@ -195,6 +200,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
         updateFeatureDistributions(
             getFeatureDistributions(_tree, activeFeatures)
         );
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activePruneIndex]);
 
     /* for now, when a prune runs, we rerun all prunes -- if performance suffers we can optimize */
@@ -206,6 +212,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
         );
 
         setVisibleNodes(calculateTreeLayout(withNewFeatureCounts, width));
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [clickPruneHistory, activePruneIndex]);
 
     /* update base tree meta and feature scale (if features loaded) on all prunes */
@@ -219,6 +226,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
                 getFeatureDistributions(visibleNodes, activeFeatures)
             );
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visibleNodes]);
 
     const recalculateLayout = () =>
@@ -623,6 +631,7 @@ export const updatefeatureHiLos = (
             n.data.items.forEach(cell => {
                 //reduce cells for each node to hi/lows
                 const key = getEntries(cell._barcode._featureValues)
+                    //eslint-disable-next-line @typescript-eslint/no-unused-vars
                     .filter(([k, _]) => activeFeatures.includes(k))
                     //alphabetize keys for standardization
                     .sort(([k1], [k2]) => (k1 < k2 ? -1 : 1))

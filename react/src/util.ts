@@ -214,6 +214,7 @@ export const formatDigit = (value: number) => {
     try {
         ret = format(`${d ? `.${d}~r` : ',d'}`)(value);
     } catch (e) {
+        //eslint-disable-next-line no-console
         console.error(e);
     }
 

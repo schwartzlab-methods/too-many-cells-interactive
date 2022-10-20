@@ -1,10 +1,4 @@
-import React, {
-    useEffect,
-    useLayoutEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { range } from 'd3-array';
 import { color as d3Color } from 'd3-color';
 import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
@@ -318,6 +312,7 @@ const LegendGradient: React.FC<LegendGradientProps> = ({
 
     useLayoutEffect(() => {
         renderLinearLegend(`.${selector}`, scale, height, width);
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scale]);
 
     return <span className={selector} />;

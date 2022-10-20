@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { saveAs } from 'file-saver';
 import { downloadPng, downloadSvg } from '../../../downloadImage';
 import {

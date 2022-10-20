@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'd3-format';
 import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
@@ -209,6 +209,7 @@ const Pruner: React.FC<PrunerProps> = ({
         if (!value && inputVal != '0') {
             setInputVal('0');
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value]);
 
     return (
@@ -288,6 +289,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                 setInputVal(formatVal(valueToMadCount(value, median, madSize)));
             }
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value, type]);
 
     return (

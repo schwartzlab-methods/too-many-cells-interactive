@@ -155,6 +155,7 @@ export default class Histogram {
         const areaG = area()
             .x(([k]) => this.xScale(k)!)
             .curve(curveBasis)
+            //eslint-disable-next-line @typescript-eslint/no-unused-vars
             .y1(([_, v]) => this.yScale(v))
             .y0(this.yScale.range()[0]);
 

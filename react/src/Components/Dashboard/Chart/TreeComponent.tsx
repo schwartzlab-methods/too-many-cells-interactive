@@ -140,6 +140,7 @@ const TreeComponent = forwardRef<
             );
 
         dispatch(updateColorScale({ labelRange, labelDomain }));
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     /* intial render */
@@ -148,6 +149,7 @@ const TreeComponent = forwardRef<
         const _Tree = new TreeViz(context, selection);
         setTree(_Tree);
         _Tree.render();
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -156,6 +158,7 @@ const TreeComponent = forwardRef<
             Tree.context = context;
             Tree.render();
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [context]);
 
     return (

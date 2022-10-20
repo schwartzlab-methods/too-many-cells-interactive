@@ -333,12 +333,14 @@ const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
                 }
             }
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedIdx]);
 
     useEffect(() => {
         if (inputRef.current) {
             parentWidth.current = inputRef.current.clientWidth - 5 + 'px';
         }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [inputRef.current]);
 
     useEffect(() => {
