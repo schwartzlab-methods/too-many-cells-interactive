@@ -17,8 +17,8 @@ import { useAppDispatch, useAppSelector } from '../../../hooks';
 import { Text } from '../../Typography';
 import { SelectPanel } from '../..';
 import {
-    formatDigit,
     madCountToValue,
+    roundDigit,
     valueToMadCountSigned,
 } from '../../../util';
 import { CumSumBin } from '../../../Visualizations/AreaChart';
@@ -227,7 +227,7 @@ const Pruner: React.FC<PrunerProps> = ({
                             <AreaChartComponent
                                 counts={plainValues}
                                 onBrush={v => {
-                                    setInputVal(formatDigit(+v).toString());
+                                    setInputVal(roundDigit(+v).toString());
                                     onSubmit(v);
                                 }}
                                 value={value}
@@ -287,10 +287,10 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
 
         if (value !== undefined) {
             if (type === 'raw') {
-                setInputVal(formatDigit(value).toString());
+                setInputVal(roundDigit(value).toString());
             } else {
                 setInputVal(
-                    formatDigit(
+                    roundDigit(
                         valueToMadCountSigned(value, median, madSize)
                     ).toString()
                 );

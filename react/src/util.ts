@@ -207,37 +207,51 @@ export const getObjectIsEmpty = (obj: Record<any, any>) =>
     !Object.keys(obj).length;
 
 /**
+ * Round number and return
+ *
+ * @param value number
+ * @param sd significant digits
+ * @returns number
+ */
+export const roundDigit = (value: number, sd?: number): number => {
+    let fmt = '';
+    if (!value) {
+        return value;
+    } else if (sd) {
+        fmt = `.${sd}~r`;
+    } else if (sd === undefined) {
+        //for smaller numbers, use 3 sig digits, stripping trailing zeroes
+        if (Math.abs(value) < 10) {
+            fmt = `.3~r`;
+            //for larger, round to 2 decimal places, stripping trailing zeroes
+        } else {
+            fmt = `.2~f`;
+        }
+    }
+    let res: number;
+    try {
+        //replace d3's dash with javascript's hyphen
+        res = +format(fmt)(value).replace('−', '-');
+        return res;
+    } catch (e) {
+        //eslint-disable-next-line no-console
+        console.error(e);
+        return value;
+    }
+};
+
+/**
  * Convert number to string, adding commas to numbers greater than a thousand,
  *     otherwise use decimal notation, varying significant digits by size
  *
  * @param value number
  * @returns string
  */
-export const formatDigit = (value: number, d = 0) => {
-    if (!value) {
-        return value;
-    } else if (!d) {
-        if (Math.abs(value) < 1) {
-            d =
-                (value.toString().replace(/^0?\./, '').match(/0+/)?.length ||
-                    0) + 2;
-        } else if (Math.abs(value) < 10) {
-            d = 4;
-        } else if (Math.abs(value) < 1000) {
-            d = 5;
-        }
-    }
-
-    let ret: string | number = value;
-
-    try {
-        ret = format(`${d ? `.${d}~r` : ',d'}`)(value).replace('−', '-');
-    } catch (e) {
-        //eslint-disable-next-line no-console
-        console.error(e);
-    }
-
-    return ret;
+export const formatDigit = (value: number, d?: number) => {
+    const rounded = roundDigit(value, d);
+    if (rounded > 1000) {
+        return format(',d')(rounded);
+    } else return rounded;
 };
 
 /* merge two dictionaries by summing corresponding values */
