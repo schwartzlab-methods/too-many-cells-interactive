@@ -5,3 +5,5 @@ node/static/files/*
 .env
 .vscode
 node/dist/**/*
+nix/**/*/result*
+nix/postgres/logfile
