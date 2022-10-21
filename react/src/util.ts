@@ -68,15 +68,24 @@ export const valueToMadCount = (value: number, median: number, mad: number) => {
 };
 
 /**
+ * Return value as count of MADs from given median, signed by relationship to median
+ */
+export const valueToMadCountSigned = (
+    value: number,
+    median: number,
+    mad: number
+) => {
+    return valueToMadCount(value, median, mad) * (value > median ? 1 : -1);
+};
+
+/**
  * Return mad count as value, given median and mad
  */
 export const madCountToValue = (
     madCount: number,
     median: number,
     mad: number
-) => {
-    return median + madCount * mad;
-};
+) => median + madCount * mad;
 
 /* this is mainly for exporting to backend to avoid 2 d3 dependencies */
 export const getMedian = (values: number[]) => median(values) || 0;
@@ -197,22 +206,32 @@ export const pruneStepIsEmpty = (ctx: Readonly<PruneStep>) =>
 export const getObjectIsEmpty = (obj: Record<any, any>) =>
     !Object.keys(obj).length;
 
-/* add commas to numbers greater than a thousand, otherwise use decimal notation, varying significant digits by size */
-export const formatDigit = (value: number) => {
-    let d = 0;
+/**
+ * Convert number to string, adding commas to numbers greater than a thousand,
+ *     otherwise use decimal notation, varying significant digits by size
+ *
+ * @param value number
+ * @returns string
+ */
+export const formatDigit = (value: number, d = 0) => {
     if (!value) {
         return value;
-    } else if (Math.abs(value) < 1) {
-        d = 3;
-    } else if (Math.abs(value) < 10) {
-        d = 4;
-    } else if (Math.abs(value) < 1000) {
-        d = 5;
+    } else if (!d) {
+        if (Math.abs(value) < 1) {
+            d =
+                (value.toString().replace(/^0?\./, '').match(/0+/)?.length ||
+                    0) + 2;
+        } else if (Math.abs(value) < 10) {
+            d = 4;
+        } else if (Math.abs(value) < 1000) {
+            d = 5;
+        }
     }
+
     let ret: string | number = value;
 
     try {
-        ret = format(`${d ? `.${d}~r` : ',d'}`)(value);
+        ret = format(`${d ? `.${d}~r` : ',d'}`)(value).replace('−', '-');
     } catch (e) {
         //eslint-disable-next-line no-console
         console.error(e);

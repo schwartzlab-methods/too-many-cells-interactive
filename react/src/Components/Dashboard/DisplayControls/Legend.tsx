@@ -60,7 +60,7 @@ const LegendItem: React.FC<LegendItemProps> = ({
     const [pickerOpen, setPickerOpen] = useState(false);
 
     return (
-        <LegendItemContainer onClick={() => setPickerOpen(true)}>
+        <LegendItemContainer>
             <Popover
                 open={pickerOpen}
                 onOpenChange={() => setPickerOpen(!pickerOpen)}

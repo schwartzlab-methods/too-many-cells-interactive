@@ -29,13 +29,14 @@ import {
 } from '../redux/annotationSlice';
 import {
     calculateTreeLayout,
-    formatDigit,
     getEntries,
     getMAD,
+    madCountToValue,
     pruneTreeByMinDistance,
     pruneTreeByMinDistanceSearch,
     pruneTreeByMinValue,
     runPrunes,
+    valueToMadCount,
 } from '../util';
 import { CumSumBin } from '../Visualizations/AreaChart';
 import useAppSelector from './useAppSelector';
@@ -293,7 +294,7 @@ const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
         )!,
         madGroups: getDistanceMadGroups(
             nodes,
-            getMaxCutoffDistance(nodes),
+            getMinCutoffDistance(nodes),
             pruneTreeByMinDistance
         ),
         median: median(
@@ -304,7 +305,7 @@ const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
         )!,
         plainGroups: getDistanceGroups(
             nodes,
-            getMaxCutoffDistance(nodes),
+            getMinCutoffDistance(nodes),
             pruneTreeByMinDistance
         ),
     },
@@ -317,7 +318,7 @@ const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
         )!,
         madGroups: getDistanceMadGroups(
             nodes,
-            getMaxCutoffDistance(nodes),
+            getMinCutoffDistanceSearch(nodes),
             pruneTreeByMinDistanceSearch
         ),
         median: median(
@@ -328,7 +329,7 @@ const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
         )!,
         plainGroups: getDistanceGroups(
             nodes,
-            getMaxCutoffDistanceSearch(nodes),
+            getMinCutoffDistanceSearch(nodes),
             pruneTreeByMinDistanceSearch
         ),
     },
@@ -370,7 +371,16 @@ const getDistanceGroups = (
     pruneFn: (tree: TMCHierarchyDataNode, size: number) => TMCHierarchyDataNode,
     binCount = 50
 ): CumSumBin[] => {
-    const bounds = ticks(0, cutoffDistance, binCount);
+    const bounds = ticks(
+        min(
+            tree
+                .descendants()
+                .filter(v => (v.data.distance || 0) <= cutoffDistance)
+                .map(d => d.data.distance || 0)
+        )!,
+        cutoffDistance,
+        binCount
+    );
 
     return bounds.map(value => ({
         value,
@@ -381,7 +391,7 @@ const getDistanceGroups = (
 /**
  * @param tree the pruned tree (we calculate new distributions for each prune)
  * @param cutoffDistance the MAXIMUM distance that can be pruned before the tree collapses into one generation of nodes.
- *  This is the smalled value of a root-grandchild node.
+ *  This is the smallest value among the root's grandchildren.
  * @returns object keyed by integer `n` whose value is count of nodes with `distance` >= median + (n * MAD) in tree
  */
 const getDistanceMadGroups = (
@@ -391,35 +401,59 @@ const getDistanceMadGroups = (
 ): CumSumBin[] => {
     const values = tree
         .descendants()
-        .map(d => d.data.distance!)
-        .sort((a, b) => (a < b ? -1 : 1));
+        .filter(d => d.data.distance !== null)
+        .map(d => d.data.distance || 0) //redundant but needed for TS
+        .sort((a, b) => (a! < b! ? -1 : 1));
 
+    // get median and mad for full (non-null) distribution
     const mad = getMAD(values)!;
     const med = median(values)!;
 
-    const maxMads = +formatDigit((cutoffDistance - med) / mad);
+    // get the display min and max, excluding values greater than the cutoff
+    const [min, max] = extent(values.filter(v => v <= cutoffDistance));
 
-    const bounds = range(0, maxMads).map(m => ({
-        size: med + m * mad,
-        mads: m,
+    // assume that min is less than median...
+    const greatestNegativeMadDistance =
+        valueToMadCount(min || 0, med, mad) * -1;
+
+    // assume that max is greater than median...
+    const greatestPositiveMadDistance = valueToMadCount(max || 0, med, mad);
+
+    const binCount = 25;
+
+    const binSize =
+        Math.abs(
+            Math.abs(greatestPositiveMadDistance) -
+                Math.abs(greatestNegativeMadDistance)
+        ) / binCount;
+
+    const bounds = range(
+        greatestNegativeMadDistance,
+        greatestPositiveMadDistance,
+        binSize
+    ).map(n => ({
+        value: madCountToValue(n, med, mad),
+        mads: n,
     }));
 
     return bounds.map(b => ({
         value: b.mads,
-        count: pruneFn(tree, b.size).descendants().length,
+        count: pruneFn(tree, b.value).descendants().length,
     }));
 };
 
 /**
- * Find the minimum size-cutoff value needed to display at least one generation of the tree
- * This ends up being the smallest grandchild of the root
+ * Find the minimum size-cutoff value needed to display at least one generation of the tree.
+ * This ends up being the smallest value of the first two generations
+ *  and represents the MAXIMUM value we can prune and still have a tree
  */
-const getMaxCutoffDistance = (tree: TMCHierarchyDataNode) => {
+const getMinCutoffDistance = (tree: TMCHierarchyDataNode) => {
     if (tree.children) {
         return min(
-            tree.children.flatMap(d =>
-                d.children ? d.children.map(d => d.data.distance || 0) : 0
-            )
+            tree
+                .descendants()
+                .filter(n => n.depth <= 1)
+                .map(n => n.data.distance || 0)
         )!;
     } else return 0;
 };
@@ -428,7 +462,7 @@ const getMaxCutoffDistance = (tree: TMCHierarchyDataNode) => {
  * Find the minimum size-cutoff value needed to display at least one generation of the tree
  * This ends up being the smallest child of the root
  */
-const getMaxCutoffDistanceSearch = (tree: TMCHierarchyDataNode) => {
+const getMinCutoffDistanceSearch = (tree: TMCHierarchyDataNode) => {
     if (tree.children) {
         return min(tree.children.map(d => d.data.distance || 0))!;
     } else return 0;
@@ -463,6 +497,7 @@ const getSizeGroups = (
 
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `value` >= median + (n * MAD) in tree
+ * TODO: merge duplicate code from getDistanceMadGroups
  */
 const getSizeMadGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
     const maxSize = getMaxCutoffNodeSize(tree)!;
@@ -475,16 +510,35 @@ const getSizeMadGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
     const mad = getMAD(values)!;
     const med = median(values)!;
 
-    const maxMads = Math.ceil((maxSize - med) / mad);
+    const [min, max] = extent(values.filter(v => v <= maxSize));
 
-    const bounds = range(0, maxMads).map(m => ({
-        size: med + m * mad,
-        mads: m,
+    const binCount = 15;
+
+    // assume that min is less than median...
+    const greatestNegativeMadDistance =
+        valueToMadCount(min || 0, med, mad) * -1;
+
+    // assume that max is greater than median...
+    const greatestPositiveMadDistance = valueToMadCount(max || 0, med, mad);
+
+    const binSize =
+        Math.abs(
+            Math.abs(greatestPositiveMadDistance) -
+                Math.abs(greatestNegativeMadDistance)
+        ) / binCount;
+
+    const bounds = range(
+        greatestNegativeMadDistance,
+        greatestPositiveMadDistance,
+        binSize
+    ).map(n => ({
+        value: madCountToValue(n, med, mad),
+        mads: n,
     }));
 
     return bounds.map(b => ({
         value: b.mads,
-        count: pruneTreeByMinValue(tree, b.size).descendants().length,
+        count: pruneTreeByMinValue(tree, b.value).descendants().length,
     }));
 };
 
@@ -527,7 +581,7 @@ const getFeatureDistributions = (
 
 /**
  * Divide the feature counts into bins, each keyed by cumsum
- * @param range: the feature counts;
+ * @param range: the feature counts
  */
 const getPlainFeatureGroups = (range: number[]): CumSumBin[] => {
     const thresholds = ticks(0, max(range) || 0, Math.max(max(range) || 0, 25));
@@ -541,7 +595,7 @@ const getPlainFeatureGroups = (range: number[]): CumSumBin[] => {
 };
 
 /**
- * Divide the feature MAD count into bins, each keyed MAD count
+ * Divide the feature MAD count into bins, each keyed by MAD count
  * @param range: the feature counts;
  */
 const getMadFeatureGroups = (

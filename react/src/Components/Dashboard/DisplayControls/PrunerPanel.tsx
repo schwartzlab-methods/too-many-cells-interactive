@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { format } from 'd3-format';
 import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import {
@@ -17,9 +16,15 @@ import { Column, Row, WidgetTitle } from '../../Layout';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import { Text } from '../../Typography';
 import { SelectPanel } from '../..';
-import { madCountToValue, valueToMadCount } from '../../../util';
+import {
+    formatDigit,
+    madCountToValue,
+    valueToMadCountSigned,
+} from '../../../util';
 import { CumSumBin } from '../../../Visualizations/AreaChart';
 import QuestionTip from '../../QuestionTip';
+
+//TODO: get rid of inline functions!
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -222,7 +227,7 @@ const Pruner: React.FC<PrunerProps> = ({
                             <AreaChartComponent
                                 counts={plainValues}
                                 onBrush={v => {
-                                    setInputVal(format('.1f')(v));
+                                    setInputVal(formatDigit(+v).toString());
                                     onSubmit(v);
                                 }}
                                 value={value}
@@ -274,8 +279,6 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
 
     const [inputVal, setInputVal] = useState<string>(value ? value + '' : '0');
 
-    const formatVal = format('.3f');
-
     useEffect(() => {
         //not sure about this....
         if (!value && inputVal != '0') {
@@ -284,9 +287,13 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
 
         if (value !== undefined) {
             if (type === 'raw') {
-                setInputVal(formatVal(value));
+                setInputVal(formatDigit(value).toString());
             } else {
-                setInputVal(formatVal(valueToMadCount(value, median, madSize)));
+                setInputVal(
+                    formatDigit(
+                        valueToMadCountSigned(value, median, madSize)
+                    ).toString()
+                );
             }
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
@@ -347,7 +354,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                                     }}
                                     value={
                                         value
-                                            ? valueToMadCount(
+                                            ? valueToMadCountSigned(
                                                   value,
                                                   median,
                                                   madSize

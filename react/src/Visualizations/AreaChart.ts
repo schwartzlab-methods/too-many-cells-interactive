@@ -1,9 +1,10 @@
 import { extent, max } from 'd3-array';
 import { axisBottom, axisRight } from 'd3-axis';
 import { brushX, BrushSelection, D3BrushEvent } from 'd3-brush';
-import { ScaleLinear, scaleLinear } from 'd3-scale';
+import { NumberValue, ScaleLinear, scaleLinear } from 'd3-scale';
 import { select, Selection } from 'd3-selection';
 import { area, curveBasis } from 'd3-shape';
+import { formatDigit } from '../util';
 
 /* object representing a cumulative count for some value in a list of numbers*/
 export interface CumSumBin {
@@ -106,25 +107,38 @@ export default class Histogram {
             .on('end', () => (startX = 0));
 
         this.svg
-            .selectAll<any, any>('g.brush-container')
-            //dummy data for enter/exit on rerender
+            .selectAll<SVGGElement, null>('g.brush-container')
+            //initial value may be provided from outside
             .data([null])
-            .join('g')
-            .attr('class', 'brush-container')
-            .call(brush)
-            .on('click', function () {
-                brush.move(select(this), [0, 0]);
-                that.onBrush(0);
-            })
-            //reset
-            .call(brush.move, [
-                initialValue
-                    ? this.xScale(initialValue)
-                    : this.xScale.range().slice(-1)[0],
-                this.xScale.range().slice(-1)[0],
-            ]);
+            .join(
+                enter =>
+                    enter
+                        .append('g')
+                        .attr('class', 'brush-container')
+                        .call(brush)
+                        .on('click', function () {
+                            brush.move(select(this), [0, 0]);
+                            that.onBrush(0);
+                        })
+                        .call(brush.move, [
+                            this.xScale(
+                                initialValue || this.xScale.range().slice(-1)[0]
+                            ),
+                            this.xScale.range().slice(-1)[0],
+                        ]),
+                update => {
+                    if (initialValue) {
+                        update.call(brush.move, [
+                            this.xScale(initialValue),
+                            this.xScale.range().slice(-1)[0],
+                        ]);
+                    }
+                    return update;
+                }
+            );
     };
 
+    /* Initialvalue is from upstream, may change over life of object if user manually changes input */
     render = (initialValue?: number) => {
         const bins = this.counts.map(c => c.value);
 
@@ -132,6 +146,9 @@ export default class Histogram {
             0 + this.margin + 12,
             this.w - this.margin,
         ]).domain(extent(bins) as [number, number]);
+
+        this.xScale.tickFormat = () => (val: NumberValue) =>
+            formatDigit(+val).toString();
 
         this.yScale = scaleLinear([
             this.h - this.margin,

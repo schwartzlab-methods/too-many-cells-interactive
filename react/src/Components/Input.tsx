@@ -56,19 +56,22 @@ export const NumberInput: React.FC<NumberInputProps> = ({
         setInternalValue(value);
     }, [value]);
 
-    const wrappedOnChange = useCallback((arg: string) => {
-        //if it starts with a dot, is an empty string, or is in the form .000 update internal value but don't push
-        if (arg === '' || /^\d*\.0*$/.test(arg)) {
-            setInternalValue(arg);
-        }
-        //this is when we have a fully valid number that can be consumed by a number-expecting parent
-        else if (/^\d*(\.\d+)?$/.test(arg)) {
-            setInternalValue(+arg);
-            return onChange(+arg);
-        }
-        //otherwise (e.g., input is not a number) do nothing
-        //eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    const wrappedOnChange = useCallback(
+        (arg: string) => {
+            // if val is empty string or starts/ends with 0 r ., update internal value but don't push
+            if (
+                /^(-)?.*(\.|(\.[0-9]*)0)$/.test(arg) ||
+                ['', '-', '-.', '-0.'].includes(arg)
+            ) {
+                setInternalValue(arg);
+            } else if (!isNaN(+arg) && !isNaN(parseFloat(arg))) {
+                setInternalValue(+arg);
+                return onChange(+arg);
+            }
+            //otherwise (e.g., input is not a number or number-like) do nothing
+        },
+        [onChange]
+    );
 
     return (
         <Input
