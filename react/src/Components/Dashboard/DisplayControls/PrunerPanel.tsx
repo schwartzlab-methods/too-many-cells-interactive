@@ -24,8 +24,6 @@ import {
 import { CumSumBin } from '../../../Visualizations/AreaChart';
 import QuestionTip from '../../QuestionTip';
 
-//TODO: get rid of inline functions!
-
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
     transition: 0.5s opacity cubic-bezier(0.73, 0.32, 0.34, 1.5);
@@ -226,10 +224,7 @@ const Pruner: React.FC<PrunerProps> = ({
                         <>
                             <AreaChartComponent
                                 counts={plainValues}
-                                onBrush={v => {
-                                    setInputVal(roundDigit(+v).toString());
-                                    onSubmit(v);
-                                }}
+                                onBrush={v => onSubmit(v)}
                                 value={value}
                                 xLabel={xLabel}
                             />
@@ -280,11 +275,6 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
     const [inputVal, setInputVal] = useState<string>(value ? value + '' : '0');
 
     useEffect(() => {
-        //not sure about this....
-        if (!value && inputVal != '0') {
-            setInputVal('0');
-        }
-
         if (value !== undefined) {
             if (type === 'raw') {
                 setInputVal(roundDigit(value).toString());
@@ -331,10 +321,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                             {type === 'raw' && (
                                 <AreaChartComponent
                                     counts={plainValues}
-                                    onBrush={val => {
-                                        setInputVal(val.toString());
-                                        onSubmit(val);
-                                    }}
+                                    onBrush={val => onSubmit(val)}
                                     value={value}
                                     xLabel={xLabel}
                                 />
@@ -342,16 +329,15 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                             {type === 'smart' && (
                                 <AreaChartComponent
                                     counts={madValues}
-                                    onBrush={val => {
-                                        setInputVal(val.toString());
+                                    onBrush={val =>
                                         onSubmit(
                                             madCountToValue(
                                                 val,
                                                 median,
                                                 madSize
                                             )
-                                        );
-                                    }}
+                                        )
+                                    }
                                     value={
                                         value
                                             ? valueToMadCountSigned(
