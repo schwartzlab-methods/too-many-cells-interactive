@@ -42,6 +42,7 @@ import {
 import { SmartPruner } from '../DisplayControls/PrunerPanel';
 import { CloseIcon } from '../../Icons';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
+import QuestionTip from '../../QuestionTip';
 
 const FeatureSearch: React.FC = () => {
     const [loading, setLoading] = useState(false);
@@ -183,6 +184,7 @@ const FeatureSearch: React.FC = () => {
                         type='radio'
                     />
                     <RadioLabel htmlFor='bulk'>Bulk Entry</RadioLabel>
+                    <QuestionTip message='Features should be comma-separated with no whitespace.' />
                 </RadioGroup>
             </Row>
             <Row justifyContent='flex-start'>

@@ -120,11 +120,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
             Object.keys(featureMaps).forEach(k => {
                 const range = treeWithCells
                     .leaves()
-                    .flatMap(l =>
-                        (l.data.items || []).map(
-                            item => item._barcode._featureValues![k] || 0
-                        )
-                    );
+                    .flatMap(n => getNodeFeatureCounts(n, k));
 
                 const med = median(range.filter(Boolean))!;
                 thresholds[k] = med;
@@ -405,38 +401,9 @@ const getDistanceMadGroups = (
         .map(d => d.data.distance || 0) //redundant but needed for TS
         .sort((a, b) => (a! < b! ? -1 : 1));
 
-    // get median and mad for full (non-null) distribution
-    const mad = getMAD(values)!;
-    const med = median(values)!;
+    const groups = getMadGroups(values, 25, cutoffDistance);
 
-    // get the display min and max, excluding values greater than the cutoff
-    const [min, max] = extent(values.filter(v => v <= cutoffDistance));
-
-    // assume that min is less than median...
-    const greatestNegativeMadDistance =
-        valueToMadCount(min || 0, med, mad) * -1;
-
-    // assume that max is greater than median...
-    const greatestPositiveMadDistance = valueToMadCount(max || 0, med, mad);
-
-    const binCount = 25;
-
-    const binSize =
-        Math.abs(
-            Math.abs(greatestPositiveMadDistance) -
-                Math.abs(greatestNegativeMadDistance)
-        ) / binCount;
-
-    const bounds = range(
-        greatestNegativeMadDistance,
-        greatestPositiveMadDistance,
-        binSize
-    ).map(n => ({
-        value: madCountToValue(n, med, mad),
-        mads: n,
-    }));
-
-    return bounds.map(b => ({
+    return groups.map(b => ({
         value: b.mads,
         count: pruneFn(tree, b.value).descendants().length,
     }));
@@ -479,6 +446,34 @@ const getMaxCutoffNodeSize = (tree: TMCHierarchyDataNode) => {
 };
 
 /**
+ * get the total features in a given cell
+ *
+ * @param node TMCHiearchyNode
+ * @param feature feature name
+ * @returns number
+ */
+const getNodeFeatureTotalCount = (node: TMCHiearchyNode, feature: string) => {
+    let total = 0;
+    for (const item of node.data.items || []) {
+        total += item._barcode._featureValues![feature] || 0;
+    }
+
+    return total;
+};
+
+/**
+ * get counts for features among cells in the given node
+ *
+ * @param node TMCHiearchyNode
+ * @param feature feature name
+ * @returns number
+ */
+const getNodeFeatureCounts = (node: TMCHiearchyNode, feature: string) =>
+    (node.data.items || []).map(
+        item => item._barcode._featureValues![feature] || 0
+    );
+
+/**
  * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
  */
 const getSizeGroups = (
@@ -497,7 +492,6 @@ const getSizeGroups = (
 
 /**
  * @returns object keyed by integer `n` whose value is count of nodes with `value` >= median + (n * MAD) in tree
- * TODO: merge duplicate code from getDistanceMadGroups
  */
 const getSizeMadGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
     const maxSize = getMaxCutoffNodeSize(tree)!;
@@ -507,12 +501,19 @@ const getSizeMadGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
         .map(d => d.value!)
         .sort((a, b) => (a < b ? -1 : 1));
 
+    const groups = getMadGroups(values, 15, maxSize);
+
+    return groups.map(b => ({
+        value: b.mads,
+        count: pruneTreeByMinValue(tree, b.value).descendants().length,
+    }));
+};
+
+const getMadGroups = (values: number[], binCount = 15, maxSize?: number) => {
     const mad = getMAD(values)!;
     const med = median(values)!;
 
-    const [min, max] = extent(values.filter(v => v <= maxSize));
-
-    const binCount = 15;
+    const [min, max] = extent(values.filter(v => v <= (maxSize ?? Infinity)));
 
     // assume that min is less than median...
     const greatestNegativeMadDistance =
@@ -527,7 +528,7 @@ const getSizeMadGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
                 Math.abs(greatestNegativeMadDistance)
         ) / binCount;
 
-    const bounds = range(
+    return range(
         greatestNegativeMadDistance,
         greatestPositiveMadDistance,
         binSize
@@ -535,13 +536,9 @@ const getSizeMadGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
         value: madCountToValue(n, med, mad),
         mads: n,
     }));
-
-    return bounds.map(b => ({
-        value: b.mads,
-        count: pruneTreeByMinValue(tree, b.value).descendants().length,
-    }));
 };
 
+/* Note that these values are for cells, not nodes */
 const getFeatureDistributions = (
     nodes: TMCHierarchyDataNode,
     activeFeatures: string[]
@@ -549,30 +546,43 @@ const getFeatureDistributions = (
     const distributions = {} as Record<string, FeatureDistribution>;
 
     activeFeatures.forEach(f => {
-        const range = nodes
-            .leaves()
-            .flatMap(l =>
-                (l.data.items || []).map(
-                    item => item._barcode._featureValues![f] || 0
-                )
-            );
+        const dist = nodes.leaves().flatMap(d => getNodeFeatureCounts(d, f));
 
-        const med = median(range.filter(Boolean))!;
+        const distWithoutZeroes = dist.filter(Boolean);
 
-        const medianWithZeroes = median(range)!;
+        //median feature count among cells
+        const med = median(distWithoutZeroes);
 
-        const mad = getMAD(range.filter(Boolean)) || 0;
+        const medianWithZeroes = median(dist);
+
+        const mad = getMAD(dist) || 0;
 
         distributions[f] = {
             mad,
-            madGroups: getMadFeatureGroups(range.filter(Boolean), mad, med),
-            madWithZeroes: getMAD(range) || 0, //remove 0s
-            max: max(range) || 0,
-            min: min(range) || 0,
+            madGroups: getMadGroups(dist).map(b => {
+                const res = {
+                    value: b.mads,
+                    count: nodes
+                        .leaves()
+                        //we want the count of nodes that have at least one cell under the mad filter
+                        .filter(
+                            d =>
+                                !!(d.data.items || []).filter(
+                                    i =>
+                                        (i._barcode._featureValues[f] || 0) >=
+                                        b.value
+                                ).length
+                        ).length,
+                };
+                return res;
+            }),
+            madWithZeroes: getMAD(dist) || 0,
+            max: max(dist) || 0,
+            min: min(dist) || 0,
             median: med || 0,
             medianWithZeroes: medianWithZeroes || 0,
-            plainGroups: getPlainFeatureGroups(range.filter(Boolean)),
-            total: sum(range) || 0,
+            plainGroups: getPlainFeatureGroups(dist),
+            total: sum(dist) || 0,
         };
     });
 
@@ -595,27 +605,6 @@ const getPlainFeatureGroups = (range: number[]): CumSumBin[] => {
 };
 
 /**
- * Divide the feature MAD count into bins, each keyed by MAD count
- * @param range: the feature counts;
- */
-const getMadFeatureGroups = (
-    range: number[],
-    mad: number,
-    median: number
-): CumSumBin[] => {
-    const maxVal = max(range) || 0;
-
-    const maxMads = Math.ceil((maxVal - median) / mad);
-
-    const thresholds = ticks(0, maxMads, Math.max(maxMads, 25));
-
-    return thresholds.map(value => ({
-        value,
-        count: range.filter(n => n > median + mad * value).length,
-    }));
-};
-
-/**
  *
  * @param nodes the base tree (not a pruned tree)
  * @param features the active features
@@ -628,11 +617,7 @@ export const updateFeatureCounts = (
     nodes.eachAfter(n => {
         if (n.data.items) {
             features.forEach(f => {
-                const quantity = n.data.items!.reduce(
-                    (acc, curr) =>
-                        (acc += curr._barcode._featureValues[f] || 0),
-                    0
-                );
+                const quantity = getNodeFeatureTotalCount(n, f);
 
                 const average = n.value ? quantity / n.value : 0;
 

@@ -9,7 +9,6 @@ interface QuestionTipProps {
 
 const QuestionContainer = styled.span`
     margin-left: 5px;
-    flex-grow: 1;
 `;
 
 const QuestionTip: React.FC<QuestionTipProps> = ({ message }) => (

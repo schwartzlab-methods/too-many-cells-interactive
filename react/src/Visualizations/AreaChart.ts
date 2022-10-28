@@ -110,31 +110,21 @@ export default class Histogram {
             .selectAll<SVGGElement, null>('g.brush-container')
             //initial value may be provided from outside
             .data([null])
-            .join(
-                enter =>
-                    enter
-                        .append('g')
-                        .attr('class', 'brush-container')
-                        .call(brush)
-                        .on('click', function () {
-                            brush.move(select(this), [0, 0]);
-                            that.onBrush(0);
-                        })
-                        .call(brush.move, [
-                            this.xScale(
-                                initialValue || this.xScale.range().slice(-1)[0]
-                            ),
-                            this.xScale.range().slice(-1)[0],
-                        ]),
-                update => {
-                    if (initialValue) {
-                        update.call(brush.move, [
-                            this.xScale(initialValue),
-                            this.xScale.range().slice(-1)[0],
-                        ]);
-                    }
-                    return update;
-                }
+            .join(enter =>
+                enter
+                    .append('g')
+                    .attr('class', 'brush-container')
+                    .call(brush)
+                    .on('click', function () {
+                        brush.move(select(this), [0, 0]);
+                        that.onBrush(that.xScale.domain()[0]);
+                    })
+                    .call(brush.move, [
+                        this.xScale(
+                            initialValue ?? this.xScale.range().slice(-1)[0]
+                        ),
+                        this.xScale.range().slice(-1)[0],
+                    ])
             );
     };
 
