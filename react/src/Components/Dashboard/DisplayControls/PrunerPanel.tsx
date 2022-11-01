@@ -209,9 +209,10 @@ const Pruner: React.FC<PrunerProps> = ({
     const [inputVal, setInputVal] = useState<string>(value ? value + '' : '0');
 
     useEffect(() => {
-        if (!value && inputVal != '0') {
-            setInputVal('0');
+        if (value !== undefined) {
+            setInputVal(roundDigit(value).toString());
         }
+
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value]);
 
