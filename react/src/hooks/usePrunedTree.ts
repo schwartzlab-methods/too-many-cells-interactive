@@ -555,11 +555,12 @@ const getFeatureDistributions = (
 
         const medianWithZeroes = median(dist);
 
-        const mad = getMAD(dist) || 0;
+        //if we include zeroes the median will be zero
+        const mad = getMAD(distWithoutZeroes)!;
 
         distributions[f] = {
             mad,
-            madGroups: getMadGroups(dist).map(b => {
+            madGroups: getMadGroups(distWithoutZeroes).map(b => {
                 const res = {
                     value: b.mads,
                     count: nodes
@@ -576,13 +577,13 @@ const getFeatureDistributions = (
                 };
                 return res;
             }),
-            madWithZeroes: getMAD(dist) || 0,
-            max: max(dist) || 0,
-            min: min(dist) || 0,
-            median: med || 0,
-            medianWithZeroes: medianWithZeroes || 0,
+            madWithZeroes: getMAD(dist) ?? 0,
+            max: max(dist) ?? 0,
+            min: min(dist) ?? 0,
+            median: med ?? 0,
+            medianWithZeroes: medianWithZeroes ?? 0,
             plainGroups: getPlainFeatureGroups(dist),
-            total: sum(dist) || 0,
+            total: sum(dist) ?? 0,
         };
     });
 
