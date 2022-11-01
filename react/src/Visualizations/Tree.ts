@@ -3,6 +3,7 @@ import { extent, sum } from 'd3-array';
 import { dispatch } from 'd3-dispatch';
 import { D3DragEvent, drag, DragBehavior } from 'd3-drag';
 import { format } from 'd3-format';
+import { HierarchyPointLink } from 'd3-hierarchy';
 import { ScaleLinear, scaleLinear } from 'd3-scale';
 import { BaseType, select, selectAll, Selection } from 'd3-selection';
 import { arc, pie, PieArcDatum, pointRadial } from 'd3-shape';
@@ -14,6 +15,7 @@ import {
     TMCHiearchyLink,
     TMCHierarchyDataNode,
     AttributeMap,
+    TMCNode,
 } from '../types';
 import { ClickPruner } from '../redux/pruneSlice';
 import {
@@ -378,6 +380,7 @@ class RadialTree {
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
     context: TreeContext;
     distanceScale: ScaleLinear<number, number>;
+    gradientContainer: Selection<SVGDefsElement, unknown, HTMLElement, unknown>;
     linkContainer: Selection<SVGGElement, unknown, HTMLElement, unknown>;
     links?: Selection<SVGGElement, TMCHiearchyLink, any, any>;
     nodeDragBehavior:
@@ -438,6 +441,8 @@ class RadialTree {
             .append('g')
             .attr('class', 'node-container')
             .attr('stroke-opacity', 0.8);
+
+        this.gradientContainer = this.container.append('defs');
 
         if (!this.serverSideMode) {
             attachToolTip();
@@ -610,20 +615,17 @@ class RadialTree {
                   .on('end', () => deltaBehavior.on('nodeDelta', null));
     }
 
-    /* todo: why is add label scale not triggering rerender? why do nodes rerender every time? */
     renderLinks = (
         selection: Selection<SVGGElement, TMCHiearchyLink, any, unknown>
     ) => {
         const { branchSizeScale, colorScaleWrapper } =
             this.context.displayContext.scales;
 
-        const gradients = this.container
+        const gradients = this.gradientContainer
             .selectAll<BaseType, TMCHiearchyLink>('linearGradient')
             .data(
                 this.context.displayContext.visibleNodes.links(),
-                //  (d: TMCHiearchyLink) =>
-                //      `${makeLinkId(d)}-${this.colorScale.range().join(' ')}`
-                () => Math.random()
+                (d: TMCHiearchyLink) => makeLinkId(d)
             )
             .join('linearGradient')
             .attr('gradientUnits', 'userSpaceOnUse')
@@ -631,15 +633,30 @@ class RadialTree {
             .attr('y1', d => pointRadial(d.source.x, d.source.y)[1])
             .attr('x2', d => pointRadial(d.target.x, d.target.y)[0])
             .attr('y2', d => pointRadial(d.target.x, d.target.y)[1])
-            .attr('id', d => `${d.source.data.id}-${d.target.data.id}`);
+            .attr(
+                'id',
+                d => `n-${d.source.data.nodeId}-${d.target.data.nodeId}`
+            );
 
         gradients
-            .append('stop')
+            .selectAll('stop.start')
+            .data<HierarchyPointLink<TMCNode>>(
+                d => [d],
+                d => makeLinkId(d as HierarchyPointLink<TMCNode>)
+            )
+            .join('stop')
+            .attr('class', 'start')
             .attr('offset', '40%')
             .attr('stop-color', d => colorScaleWrapper(d.source));
 
         gradients
-            .append('stop')
+            .selectAll('stop.end')
+            .data<HierarchyPointLink<TMCNode>>(
+                d => [d],
+                d => makeLinkId(d as HierarchyPointLink<TMCNode>)
+            )
+            .join('stop')
+            .attr('class', 'end')
             .attr('offset', '85%')
             .attr('stop-color', d => colorScaleWrapper(d.target));
 
@@ -680,6 +697,18 @@ class RadialTree {
 
                 update =>
                     update
+                        .attr(
+                            'stroke',
+                            this.context.displayContext.toggleableFeatures
+                                .strokeVisible
+                                ? 'black'
+                                : 'none'
+                        )
+                        .attr(
+                            'fill',
+                            d =>
+                                `url('#n-${d.source.data.nodeId}-${d.target.data.nodeId}')`
+                        )
                         .transition()
                         .delay(this.transitionTime)
                         .duration(this.transitionTime)
@@ -706,16 +735,6 @@ class RadialTree {
                             ).toString()
                         )
                         .remove()
-            )
-            .attr(
-                'stroke',
-                this.context.displayContext.toggleableFeatures.strokeVisible
-                    ? 'black'
-                    : 'none'
-            )
-            .attr(
-                'fill',
-                d => `url('#${d.source.data.id}-${d.target.data.id}')`
             );
     };
 
