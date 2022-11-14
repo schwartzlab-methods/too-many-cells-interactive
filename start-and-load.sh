@@ -19,7 +19,7 @@ function help()
    echo
 }
 
-if [[ $# < 6 ]]; then
+if [[ $# -lt 6 ]]; then
     help && exit 1
 fi
 
@@ -90,7 +90,7 @@ else
 
 fi
 
-docker-compose -f docker-compose.prod.yaml run --rm -p ${port}:3000 \
+docker-compose -f docker-compose.prod.yaml run --rm -p "${port}":3000 \
     -v "${tree_path}":/usr/app/static/files/cluster_tree.json:ro \
     -v "${label_path}":/usr/app/static/files/labels.csv:ro \
     node --prod

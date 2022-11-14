@@ -6,7 +6,7 @@ import yargs from 'yargs';
 import concatStream from 'concat-stream';
 import { Pool } from 'pg';
 
-import { queryFeatures } from '../src';
+import { queryFeatures } from '../src/util';
 import Tree, {
     d3select,
     TreeContext,

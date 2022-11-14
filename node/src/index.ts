@@ -1,15 +1,9 @@
 import express from 'express';
 import { Pool } from 'pg';
 import path from 'path';
+import { queryFeatures } from './util';
 
 const app = express();
-
-export interface Feature {
-    feature: string;
-    feature_type: string;
-    id: string;
-    value: number;
-}
 
 const pool = new Pool();
 
@@ -30,26 +24,6 @@ app.use('/api/features', async (req, res) => {
         res.json(formatted);
     }
 });
-
-export const queryFeatures = async (features: string[], pool: Pool) => {
-    const parameters = features.map((_, i) => `$${i + 1}`).join(',');
-
-    const r = await pool.query<Feature>(
-        `SELECT * FROM features where feature in (${parameters})`,
-        features
-    );
-
-    const formatted = {} as Record<string, Record<string | number, number>>;
-
-    r.rows.forEach(item => {
-        if (!formatted[item.feature]) {
-            formatted[item.feature] = {};
-        }
-        formatted[item.feature][item.id] = +item.value;
-    });
-
-    return formatted;
-};
 
 app.use('/api/features-set', async (req, res) => {
     //searching all docs by regex is slow, so we can just return all unique values up front

@@ -671,20 +671,7 @@ class RadialTree {
                     return enter
                         .append('polygon')
                         .attr('class', 'link')
-                        .attr('points', d =>
-                            drawScaledTrapezoid(
-                                pointRadial(d.source.x, d.source.y),
-                                pointRadial(d.source.x, d.source.y).map(
-                                    d => d + 0.1
-                                ) as Point,
-                                0,
-                                0
-                            ).toString()
-                        )
                         .call(this.branchDragBehavior)
-                        .transition()
-                        .delay(this.transitionTime * 2)
-                        .duration(this.transitionTime)
                         .attr('points', d => {
                             return drawScaledTrapezoid(
                                 pointRadial(d.source.x, d.source.y),
@@ -692,7 +679,19 @@ class RadialTree {
                                 branchSizeScale(d.source.value!),
                                 branchSizeScale(d.target.value!)
                             ).toString();
-                        });
+                        })
+                        .attr(
+                            'stroke',
+                            this.context.displayContext.toggleableFeatures
+                                .strokeVisible
+                                ? 'black'
+                                : 'none'
+                        )
+                        .attr(
+                            'fill',
+                            d =>
+                                `url('#n-${d.source.data.nodeId}-${d.target.data.nodeId}')`
+                        );
                 },
 
                 update =>

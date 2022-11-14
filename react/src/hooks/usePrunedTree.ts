@@ -565,7 +565,7 @@ const getFeatureDistributions = (
                     value: b.mads,
                     count: nodes
                         .leaves()
-                        //we want the count of nodes that have at least one cell under the mad filter
+                        //we want the count of nodes that have at least one cell under the mad threshold filter
                         .filter(
                             d =>
                                 !!(d.data.items || []).filter(

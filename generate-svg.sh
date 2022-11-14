@@ -7,7 +7,7 @@ set -eo pipefail
 # Assumes the database has already been provisioned, either by running ./start-and-load.sh or manually.
 # Note that by default the user running the container process is `node`, which has UID 1000, please ensure that this user has the proper
 # permissions to access the mounted files and directories; alternately, a different user can be configured to run the container
-# using the --user argument to the docker run command or by passing arguments directly to the build command.
+# using the --user argument to the docker run command or by passing the corresponding arguments (`ARG`s) to the build command.
 
 build=true
 
@@ -21,7 +21,7 @@ if [[ $# -lt 7 ]]; then
         [--no-build] " && exit 1
 fi
 
-while [ ! -z $1 ]; do
+while [ -n "$1" ]; do
     if [[ $1 == '--label-path' ]]; then 
         shift
         if [[ ! -f "${1}" ]]; then
@@ -74,6 +74,7 @@ while [ ! -z $1 ]; do
         shift
     fi
 done
+
 
 # mount config file only if we're not reading from stdin
 if [[ $target_config_path == '-' ]]; then

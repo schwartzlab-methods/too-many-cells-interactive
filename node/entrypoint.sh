@@ -6,7 +6,7 @@ init=''
 debug=''
 prod=''
 
-while [ ! -z "$1" ]; do
+while [ -n "$1" ]; do
     if [[ "$1" == '--init' ]]; then 
         shift
         init=1
