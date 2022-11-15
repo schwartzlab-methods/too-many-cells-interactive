@@ -87,7 +87,6 @@ if [[ -n "${matrix_dir}" ]]; then
 else
     # reset the database in case a prior run inserted data that's no longer needed
     docker-compose exec postgres psql -U postgres -d tmc -c 'TRUNCATE features;'
-
 fi
 
 docker-compose -f docker-compose.prod.yaml run --rm -p "${port}":3000 \

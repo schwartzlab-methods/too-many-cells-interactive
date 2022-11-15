@@ -30,7 +30,7 @@ json=$(cat <<EOF
 EOF
 )
 
-for g in ${genes[@]}; do
+for g in "${genes[@]}"; do
 
     config=$(echo $json |  jq --arg g "$g" --arg override export-"$g".svg '
         setpath(["features"];[$g]) 
