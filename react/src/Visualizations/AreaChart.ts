@@ -54,7 +54,7 @@ export default class Histogram {
         this.xLabel = xLabel;
     }
 
-    setBrush = (initialValue?: number) => {
+    setBrush = (brushValue?: number) => {
         const that = this;
         let startX = 0;
         let selectedIdx: number;
@@ -110,26 +110,34 @@ export default class Histogram {
             .selectAll<SVGGElement, null>('g.brush-container')
             //initial value may be provided from outside
             .data([null])
-            .join(enter =>
-                enter
-                    .append('g')
-                    .attr('class', 'brush-container')
-                    .call(brush)
-                    .on('click', function () {
-                        brush.move(select(this), [0, 0]);
-                        that.onBrush(that.xScale.domain()[0]);
-                    })
-                    .call(brush.move, [
+            .join(
+                enter =>
+                    enter
+                        .append('g')
+                        .attr('class', 'brush-container')
+                        .call(brush)
+                        .on('click', function () {
+                            brush.move(select(this), [0, 0]);
+                            that.onBrush(that.xScale.domain()[0]);
+                        })
+                        .call(brush.move, [
+                            this.xScale(
+                                brushValue ?? this.xScale.range().slice(-1)[0]
+                            ),
+                            this.xScale.range().slice(-1)[0],
+                        ]),
+                update =>
+                    update.call(brush.move, [
                         this.xScale(
-                            initialValue ?? this.xScale.range().slice(-1)[0]
+                            brushValue ?? this.xScale.range().slice(-1)[0]
                         ),
                         this.xScale.range().slice(-1)[0],
                     ])
             );
     };
 
-    /* Initialvalue is from upstream, may change over life of object if user manually changes input */
-    render = (initialValue?: number) => {
+    /* brushValue is from upstream, may change over life of object if user manually changes input */
+    render = (brushValue?: number) => {
         const bins = this.counts.map(c => c.value);
 
         this.xScale = scaleLinear([
@@ -233,6 +241,6 @@ export default class Histogram {
             .attr('text-anchor', 'end')
             .text(d => d);
 
-        this.setBrush(initialValue);
+        this.setBrush(brushValue);
     };
 }
