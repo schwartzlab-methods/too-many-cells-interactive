@@ -132,13 +132,10 @@ const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
 
         if (scaleType === 'featureHiLos') {
             const thresholds =
-                (state.scales.colorScale?.featureHiLoThresholds as Record<
-                    string,
-                    number
-                >) || {};
+                state.scales.colorScale?.featureHiLoThresholds || {};
             getEntries(featureMap).forEach(([k, v]) => {
                 if (!thresholds[k]) {
-                    thresholds[k] = getMedian(Object.values(v));
+                    thresholds[k].plainValue = getMedian(Object.values(v));
                 }
             });
             updatefeatureHiLos(nodes, thresholds, state.features);

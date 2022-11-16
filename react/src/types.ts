@@ -73,3 +73,8 @@ export type TMCHierarchyDataNode = TMCHierarchyPointNode | TMCHiearchyNode;
 export type TMCHiearchyLink = HierarchyPointLink<TMCNode>;
 
 export type FeatureMap = Record<string, Record<string, number>>;
+
+export interface PlainOrMADVal {
+    plainValue: number;
+    madsValue?: number;
+}

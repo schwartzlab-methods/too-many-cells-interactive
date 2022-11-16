@@ -30,7 +30,7 @@ import {
     activateFeatureColorScale as _activateFeatureColorScale,
     selectDisplayConfig,
     updateColorScale as _updateColorScale,
-    updateColorScaleThresholds as _updateColorScaleThresholds,
+    updateColorScaleThresholds as __updateColorScaleThresholds,
     updateColorScaleType as _updateColorScaleType,
 } from '../../../redux/displayConfigSlice';
 import {
@@ -39,15 +39,17 @@ import {
     removeActiveFeature as _removeActiveFeature,
     selectAnnotationSlice,
 } from '../../../redux/annotationSlice';
-import { SmartPruner } from '../DisplayControls/PrunerPanel';
+import { SmartPruner, SmartPrunerProps } from '../DisplayControls/PrunerPanel';
 import { CloseIcon } from '../../Icons';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import QuestionTip from '../../QuestionTip';
+import { PlainOrMADVal } from '../../../types';
+import { PrunerValueDisplayType } from '../../../redux/pruneSlice';
 
 const FeatureSearch: React.FC = () => {
-    const [loading, setLoading] = useState(false);
-    const [featureList, setFeatureList] = useState<string[]>();
     const [bulkFeatureInput, setBulkFeatureInput] = useState('');
+    const [featureList, setFeatureList] = useState<string[]>();
+    const [loading, setLoading] = useState(false);
     const [lookupType, setLookupType] = useState<'single' | 'bulk'>('single');
 
     const {
@@ -66,7 +68,7 @@ const FeatureSearch: React.FC = () => {
         clearActiveFeatures,
         removeActiveFeature,
         updateColorScale,
-        updateColorScaleThresholds,
+        _updateColorScaleThresholds,
         updateColorScaleType,
     } = bindActionCreators(
         {
@@ -75,7 +77,7 @@ const FeatureSearch: React.FC = () => {
             clearActiveFeatures: _clearActiveFeatures,
             removeActiveFeature: _removeActiveFeature,
             updateColorScale: _updateColorScale,
-            updateColorScaleThresholds: _updateColorScaleThresholds,
+            _updateColorScaleThresholds: __updateColorScaleThresholds,
             updateColorScaleType: _updateColorScaleType,
         },
         useAppDispatch()
@@ -94,6 +96,9 @@ const FeatureSearch: React.FC = () => {
             return !/^[A-Za-z0-9,]+$/.test(bulkFeatureInput);
         }
     }, [bulkFeatureInput]);
+
+    const updateColorScaleThresholds = (key: string, val: PlainOrMADVal) =>
+        _updateColorScaleThresholds({ [key]: val });
 
     const removeFeature = (featureName: string) => {
         removeActiveFeature(featureName);
@@ -242,7 +247,7 @@ const FeatureSearch: React.FC = () => {
                         {Object.keys(featureHiLoThresholds)
                             .filter(k => activeFeatures.includes(k))
                             .map(k => (
-                                <SmartPruner
+                                <UncontrolledSmartPruner
                                     key={k}
                                     expanded={true}
                                     id={k}
@@ -268,9 +273,10 @@ const FeatureSearch: React.FC = () => {
                                     plainValues={
                                         featureDistributions[k].plainGroups
                                     }
-                                    onSubmit={v =>
-                                        updateColorScaleThresholds({
-                                            [k]: v,
+                                    onSubmit={(plainValue, madsValue) =>
+                                        updateColorScaleThresholds(k, {
+                                            plainValue,
+                                            ...{ madsValue },
                                         })
                                     }
                                     xLabel='Theshold'
@@ -471,3 +477,23 @@ const Choice = styled.span<{ selected: boolean }>`
 `;
 
 export default FeatureSearch;
+
+/* 
+    For the main smart pruners, we pass in view type from reducer b/c it needs to be available on state.
+    In this case, though, the value can stay local, so we'll just wrap.
+*/
+
+const UncontrolledSmartPruner: React.FC<
+    Omit<SmartPrunerProps, 'onViewTypeChange' | 'viewType'>
+> = props => {
+    const [prunerViewType, setPrunerViewType] =
+        useState<PrunerValueDisplayType>('plain');
+
+    const wrappedProps: SmartPrunerProps = {
+        ...props,
+        onViewTypeChange: setPrunerViewType,
+        viewType: prunerViewType,
+    };
+
+    return <SmartPruner {...wrappedProps} />;
+};

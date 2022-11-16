@@ -4,6 +4,7 @@ import { extent, max, median, min, range, sum, ticks } from 'd3-array';
 import {
     AttributeMap,
     FeatureMap,
+    PlainOrMADVal,
     TMCHiearchyNode,
     TMCHierarchyDataNode,
 } from '../types';
@@ -112,7 +113,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
                 featureMaps
             ) as TMCHiearchyNode;
 
-            const thresholds = {} as Record<string, number>;
+            const thresholds = {} as Record<string, PlainOrMADVal>;
 
             // then calculate new scale thresholds, which will cause next hook to fire, which will
             // calculate node-level counts based on these new thresholds
@@ -123,7 +124,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
                     .flatMap(n => getNodeFeatureCounts(n, k));
 
                 const med = median(range.filter(Boolean))!;
-                thresholds[k] = med;
+                thresholds[k] = { plainValue: med };
             });
 
             updateColorScaleThresholds(thresholds);
@@ -660,7 +661,7 @@ export const updateFeatureCounts = (
  */
 export const updatefeatureHiLos = (
     nodes: TMCHierarchyDataNode,
-    thresholds: Record<string, number>,
+    thresholds: Record<string, PlainOrMADVal>,
     activeFeatures: string[]
 ) =>
     nodes.eachAfter(n => {
@@ -678,7 +679,9 @@ export const updatefeatureHiLos = (
                     .reduce(
                         (acc, [k, v]) =>
                             `${acc ? acc + '-' : ''}${
-                                v && v >= thresholds[k] ? 'high' : 'low'
+                                v && v >= thresholds[k]?.plainValue
+                                    ? 'high'
+                                    : 'low'
                             }-${k}`,
                         ''
                     );

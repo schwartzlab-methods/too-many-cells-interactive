@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { PlainOrMADVal } from '../types';
 import { getEntries } from '../util';
 import type { RootState } from './store';
 
@@ -38,7 +39,7 @@ export interface ColorScaleConfig {
     featureGradientRange: [string, string];
     featureHiLoDomain: string[];
     featureHiLoRange: string[];
-    featureHiLoThresholds: Record<string, number>;
+    featureHiLoThresholds: Record<string, PlainOrMADVal>;
     labelDomain: string[];
     labelRange: string[];
     userAnnotationRange: [string, string];
@@ -163,7 +164,7 @@ export const displayConfigSlice = createSlice({
         },
         updateColorScaleThresholds: (
             state,
-            { payload }: PayloadAction<Record<string, number>>
+            { payload }: PayloadAction<Record<string, PlainOrMADVal>>
         ) => {
             state.scales.colorScale.featureHiLoThresholds = {
                 ...state.scales.colorScale.featureHiLoThresholds,

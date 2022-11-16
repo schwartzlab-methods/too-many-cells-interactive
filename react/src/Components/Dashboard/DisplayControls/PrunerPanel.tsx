@@ -3,9 +3,11 @@ import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import {
     addValuePrune as _addValuePrune,
+    PrunerValueDisplayType,
     selectActivePruneStep,
     selectPruneSlice,
     ValuePruneType,
+    updatePruneValueDisplayType as _updatePruneValueDisplayType,
 } from '../../../redux/pruneSlice';
 import { AreaChartComponent } from '../../../Components';
 //https://github.com/styled-components/styled-components/issues/1449
@@ -16,13 +18,10 @@ import { Column, Row, WidgetTitle } from '../../Layout';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import { Text } from '../../Typography';
 import { SelectPanel } from '../..';
-import {
-    madCountToValue,
-    roundDigit,
-    valueToMadCountSigned,
-} from '../../../util';
+import { madCountToValue, roundDigit, valueToMadCount } from '../../../util';
 import { CumSumBin } from '../../../Visualizations/AreaChart';
 import QuestionTip from '../../QuestionTip';
+import { PlainOrMADVal } from '../../../types';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -83,9 +82,10 @@ const PrunerPanel: React.FC = () => {
         ];
     }, []);
 
-    const { addValuePrune } = bindActionCreators(
+    const { addValuePrune, updatePruneValueDisplayType } = bindActionCreators(
         {
             addValuePrune: _addValuePrune,
+            updatePruneValueDisplayType: _updatePruneValueDisplayType,
         },
         useAppDispatch()
     );
@@ -101,11 +101,18 @@ const PrunerPanel: React.FC = () => {
 
     const { step } = useAppSelector(selectActivePruneStep);
 
-    const getPrunerVal = (key: ValuePruneType) =>
-        key === step.valuePruner.key ? step.valuePruner.value : undefined;
+    const getPrunerVal = (name: ValuePruneType) =>
+        name === step.valuePruner.name ? step.valuePruner.value : undefined;
 
-    const prune = (key: ValuePruneType) => (value: number) =>
-        addValuePrune({ key, value });
+    const prune =
+        (name: ValuePruneType) => (plainValue: number, madsValue?: number) =>
+            addValuePrune({
+                name,
+                value: {
+                    plainValue,
+                    ...{ madsValue },
+                },
+            });
 
     return (
         <Column xs={12}>
@@ -138,8 +145,10 @@ const PrunerPanel: React.FC = () => {
                     madSize={sizeMeta.mad}
                     median={sizeMeta.median}
                     onSubmit={prune('minSize')}
+                    onViewTypeChange={updatePruneValueDisplayType}
                     plainValues={sizeMeta.plainGroups}
                     value={getPrunerVal('minSize')}
+                    viewType={step.valuePruner.displayValue || 'plain'}
                     xLabel='Size'
                 />
                 <SmartPruner
@@ -157,9 +166,11 @@ const PrunerPanel: React.FC = () => {
                     madValues={distanceMeta.madGroups}
                     madSize={distanceMeta.mad}
                     median={distanceMeta.median}
+                    onViewTypeChange={updatePruneValueDisplayType}
                     onSubmit={prune('minDistance')}
                     plainValues={distanceMeta.plainGroups}
                     value={getPrunerVal('minDistance')}
+                    viewType={step.valuePruner.displayValue || 'plain'}
                     xLabel='Distance'
                 />
                 <SmartPruner
@@ -169,9 +180,11 @@ const PrunerPanel: React.FC = () => {
                     madValues={distanceSearchMeta.madGroups}
                     madSize={distanceSearchMeta.mad}
                     median={distanceSearchMeta.median}
+                    onViewTypeChange={updatePruneValueDisplayType}
                     onSubmit={prune('minDistanceSearch')}
                     plainValues={distanceSearchMeta.plainGroups}
                     value={getPrunerVal('minDistanceSearch')}
+                    viewType={step.valuePruner.displayValue || 'plain'}
                     xLabel='Distance (Search)'
                 />
                 <Pruner
@@ -195,7 +208,7 @@ interface PrunerProps {
     onSubmit: (size: number) => void;
     plainValues: CumSumBin[];
     xLabel: string;
-    value?: number;
+    value?: PlainOrMADVal;
 }
 
 const Pruner: React.FC<PrunerProps> = ({
@@ -209,8 +222,8 @@ const Pruner: React.FC<PrunerProps> = ({
     const [inputVal, setInputVal] = useState<string>(value ? value + '' : '0');
 
     useEffect(() => {
-        if (value !== undefined) {
-            setInputVal(roundDigit(value).toString());
+        if (value?.plainValue) {
+            setInputVal(roundDigit(value.plainValue).toString());
         }
 
         //eslint-disable-next-line react-hooks/exhaustive-deps
@@ -226,7 +239,7 @@ const Pruner: React.FC<PrunerProps> = ({
                             <AreaChartComponent
                                 counts={plainValues}
                                 onBrush={v => onSubmit(v)}
-                                value={value}
+                                value={value?.plainValue}
                                 xLabel={xLabel}
                             />
                             <UpdateBox
@@ -246,17 +259,19 @@ const Pruner: React.FC<PrunerProps> = ({
     );
 };
 
-interface SmartPrunerProps {
+export interface SmartPrunerProps {
     expanded: boolean;
     id: string;
     label: JSX.Element;
     madSize: number;
     madValues: CumSumBin[];
     median: number;
+    onViewTypeChange: (viewType: PrunerValueDisplayType) => void;
     plainValues: CumSumBin[];
-    onSubmit: (size: number) => void;
+    onSubmit: (value: number, madsValue?: number) => void;
     xLabel: string;
-    value?: number;
+    value?: PlainOrMADVal;
+    viewType?: PrunerValueDisplayType;
 }
 
 export const SmartPruner: React.FC<SmartPrunerProps> = ({
@@ -266,29 +281,25 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
     madValues,
     madSize,
     median,
+    onViewTypeChange,
     plainValues,
     onSubmit,
     xLabel,
     value,
+    viewType,
 }) => {
-    const [type, setType] = useState<'raw' | 'smart'>('raw');
-
     const [inputVal, setInputVal] = useState<string>(value ? value + '' : '0');
 
     useEffect(() => {
         if (value !== undefined) {
-            if (type === 'raw') {
-                setInputVal(roundDigit(value).toString());
+            if (viewType === 'plain') {
+                setInputVal(roundDigit(value.plainValue || 0).toString());
             } else {
-                setInputVal(
-                    roundDigit(
-                        valueToMadCountSigned(value, median, madSize)
-                    ).toString()
-                );
+                setInputVal(roundDigit(value.madsValue || 0).toString() || '');
             }
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value, type]);
+    }, [value, viewType]);
 
     return (
         <PrunerContainer expanded={expanded}>
@@ -299,35 +310,44 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                         <>
                             <RadioGroup>
                                 <RadioButton
-                                    checked={type === 'raw'}
+                                    checked={viewType === 'plain'}
                                     id={`${id}raw`}
                                     name={`${id}types`}
-                                    onChange={() => setType('raw')}
+                                    onChange={() => onViewTypeChange('plain')}
                                     type='radio'
                                 />
                                 <RadioLabel htmlFor={`${id}raw`}>
                                     Plain
                                 </RadioLabel>
                                 <RadioButton
-                                    checked={type === 'smart'}
+                                    checked={viewType === 'mads'}
                                     id={`${id}smart`}
                                     name={`${id}types`}
-                                    onChange={() => setType('smart')}
+                                    onChange={() => onViewTypeChange('mads')}
                                     type='radio'
                                 />
                                 <RadioLabel htmlFor={`${id}smart`}>
                                     Smart
                                 </RadioLabel>
                             </RadioGroup>
-                            {type === 'raw' && (
+                            {viewType === 'plain' && (
                                 <AreaChartComponent
                                     counts={plainValues}
-                                    onBrush={val => onSubmit(val)}
-                                    value={value}
+                                    onBrush={val =>
+                                        onSubmit(
+                                            val,
+                                            valueToMadCount(
+                                                val,
+                                                median,
+                                                madSize
+                                            )
+                                        )
+                                    }
+                                    value={value?.plainValue}
                                     xLabel={xLabel}
                                 />
                             )}
-                            {type === 'smart' && (
+                            {viewType === 'mads' && (
                                 <AreaChartComponent
                                     counts={madValues}
                                     onBrush={val =>
@@ -336,18 +356,11 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                                                 val,
                                                 median,
                                                 madSize
-                                            )
+                                            ),
+                                            val
                                         )
                                     }
-                                    value={
-                                        value
-                                            ? valueToMadCountSigned(
-                                                  value,
-                                                  median,
-                                                  madSize
-                                              )
-                                            : undefined
-                                    }
+                                    value={value ? value.madsValue : undefined}
                                     xLabel={`${xLabel} in MADs from median`}
                                 />
                             )}
@@ -355,15 +368,20 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                                 onChange={v => setInputVal(v + '')}
                                 onSubmit={() => {
                                     if (inputVal) {
-                                        onSubmit(
-                                            type === 'smart'
+                                        const madsValue =
+                                            viewType === 'mads'
+                                                ? +inputVal
+                                                : undefined;
+                                        const plainValue =
+                                            viewType === 'mads'
                                                 ? madCountToValue(
                                                       +inputVal,
                                                       median,
                                                       madSize
                                                   )
-                                                : +inputVal
-                                        );
+                                                : +inputVal;
+
+                                        onSubmit(plainValue, madsValue);
                                     }
                                 }}
                                 value={inputVal}

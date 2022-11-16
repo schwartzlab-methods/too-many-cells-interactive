@@ -751,16 +751,16 @@ class RadialTree {
 
             if (event.ctrlKey) {
                 pruner = {
-                    key: 'setRootNode',
-                    value: targetNodeId,
+                    name: 'setRootNode',
+                    value: { plainValue: targetNodeId },
                 };
             } else if (event.shiftKey) {
                 pruner = {
-                    key: 'setCollapsedNode',
-                    value: targetNodeId,
+                    name: 'setCollapsedNode',
+                    value: { plainValue: targetNodeId },
                 };
             }
-            if (pruner.key) {
+            if (pruner.name) {
                 that.context.clickPruneCallbacks!.addClickPrune(pruner);
             }
         });
@@ -930,8 +930,8 @@ class RadialTree {
                     const collapsed =
                         that.context.displayContext.clickPruneHistory.find(
                             p =>
-                                p.key === 'setCollapsedNode' &&
-                                p.value === d.data.id
+                                p.name === 'setCollapsedNode' &&
+                                p.value?.plainValue === d.data.id
                         );
                     if (collapsed) {
                         that.context.clickPruneCallbacks!.removeClickPrune(

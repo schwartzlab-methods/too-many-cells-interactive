@@ -122,11 +122,17 @@ const PruneStep: React.FC<PruneStepProps> = ({
 };
 
 const getPruneHistoryLabel = (pruneStep: PruneStep, index: number) => {
-    const { key, value } = pruneStep.valuePruner;
+    const { name, value, displayValue } = pruneStep.valuePruner;
     const manualPruneCount = pruneStep.clickPruneHistory.length;
     const labels = [];
-    if (key && value) {
-        labels.push(`${key}: ${formatDigit(value)}`);
+    if (name && value) {
+        labels.push(
+            `${name}: ${formatDigit(
+                displayValue === 'mads'
+                    ? value.madsValue || 0
+                    : value.plainValue
+            )}${displayValue === 'mads' ? ' MADs' : ''}`
+        );
     }
     if (manualPruneCount) {
         labels.push(

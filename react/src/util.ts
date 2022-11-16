@@ -10,6 +10,7 @@ import {
     ClickPruner,
     ClickPruneType,
     PruneStep,
+    ValuePruner,
     ValuePruneType,
 } from './redux/pruneSlice';
 import { AttributeMap, TMCHierarchyDataNode, TMCNode } from './types';
@@ -350,9 +351,8 @@ export const runPrunes = (
     return _prunedNodes;
 };
 
-const isClickPruner = (pruner: ClickPruner | any): pruner is ClickPruner => {
-    return ['setCollapsedNode', 'setRootNode'].includes(pruner.key);
-};
+const isValuePruner = (pruner: AllPruner): pruner is ValuePruner =>
+    !!(pruner as ValuePruner).value?.madsValue;
 
 export const runClickPrunes = (
     clickPruneHistory: ClickPruner[],
@@ -377,11 +377,14 @@ const pruners = {
 };
 
 export const runPrune = (arg: AllPruner, tree: TMCHierarchyDataNode) => {
-    if (!arg.key) return tree;
-    if (isClickPruner(arg)) {
-        return pruners[arg.key as ClickPruneType](tree, arg.value!);
+    if (!arg.name || !arg.value) return tree;
+    if (!isValuePruner(arg)) {
+        return pruners[arg.name as ClickPruneType](
+            tree,
+            arg.value.plainValue as string
+        );
     } else {
-        return pruners[arg.key as ValuePruneType](tree, arg.value! as number);
+        return pruners[arg.name as ValuePruneType](tree, arg.value.plainValue);
     }
 };
 

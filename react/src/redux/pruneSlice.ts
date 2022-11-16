@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { PlainOrMADVal } from '../types';
 import { CumSumBin } from '../Visualizations/AreaChart';
 import type { RootState } from './store';
 
@@ -51,20 +52,28 @@ export type ClickPruneType = 'setRootNode' | 'setCollapsedNode';
 
 type AllPruneType = ValuePruneType | ClickPruneType;
 
+export type PrunerValueDisplayType = 'plain' | 'mads';
+
+/* A new prune step will be an empty object to be populated by UI controls */
 interface Pruner<T> {
-    key?: T;
+    name?: T;
+    displayValue?: PrunerValueDisplayType;
+}
+
+interface ClickPrunerVal {
+    plainValue: string;
 }
 
 export interface ClickPruner extends Pruner<ClickPruneType> {
-    value?: string;
+    value?: ClickPrunerVal;
 }
 
 export interface ValuePruner extends Pruner<ValuePruneType> {
-    value?: number;
+    value?: PlainOrMADVal;
 }
 
 export interface AllPruner extends Pruner<AllPruneType> {
-    value?: string | number;
+    value?: PlainOrMADVal | ClickPrunerVal;
 }
 
 export interface PruneStep {
@@ -98,16 +107,22 @@ export const pruneSlice = createSlice({
             { currentPruneStep, pruneHistory },
             { payload }: PayloadAction<ValuePruner>
         ) => {
-            pruneHistory[currentPruneStep].valuePruner = payload;
+            pruneHistory[currentPruneStep].valuePruner = {
+                ...pruneHistory[currentPruneStep].valuePruner,
+                ...payload,
+            };
+            //always wipe out uncommitted click prunes
             pruneHistory[currentPruneStep].clickPruneHistory = [];
         },
         removeClickPrune: (
             { currentPruneStep, pruneHistory },
-            { payload: { key, value } }: PayloadAction<ClickPruner>
+            { payload: { name, value } }: PayloadAction<ClickPruner>
         ) => {
             pruneHistory[currentPruneStep].clickPruneHistory = pruneHistory[
                 currentPruneStep
-            ].clickPruneHistory.filter(h => h.key !== key && h.value === value);
+            ].clickPruneHistory.filter(
+                h => h.name !== name && h.value === value
+            );
         },
         resetHistory: state => {
             state.currentPruneStep = 0;
@@ -125,6 +140,12 @@ export const pruneSlice = createSlice({
         ) => {
             state.distributionMetadata = payload;
         },
+        updatePruneValueDisplayType: (
+            { pruneHistory, currentPruneStep },
+            { payload }: PayloadAction<PrunerValueDisplayType>
+        ) => {
+            pruneHistory[currentPruneStep].valuePruner.displayValue = payload;
+        },
     },
 });
 
@@ -136,6 +157,7 @@ export const {
     resetHistory,
     revertToStep,
     updateDistributions,
+    updatePruneValueDisplayType,
 } = pruneSlice.actions;
 
 export const selectActivePruneStep = (state: RootState) => ({
