@@ -121,16 +121,12 @@ export default class Histogram {
                             that.onBrush(that.xScale.domain()[0]);
                         })
                         .call(brush.move, [
-                            this.xScale(
-                                brushValue ?? this.xScale.range().slice(-1)[0]
-                            ),
+                            this.xScale(brushValue ?? this.xScale.domain()[1]),
                             this.xScale.range().slice(-1)[0],
                         ]),
                 update =>
                     update.call(brush.move, [
-                        this.xScale(
-                            brushValue ?? this.xScale.range().slice(-1)[0]
-                        ),
+                        this.xScale(brushValue ?? this.xScale.domain()[1]),
                         this.xScale.range().slice(-1)[0],
                     ])
             );

@@ -463,7 +463,7 @@ const getNodeFeatureTotalCount = (node: TMCHiearchyNode, feature: string) => {
 };
 
 /**
- * get counts for features among cells in the given node
+ * get counts for features among cells in the given (leaf) node
  *
  * @param node TMCHiearchyNode
  * @param feature feature name
@@ -539,7 +539,13 @@ const getMadGroups = (values: number[], binCount = 15, maxSize?: number) => {
     }));
 };
 
-/* Note that these values are for cells, not nodes */
+/**
+ *
+ * @param nodes The tree, possibly pruned
+ * @param activeFeatures
+ * @returns Distribution of average feature-per-cell counts for each node according to current threshold
+ */
+
 const getFeatureDistributions = (
     nodes: TMCHierarchyDataNode,
     activeFeatures: string[]
@@ -547,7 +553,10 @@ const getFeatureDistributions = (
     const distributions = {} as Record<string, FeatureDistribution>;
 
     activeFeatures.forEach(f => {
-        const dist = nodes.leaves().flatMap(d => getNodeFeatureCounts(d, f));
+        /* Get average feature count per cell by node */
+        const dist = nodes
+            .descendants()
+            .map(d => d.data.featureCount[f].scaleKey as number);
 
         const distWithoutZeroes = dist.filter(Boolean);
 
@@ -561,23 +570,14 @@ const getFeatureDistributions = (
 
         distributions[f] = {
             mad,
-            madGroups: getMadGroups(distWithoutZeroes).map(b => {
-                const res = {
-                    value: b.mads,
-                    count: nodes
-                        .leaves()
-                        //we want the count of nodes that have at least one cell under the mad threshold filter
-                        .filter(
-                            d =>
-                                !!(d.data.items || []).filter(
-                                    i =>
-                                        (i._barcode._featureValues[f] || 0) >=
-                                        b.value
-                                ).length
-                        ).length,
-                };
-                return res;
-            }),
+            madGroups: getMadGroups(distWithoutZeroes).map(b => ({
+                value: b.mads,
+                count: nodes
+                    .descendants()
+                    //we want the count of nodes that have an average above the threshold filter
+                    .filter(d => d.data.featureCount[f].scaleKey > b.value)
+                    .length,
+            })),
             madWithZeroes: getMAD(dist) ?? 0,
             max: max(dist) ?? 0,
             min: min(dist) ?? 0,

@@ -279,7 +279,7 @@ const FeatureSearch: React.FC = () => {
                                             ...{ madsValue },
                                         })
                                     }
-                                    xLabel='Theshold'
+                                    xLabel='Average Feature Count per Node'
                                     value={featureHiLoThresholds[k]}
                                 />
                             ))}
