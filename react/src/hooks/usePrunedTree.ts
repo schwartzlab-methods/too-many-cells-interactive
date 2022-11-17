@@ -30,8 +30,10 @@ import {
 } from '../redux/annotationSlice';
 import {
     calculateTreeLayout,
+    getDistanceMAD,
     getEntries,
     getMAD,
+    getSizeMAD,
     madCountToValue,
     pruneTreeByMinDistance,
     pruneTreeByMinDistanceSearch,
@@ -283,12 +285,7 @@ export const addUserAnnotations = (
 const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
     depthGroups: getDepthGroups(nodes),
     distance: {
-        mad: getMAD(
-            nodes
-                .descendants()
-                .map(v => v.data.distance!)
-                .filter(Boolean)
-        )!,
+        mad: getDistanceMAD(nodes),
         madGroups: getDistanceMadGroups(
             nodes,
             getMinCutoffDistance(nodes),
@@ -307,12 +304,7 @@ const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
         ),
     },
     distanceSearch: {
-        mad: getMAD(
-            nodes
-                .descendants()
-                .map(v => v.data.distance!)
-                .filter(Boolean)
-        )!,
+        mad: getDistanceMAD(nodes),
         madGroups: getDistanceMadGroups(
             nodes,
             getMinCutoffDistanceSearch(nodes),
@@ -331,7 +323,7 @@ const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
         ),
     },
     size: {
-        mad: getMAD(nodes.descendants().map(v => v.value!))!,
+        mad: getSizeMAD(nodes),
         madGroups: getSizeMadGroups(nodes),
         median: median(nodes.descendants().map(v => v.value!))!,
         plainGroups: getSizeGroups(nodes),

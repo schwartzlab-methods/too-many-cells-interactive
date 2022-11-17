@@ -62,6 +62,27 @@ export const getMAD = (values: number[]) => {
 };
 
 /**
+ * Calculate the median absolute distance for the distance property, excluding zeroes
+ * @param node a TMC Tree
+ * @returns float
+ */
+export const getDistanceMAD = (node: TMCHierarchyDataNode) =>
+    getMAD(
+        node
+            .descendants()
+            .map(v => v.data.distance!)
+            .filter(Boolean)
+    )!;
+
+/**
+ * Calculate the median absolute distance for node size
+ * @param node a TMC Tree
+ * @returns float
+ */
+export const getSizeMAD = (node: TMCHierarchyDataNode) =>
+    getMAD(node.descendants().map(v => v.value!))!;
+
+/**
  * Return value as count of MADs from given median
  */
 export const valueToMadCount = (value: number, median: number, mad: number) => {
@@ -69,15 +90,13 @@ export const valueToMadCount = (value: number, median: number, mad: number) => {
 };
 
 /**
- * Return value as count of MADs from given median, signed by relationship to median
+ * Return value as count of MADs from given median, signed by position wrt median
  */
 export const valueToMadCountSigned = (
     value: number,
     median: number,
     mad: number
-) => {
-    return valueToMadCount(value, median, mad) * (value > median ? 1 : -1);
-};
+) => valueToMadCount(value, median, mad) * (value > median ? 1 : -1);
 
 /**
  * Return mad count as value, given median and mad
@@ -231,10 +250,11 @@ export const roundDigit = (value: number, sd?: number): number => {
     }
     let res: number;
     try {
-        //replace d3's dash with javascript's hyphen
+        //for negative numbers, replace d3's dash with javascript's hyphen
         res = +format(fmt)(value).replace('−', '-');
         return res;
     } catch (e) {
+        //we don't want the app to blow up if this function can't handle something
         //eslint-disable-next-line no-console
         console.error(e);
         return value;
@@ -376,6 +396,7 @@ const pruners = {
     setRootNode: setRootNode,
 };
 
+/* todo: this should be lower-level, higher up (in runPrunes) we can resolve the value, but in this case it should be k/v */
 export const runPrune = (arg: AllPruner, tree: TMCHierarchyDataNode) => {
     if (!arg.name || !arg.value) return tree;
     if (!isValuePruner(arg)) {
