@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { PlainOrMADVal } from '../types';
-import { getEntries } from '../util';
+import { PlainOrMADVal, ValueDisplayUnits } from '../types';
+import { getEntries, getKeys } from '../util';
 import type { RootState } from './store';
 
 export interface TreeMetaData {
@@ -40,6 +40,7 @@ export interface ColorScaleConfig {
     featureHiLoDomain: string[];
     featureHiLoRange: string[];
     featureHiLoThresholds: Record<string, PlainOrMADVal>;
+    featureHiLoThresholdUnits: Record<string, ValueDisplayUnits>;
     labelDomain: string[];
     labelRange: string[];
     userAnnotationRange: [string, string];
@@ -83,6 +84,7 @@ const initialScales: Scales = {
         featureHiLoDomain: [],
         featureHiLoRange: [],
         featureHiLoThresholds: {},
+        featureHiLoThresholdUnits: {},
         labelDomain: [],
         labelRange: [],
         userAnnotationRange: ['#D3D3D3', '#FFA500'],
@@ -170,6 +172,21 @@ export const displayConfigSlice = createSlice({
                 ...state.scales.colorScale.featureHiLoThresholds,
                 ...payload,
             };
+
+            getKeys(payload).forEach(k => {
+                if (!state.scales.colorScale.featureHiLoThresholdUnits[k]) {
+                    state.scales.colorScale.featureHiLoThresholdUnits[k] =
+                        'plain';
+                }
+            });
+        },
+        updateColorScaleThresholdUnits: (
+            state,
+            {
+                payload: { key, value },
+            }: PayloadAction<{ key: string; value: ValueDisplayUnits }>
+        ) => {
+            state.scales.colorScale.featureHiLoThresholdUnits[key] = value;
         },
         updateColorScaleType: (
             state,
@@ -201,8 +218,9 @@ export const {
     activateFeatureColorScale,
     toggleDisplayProperty,
     updateActiveOrdinalColorScale,
-    updateColorScaleThresholds,
     updateColorScale,
+    updateColorScaleThresholds,
+    updateColorScaleThresholdUnits,
     updateColorScaleType,
     updateLinearScale,
     updateTreeMetadata,

@@ -78,3 +78,5 @@ export interface PlainOrMADVal {
     plainValue: number;
     madsValue?: number;
 }
+
+export type ValueDisplayUnits = 'plain' | 'mads';

@@ -31,6 +31,7 @@ import {
     selectDisplayConfig,
     updateColorScale as _updateColorScale,
     updateColorScaleThresholds as __updateColorScaleThresholds,
+    updateColorScaleThresholdUnits as _updateColorScaleThresholdUnits,
     updateColorScaleType as _updateColorScaleType,
 } from '../../../redux/displayConfigSlice';
 import {
@@ -39,12 +40,11 @@ import {
     removeActiveFeature as _removeActiveFeature,
     selectAnnotationSlice,
 } from '../../../redux/annotationSlice';
-import { SmartPruner, SmartPrunerProps } from '../DisplayControls/PrunerPanel';
+import { SmartPruner } from '../DisplayControls/PrunerPanel';
 import { CloseIcon } from '../../Icons';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import QuestionTip from '../../QuestionTip';
 import { PlainOrMADVal } from '../../../types';
-import { PrunerValueDisplayType } from '../../../redux/pruneSlice';
 
 const FeatureSearch: React.FC = () => {
     const [bulkFeatureInput, setBulkFeatureInput] = useState('');
@@ -54,7 +54,7 @@ const FeatureSearch: React.FC = () => {
 
     const {
         scales: {
-            colorScale: { featureHiLoThresholds },
+            colorScale: { featureHiLoThresholds, featureHiLoThresholdUnits },
         },
     } = useAppSelector(selectDisplayConfig);
 
@@ -69,6 +69,7 @@ const FeatureSearch: React.FC = () => {
         removeActiveFeature,
         updateColorScale,
         _updateColorScaleThresholds,
+        updateColorScaleThresholdUnits,
         updateColorScaleType,
     } = bindActionCreators(
         {
@@ -78,6 +79,7 @@ const FeatureSearch: React.FC = () => {
             removeActiveFeature: _removeActiveFeature,
             updateColorScale: _updateColorScale,
             _updateColorScaleThresholds: __updateColorScaleThresholds,
+            updateColorScaleThresholdUnits: _updateColorScaleThresholdUnits,
             updateColorScaleType: _updateColorScaleType,
         },
         useAppDispatch()
@@ -247,7 +249,7 @@ const FeatureSearch: React.FC = () => {
                         {Object.keys(featureHiLoThresholds)
                             .filter(k => activeFeatures.includes(k))
                             .map(k => (
-                                <UncontrolledSmartPruner
+                                <SmartPruner
                                     key={k}
                                     expanded={true}
                                     id={k}
@@ -273,6 +275,12 @@ const FeatureSearch: React.FC = () => {
                                     plainValues={
                                         featureDistributions[k].plainGroups
                                     }
+                                    onViewTypeChange={value =>
+                                        updateColorScaleThresholdUnits({
+                                            key: k,
+                                            value,
+                                        })
+                                    }
                                     onSubmit={(plainValue, madsValue) =>
                                         updateColorScaleThresholds(k, {
                                             plainValue,
@@ -281,6 +289,7 @@ const FeatureSearch: React.FC = () => {
                                     }
                                     xLabel='Average Feature Count per Node'
                                     value={featureHiLoThresholds[k]}
+                                    viewType={featureHiLoThresholdUnits[k]}
                                 />
                             ))}
                     </FeatureList>
@@ -477,23 +486,3 @@ const Choice = styled.span<{ selected: boolean }>`
 `;
 
 export default FeatureSearch;
-
-/* 
-    For the main smart pruners, we pass in view type from reducer b/c it needs to be available on state.
-    In this case, though, the value can stay local, so we'll just wrap.
-*/
-
-const UncontrolledSmartPruner: React.FC<
-    Omit<SmartPrunerProps, 'onViewTypeChange' | 'viewType'>
-> = props => {
-    const [prunerViewType, setPrunerViewType] =
-        useState<PrunerValueDisplayType>('plain');
-
-    const wrappedProps: SmartPrunerProps = {
-        ...props,
-        onViewTypeChange: setPrunerViewType,
-        viewType: prunerViewType,
-    };
-
-    return <SmartPruner {...wrappedProps} />;
-};

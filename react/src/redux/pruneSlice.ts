@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { PlainOrMADVal } from '../types';
+import { PlainOrMADVal, ValueDisplayUnits } from '../types';
 import { CumSumBin } from '../Visualizations/AreaChart';
 import type { RootState } from './store';
 
@@ -52,12 +52,12 @@ export type ClickPruneType = 'setRootNode' | 'setCollapsedNode';
 
 type AllPruneType = ValuePruneType | ClickPruneType;
 
-export type PrunerValueDisplayType = 'plain' | 'mads';
-
-/* A new prune step will be an empty object to be populated by UI controls */
+/* A new prune step will be an empty object to be populated by UI controls 
+    Display type stored on pruner mainly for convenience
+*/
 interface Pruner<T> {
     name?: T;
-    displayValue?: PrunerValueDisplayType;
+    displayValue?: ValueDisplayUnits;
 }
 
 interface ClickPrunerVal {
@@ -142,7 +142,7 @@ export const pruneSlice = createSlice({
         },
         updatePruneValueDisplayType: (
             { pruneHistory, currentPruneStep },
-            { payload }: PayloadAction<PrunerValueDisplayType>
+            { payload }: PayloadAction<ValueDisplayUnits>
         ) => {
             pruneHistory[currentPruneStep].valuePruner.displayValue = payload;
         },

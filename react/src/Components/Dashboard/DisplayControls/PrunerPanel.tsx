@@ -3,7 +3,6 @@ import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import {
     addValuePrune as _addValuePrune,
-    PrunerValueDisplayType,
     selectActivePruneStep,
     selectPruneSlice,
     ValuePruneType,
@@ -21,7 +20,7 @@ import { SelectPanel } from '../..';
 import { madCountToValue, roundDigit, valueToMadCount } from '../../../util';
 import { CumSumBin } from '../../../Visualizations/AreaChart';
 import QuestionTip from '../../QuestionTip';
-import { PlainOrMADVal } from '../../../types';
+import { PlainOrMADVal, ValueDisplayUnits } from '../../../types';
 
 const ChartContainer = styled.div<{ expanded: boolean }>`
     opacity: ${props => (props.expanded ? 1 : 0)};
@@ -266,12 +265,12 @@ export interface SmartPrunerProps {
     madSize: number;
     madValues: CumSumBin[];
     median: number;
-    onViewTypeChange: (viewType: PrunerValueDisplayType) => void;
+    onViewTypeChange: (viewType: ValueDisplayUnits) => void;
     plainValues: CumSumBin[];
     onSubmit: (value: number, madsValue?: number) => void;
     xLabel: string;
     value?: PlainOrMADVal;
-    viewType?: PrunerValueDisplayType;
+    viewType?: ValueDisplayUnits;
 }
 
 export const SmartPruner: React.FC<SmartPrunerProps> = ({
