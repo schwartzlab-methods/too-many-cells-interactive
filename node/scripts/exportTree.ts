@@ -14,15 +14,22 @@ import Tree, {
 import { transformData } from '../../react/src/prepareData';
 import {
     addGray,
+    AnyPruneHistory,
     calculateOrdinalColorScaleRangeAndDomain,
     calculateTreeLayout,
+    getDistances,
     getEntries,
     getExtent,
     getKeys,
+    getMAD,
     getMedian,
+    getObjectIsEmpty,
     getScaleCombinations,
+    getSizes,
     interpolateColorScale,
-    runPrunes,
+    madCountToValue,
+    prunerMap,
+    runClickPrunes,
     textToAnnotations,
 } from '../../react/src/util';
 import {
@@ -37,6 +44,7 @@ import { attachLegend } from '../../react/src/downloadImage';
 import {
     AttributeMap,
     TMCHiearchyNode,
+    TMCHierarchyDataNode,
     TMCHierarchyPointNode,
 } from '../../react/src/types';
 import { StateExport } from '../../react/src/hooks/useExportState';
@@ -48,6 +56,7 @@ import {
     updatefeatureHiLos,
 } from '../../react/src/hooks/usePrunedTree';
 import { ToggleableDisplayElements } from '../../react/src/redux/displayConfigSlice';
+import { ClickPruner, ValuePruneType } from '../../react/src/redux/pruneSlice';
 
 type StateConfig = StateExport & { filenameOverride?: string };
 type ChartConfig = Required<StateExport> & { filenameOverride?: string };
@@ -113,6 +122,61 @@ if (argv.annotationPath) {
     annotations = textToAnnotations(text);
 }
 
+/*  
+    This is different than the front-end runprunes function in that it recalculates the relevant MADs after each run,
+        since the MAD value should be given in terms of the current (pruned) distribution of nodes.
+    We don't do this on the FE b/c it has a performance penalty, so instead we just store both values (MADs and plain).
+    But we can't do that here b/c the data might be arbitrary and the plain values not useful.
+*/
+const runBackEndPrunes = (
+    pruneHistory: AnyPruneHistory[],
+    tree: TMCHierarchyDataNode
+) => {
+    let i = 0;
+    let _prunedNodes = tree;
+    while (i < pruneHistory.length) {
+        if (
+            !!pruneHistory[i].valuePruner &&
+            !getObjectIsEmpty(pruneHistory[i].valuePruner)
+        ) {
+            const {
+                valuePruner: { displayValue, name, value },
+            } = pruneHistory[i];
+            //typeguarding
+            if (!!name && !!value) {
+                let val: number;
+                if (displayValue === 'mads' && !!name && !!value) {
+                    const mapped = [
+                        'minDistance',
+                        'minDistanceSearch',
+                    ].includes(name)
+                        ? getDistances(_prunedNodes)
+                        : getSizes(_prunedNodes);
+
+                    val = madCountToValue(
+                        value.madsValue!,
+                        getMedian(mapped),
+                        getMAD(mapped)
+                    );
+                } else {
+                    val = value!.plainValue!;
+                }
+
+                _prunedNodes = prunerMap[name](_prunedNodes, val);
+            }
+
+            if (pruneHistory[i].clickPruneHistory) {
+                _prunedNodes = runClickPrunes(
+                    pruneHistory[i].clickPruneHistory as ClickPruner[],
+                    _prunedNodes
+                );
+            }
+        }
+        i++;
+    }
+    return _prunedNodes;
+};
+
 const getFeatureMap = async (features: string[]) => {
     const pool = new Pool();
     const featureMap = await queryFeatures(features, pool);
@@ -147,13 +211,15 @@ const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
     return nodes;
 };
 
-// run prunes (generally done after adding features but before calculating scales)
+/* 
+    Run prunes (should be done after adding features but before calculating scales).thin
+ */
 const pruneAndCalculateLayout = (
     state: ChartConfig,
     nodes: TMCHiearchyNode
 ) => {
     const pruned = state.pruneState.length
-        ? runPrunes(state.pruneState.length - 1, state.pruneState, nodes)
+        ? runBackEndPrunes(state.pruneState, nodes)
         : nodes;
 
     const visibleNodes = calculateTreeLayout(pruned, state.width);

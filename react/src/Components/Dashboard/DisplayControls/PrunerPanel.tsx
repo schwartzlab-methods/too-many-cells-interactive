@@ -294,8 +294,10 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
             if (viewType === 'plain') {
                 setInputVal(roundDigit(value.plainValue || 0).toString());
             } else {
-                setInputVal(roundDigit(value.madsValue || 0).toString() || '');
+                setInputVal(roundDigit(value.madsValue || 0).toString());
             }
+        } else {
+            setInputVal('');
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value, viewType]);
@@ -359,7 +361,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                                             val
                                         )
                                     }
-                                    value={value ? value.madsValue : undefined}
+                                    value={value?.madsValue}
                                     xLabel={`${xLabel} in MADs from median`}
                                 />
                             )}

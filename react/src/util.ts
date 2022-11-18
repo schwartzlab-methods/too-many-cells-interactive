@@ -58,7 +58,7 @@ export const getMAD = (values: number[]) => {
 
     const distances = values.map(v => Math.abs(v - med));
 
-    return median(distances);
+    return median(distances)!;
 };
 
 /**
@@ -66,21 +66,19 @@ export const getMAD = (values: number[]) => {
  * @param node a TMC Tree
  * @returns float
  */
-export const getDistanceMAD = (node: TMCHierarchyDataNode) =>
-    getMAD(
-        node
-            .descendants()
-            .map(v => v.data.distance!)
-            .filter(Boolean)
-    )!;
+export const getDistances = (node: TMCHierarchyDataNode) =>
+    node
+        .descendants()
+        .map(v => v.data.distance!)
+        .filter(Boolean)!;
 
 /**
  * Calculate the median absolute distance for node size
  * @param node a TMC Tree
  * @returns float
  */
-export const getSizeMAD = (node: TMCHierarchyDataNode) =>
-    getMAD(node.descendants().map(v => v.value!))!;
+export const getSizes = (node: TMCHierarchyDataNode) =>
+    node.descendants().map(v => v.value!)!;
 
 /**
  * Return value as count of MADs from given median
@@ -387,7 +385,7 @@ export const runClickPrunes = (
     return _tree;
 };
 
-const pruners = {
+export const prunerMap = {
     minDepth: pruneTreeByDepth,
     minSize: pruneTreeByMinValue,
     minDistance: pruneTreeByMinDistance,
@@ -396,16 +394,18 @@ const pruners = {
     setRootNode: setRootNode,
 };
 
-/* todo: this should be lower-level, higher up (in runPrunes) we can resolve the value, but in this case it should be k/v */
 export const runPrune = (arg: AllPruner, tree: TMCHierarchyDataNode) => {
     if (!arg.name || !arg.value) return tree;
     if (!isValuePruner(arg)) {
-        return pruners[arg.name as ClickPruneType](
+        return prunerMap[arg.name as ClickPruneType](
             tree,
             arg.value.plainValue as string
         );
     } else {
-        return pruners[arg.name as ValuePruneType](tree, arg.value.plainValue);
+        return prunerMap[arg.name as ValuePruneType](
+            tree,
+            arg.value.plainValue
+        );
     }
 };
 
