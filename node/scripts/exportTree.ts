@@ -52,6 +52,7 @@ import {
     addFeaturesToCells,
     addUserAnnotations,
     getFeatureGradientDomain,
+    getFeatureMadAndMeds,
     updateFeatureCounts,
     updatefeatureHiLos,
 } from '../../react/src/hooks/usePrunedTree';
@@ -188,23 +189,38 @@ const getFeatureMap = async (features: string[]) => {
  * If features are present, add them to cells and annotate nodes as required for scales to render appropriately.
  */
 const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
-    const { variant: scaleType } = state.scales!.colorScale!;
+    const { variant: scaleType, featureHiLoThresholdUnits } =
+        state.scales!.colorScale!;
 
     if (state.features.length && scaleType !== 'labelCount') {
         const featureMap = await getFeatureMap(state.features);
         addFeaturesToCells(nodes, featureMap);
 
         if (scaleType === 'featureHiLos') {
+            updateFeatureCounts(nodes, state.features);
+
             const thresholds =
                 state.scales.colorScale?.featureHiLoThresholds || {};
+
             getEntries(featureMap).forEach(([k, v]) => {
                 if (!thresholds[k]) {
-                    thresholds[k].plainValue = getMedian(Object.values(v));
+                    const { med } = getFeatureMadAndMeds(nodes, k);
+                    thresholds[k].plainValue = med!;
+                } else if (
+                    !!thresholds[k].madsValue &&
+                    featureHiLoThresholdUnits &&
+                    featureHiLoThresholdUnits[k] === 'mads'
+                ) {
+                    const { med, mad } = getFeatureMadAndMeds(nodes, k);
+
+                    thresholds[k].plainValue = madCountToValue(
+                        thresholds[k].madsValue!,
+                        med!,
+                        mad
+                    );
                 }
             });
             updatefeatureHiLos(nodes, thresholds, state.features);
-        } else {
-            updateFeatureCounts(nodes, state.features);
         }
     }
 
@@ -212,7 +228,7 @@ const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
 };
 
 /* 
-    Run prunes (should be done after adding features but before calculating scales).thin
+    Run prunes (should be done after adding features but before calculating scales)
  */
 const pruneAndCalculateLayout = (
     state: ChartConfig,

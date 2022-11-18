@@ -30,6 +30,7 @@ export default class Histogram {
     svg: Selection<SVGGElement, unknown, any, any>;
     title?: string;
     xLabel: string;
+    yLabel: string;
     xScale!: ScaleLinear<number, number>;
     w = 400;
     yScale!: ScaleLinear<number, number>;
@@ -38,6 +39,7 @@ export default class Histogram {
         onBrush: (val: number) => void,
         selector: string,
         xLabel: string,
+        yLabel: string,
         title?: string
     ) {
         this.counts = counts;
@@ -50,7 +52,7 @@ export default class Histogram {
             .attr('class', 'container');
 
         this.title = title;
-
+        this.yLabel = yLabel;
         this.xLabel = xLabel;
     }
 
@@ -226,7 +228,7 @@ export default class Histogram {
             .call(axisRight(this.yScale))
             .selection()
             .selectAll('g.y-label')
-            .data(['Count'])
+            .data([this.yLabel])
             .join('g')
             .attr('class', 'y-label')
             .selectAll('text')
@@ -234,7 +236,7 @@ export default class Histogram {
             .join('text')
             .attr('transform', `translate(-12, ${this.h / 2}), rotate(90)`)
             .attr('fill', 'black')
-            .attr('text-anchor', 'end')
+            .attr('text-anchor', 'middle')
             .text(d => d);
 
         this.setBrush(brushValue);

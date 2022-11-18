@@ -10,6 +10,7 @@ interface AreaChartComponentProps {
     title?: string;
     value?: number;
     xLabel: string;
+    yLabel?: string;
 }
 
 const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
@@ -18,6 +19,7 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
     title,
     value,
     xLabel,
+    yLabel,
 }) => {
     const [Chart, setChart] = useState<AreaChart>();
     const selector = useRef<string>(`a${Math.random().toString(36).slice(3)}`);
@@ -39,6 +41,7 @@ const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
             onBrush,
             `.${selector.current}`,
             xLabel,
+            yLabel || 'Count',
             title
         );
         setChart(Chart);

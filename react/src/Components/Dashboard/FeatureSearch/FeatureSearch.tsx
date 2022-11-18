@@ -287,9 +287,10 @@ const FeatureSearch: React.FC = () => {
                                             ...{ madsValue },
                                         })
                                     }
-                                    xLabel='Average Feature Count per Node'
+                                    xLabel='High-Low threshold'
                                     value={featureHiLoThresholds[k]}
                                     viewType={featureHiLoThresholdUnits[k]}
+                                    yLabel='Feature Avg > threshold'
                                 />
                             ))}
                     </FeatureList>

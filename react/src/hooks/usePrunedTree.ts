@@ -531,6 +531,27 @@ const getMadGroups = (values: number[], binCount = 15, maxSize?: number) => {
     }));
 };
 
+export const getFeatureMadAndMeds = (
+    node: TMCHierarchyDataNode,
+    feature: string
+) => {
+    const dist = node
+        .descendants()
+        .map(d => d.data.featureCount[feature].scaleKey as number);
+
+    const distWithoutZeroes = dist.filter(Boolean);
+
+    //median feature count among cells
+    const med = median(distWithoutZeroes);
+
+    const medWithZeroes = median(dist);
+
+    //if we include zeroes the median will be zero
+    const mad = getMAD(distWithoutZeroes)!;
+
+    return { med, mad, medWithZeroes };
+};
+
 /**
  *
  * @param nodes The tree, possibly pruned
@@ -545,24 +566,15 @@ const getFeatureDistributions = (
     const distributions = {} as Record<string, FeatureDistribution>;
 
     activeFeatures.forEach(f => {
-        /* Get average feature count per cell by node */
+        const { med, mad, medWithZeroes } = getFeatureMadAndMeds(nodes, f);
+
         const dist = nodes
             .descendants()
             .map(d => d.data.featureCount[f].scaleKey as number);
 
-        const distWithoutZeroes = dist.filter(Boolean);
-
-        //median feature count among cells
-        const med = median(distWithoutZeroes);
-
-        const medianWithZeroes = median(dist);
-
-        //if we include zeroes the median will be zero
-        const mad = getMAD(distWithoutZeroes)!;
-
         distributions[f] = {
             mad,
-            madGroups: getMadGroups(distWithoutZeroes).map(b => ({
+            madGroups: getMadGroups(dist.filter(Boolean)).map(b => ({
                 value: b.mads,
                 count: nodes
                     .descendants()
@@ -574,7 +586,7 @@ const getFeatureDistributions = (
             max: max(dist) ?? 0,
             min: min(dist) ?? 0,
             median: med ?? 0,
-            medianWithZeroes: medianWithZeroes ?? 0,
+            medianWithZeroes: medWithZeroes ?? 0,
             plainGroups: getPlainFeatureGroups(dist),
             total: sum(dist) ?? 0,
         };
@@ -646,7 +658,7 @@ export const updateFeatureCounts = (
 
 /**
  *
- * @param nodes The base tree (not a pruned tree)
+ * @param nodes The base tree (not a pruned tree, b/c we need leaves as only leaves have cells)
  * @param thresholds The cutoff for hi/lo for each feature
  * @param activeFeatures The features currently visible
  * @returns TMCHierarchyDataNode (argument will be mutated)
@@ -662,7 +674,7 @@ export const updatefeatureHiLos = (
         //if these are leaves, store and calculate base values
         if (n.data.items) {
             n.data.items.forEach(cell => {
-                //reduce cells for each node to hi/lows
+                //reduce cells for each node to hi/los
                 const key = getEntries(cell._barcode._featureValues)
                     //eslint-disable-next-line @typescript-eslint/no-unused-vars
                     .filter(([k, _]) => activeFeatures.includes(k))

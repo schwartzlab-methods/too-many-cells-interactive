@@ -271,6 +271,7 @@ export interface SmartPrunerProps {
     xLabel: string;
     value?: PlainOrMADVal;
     viewType?: ValueDisplayUnits;
+    yLabel?: string;
 }
 
 export const SmartPruner: React.FC<SmartPrunerProps> = ({
@@ -286,6 +287,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
     xLabel,
     value,
     viewType,
+    yLabel,
 }) => {
     const [inputVal, setInputVal] = useState<string>(value ? value + '' : '0');
 
@@ -346,6 +348,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                                     }
                                     value={value?.plainValue}
                                     xLabel={xLabel}
+                                    yLabel={yLabel}
                                 />
                             )}
                             {viewType === 'mads' && (
@@ -363,6 +366,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                                     }
                                     value={value?.madsValue}
                                     xLabel={`${xLabel} in MADs from median`}
+                                    yLabel={yLabel}
                                 />
                             )}
                             <UpdateBox
