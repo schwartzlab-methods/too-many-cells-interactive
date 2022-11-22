@@ -24,8 +24,10 @@ if [[ $# -lt 6 ]]; then
 fi
 
 debug=""
+uid=$(id -u)
+gid=$(id -g)
 
-while [ ! -z "$1" ]; do
+while [ -n "$1" ]; do
     if [[ "$1" == '--help' ]]; then
         help && exit 1
 
@@ -70,7 +72,7 @@ if [[ -z $port ]]; then
     echo >&2 "please include the --port argument!" && exit 1
 fi
 
-docker-compose build
+docker-compose -f docker-compose.prod.yaml build --build-arg UID=$uid --build-arg GID=$gid node
 
 # start postgres in the background so we can exec commands to it
 docker-compose -f docker-compose.prod.yaml up -d postgres

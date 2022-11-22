@@ -47,9 +47,9 @@ while [ -n "$1" ]; do
         if [[ ! -d "${host_out_dir}" ]]; then
            echo >&2 "${1} does not exist!" && exit 1
         fi
-        target_out_dir=/tmp/results/"$(basename "${1}")"
+        target_out_file=/tmp/results/"$(basename "${1}")"
         docker_args+=("-v" "${host_out_dir}:/tmp/results")
-        script_args+=("--outPath" "${target_out_dir}")
+        script_args+=("--outPath" "${target_out_file}")
 
     elif [[ $1 == '--tree-path' ]]; then
         shift
@@ -78,7 +78,7 @@ while [ -n "$1" ]; do
         if [[ ! -f "${1}" ]]; then
            echo >&2 "${1} does not exist!" && exit 1
         fi
-        target_annotation_path=/tmp/results/"$(basename "${1}")"
+        target_annotation_path=/tmp/"$(basename "${1}")"
 
         docker_args+=("-v" "${1}:${target_annotation_path}:ro")
         script_args+=("--annotation-path" "${target_annotation_path}")
@@ -93,7 +93,7 @@ while [ -n "$1" ]; do
 done
 
 if [[ $build == true ]]; then
-    docker-compose build node
+    docker-compose build --build-arg UID=$uid --build-arg GID=$gid node
 fi
 
 set -- "${docker_args[@]}" node dist/exportTree.js "${script_args[@]}"
