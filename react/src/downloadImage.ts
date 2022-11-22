@@ -58,7 +58,7 @@ export const attachLegend = (
     if (hasOrdinalScale) {
         legend
             .selectAll('g.item')
-            .data(colorScale.domain())
+            .data(colorScale.domain().filter(Boolean))
             .join('g')
             .each(function (_, i) {
                 const container = select<SVGGElement, string>(

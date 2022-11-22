@@ -48,7 +48,7 @@ export const transformData = (data: RoseNode, labels: string) => {
 const addLabels = (tree: HierarchyNode<TMCNode>, labels: string) => {
     const labelMap: Record<string, string> = {};
 
-    const [headers, ...rows] = labels.split('\n');
+    const [headers, ...rows] = labels.split(/\r\n|\n/);
 
     const itemIdx = headers.split(',').findIndex(r => r === 'item');
     const labelIdx = headers.split(',').findIndex(r => r === 'label');
