@@ -9,7 +9,17 @@ set -eo pipefail
 # permissions to access the mounted files and directories; alternately, a different user can be configured to run the container
 # using the --user argument to the docker run command or by passing the corresponding arguments (`ARG`s) to the build command.
 
+# Examples:
+# bash generate-svg.sh --label-path ~/too-many-cells/data/tabula_muris/all_simple/labels.csv --config-path ~/too-many-cells/data/tabula_muris/all_simple/state.json --tree-path ~/too-many-cells/data/tabula_muris/all_simple/cluster_tree.json --out-path ~/too-many-cells/data/tabula_muris/sample-output.svg --no-build
+# echo '{"width": 2000, "filenameOverride": "somefile.svg"}' | bash generate-svg.sh --config-path - ....
+
+
 build=true
+docker_args=()
+script_args=()
+uid=$(id -u)
+gid=$(id -g)
+
 
 if [[ $# -lt 7 ]]; then
     echo -e >&2 "USAGE: $0 
@@ -27,8 +37,9 @@ while [ -n "$1" ]; do
         if [[ ! -f "${1}" ]]; then
            echo >&2 "${1} does not exist!" && exit 1
         fi
-        host_label_path="${1}"
-        target_label_path=/tmp/"$(basename "${host_label_path}")"
+        target_label_path=/tmp/"$(basename "${1}")"
+        docker_args+=("-v" "${1}:${target_label_path}:ro")
+        script_args+=("--labelPath" "${target_label_path}")
 
     elif [[ $1 == '--out-path' ]]; then
         shift
@@ -37,79 +48,56 @@ while [ -n "$1" ]; do
            echo >&2 "${1} does not exist!" && exit 1
         fi
         target_out_dir=/tmp/results/"$(basename "${1}")"
+        docker_args+=("-v" "${host_out_dir}:/tmp/results")
+        script_args+=("--outPath" "${target_out_dir}")
+
+    elif [[ $1 == '--tree-path' ]]; then
+        shift
+        if [[ ! -f "${1}" ]]; then
+           echo >&2 "${1} does not exist!" && exit 1
+        fi
+        target_tree_path=/tmp/"$(basename "${1}")"
+        docker_args+=("-v" "${1}:${target_tree_path}:ro")
+        script_args+=("--treePath" "${target_tree_path}")
+
+    # passing in `-` tells node script to read config from stdin, equals sign required
+    elif [[ $1 == '--config-path' ]]; then
+        shift
+        if [[ $1 == "-" ]]; then
+            script_args+=("--configPath=-")
+        elif [[ ! -f "${1}" ]]; then
+            echo >&2 "${1} does not exist!" && exit 1
+        else 
+            target_config_path=/tmp/"$(basename "${1}")"
+            docker_args+=("-v" "${1}:${target_config_path}:ro")
+            script_args+=("--configPath" "${target_config_path}")
+        fi
 
     elif [[ $1 == '--annotation-path' ]]; then
         shift
         if [[ ! -f "${1}" ]]; then
            echo >&2 "${1} does not exist!" && exit 1
         fi
-        host_annotation_path="${1}"
         target_annotation_path=/tmp/results/"$(basename "${1}")"
+
+        docker_args+=("-v" "${1}:${target_annotation_path}:ro")
+        script_args+=("--annotation-path" "${target_annotation_path}")
 
     elif [[ $1 == '--no-build' ]]; then
         build=false
         shift
-    
-    elif [[ $1 == '--tree-path' ]]; then
-        shift
-        if [[ ! -f "${1}" ]]; then
-           echo >&2 "${1} does not exist!" && exit 1
-        fi
-        host_tree_path="${1}"
-        target_tree_path=/tmp/"$(basename "${host_tree_path}")"
 
-    # passing in `-` tells node script to read config from stdin
-    elif [[ $1 == '--config-path' ]]; then
-        shift
-        if [[ $1 == "-" ]]; then
-            target_config_path=-
-        elif [[ ! -f "${1}" ]]; then
-            echo >&2 "${1} does not exist!" && exit 1
-        else 
-            host_config_path="${1}"
-            target_config_path=/tmp/"$(basename "${host_config_path}")"
-
-        fi
     else
         shift
     fi
 done
 
-
-# mount config file only if we're not reading from stdin
-if [[ $target_config_path == '-' ]]; then
-    config_volume_mount=' '
-else
-    config_volume_mount="-v "${host_config_path}":"${target_config_path}":ro"
-fi
-
-if [[ -z $host_annotation_path ]]; then 
-    annnotation_volume_mount=' '
-    annotation_arg=""
-else
-    annnotation_volume_mount="-v "${host_annotation_path}":"${target_annotation_path}":ro"
-    annotation_arg="--annotation-path "${target_annotation_path}""
-fi
-
-
-
 if [[ $build == true ]]; then
     docker-compose build node
 fi
 
-docker-compose -f docker-compose.prod.yaml \
-    run --rm --entrypoint="node" \
-    -v "${host_label_path}":"${target_label_path}":ro \
-    -v "${host_tree_path}":"${target_tree_path}":ro \
-    -v "${host_out_dir}":/tmp/results \
-    $config_volume_mount \
-    $annnotation_volume_mount \
-    node dist/exportTree.js \
-    --labelPath "${target_label_path}" \
-    --treePath "${target_tree_path}" \
-    --configPath="${target_config_path}" \
-    --outPath "${target_out_dir}" \
-    ${annotation_arg}
+set -- "${docker_args[@]}" node dist/exportTree.js "${script_args[@]}"
 
-# bash generate-svg.sh --label-path ~/too-many-cells/data/tabula_muris/all_simple/labels.csv --config-path ~/too-many-cells/data/tabula_muris/all_simple/state.json --tree-path ~/too-many-cells/data/tabula_muris/all_simple/cluster_tree.json --out-path ~/too-many-cells/data/tabula_muris/sample-output.svg --no-build
-# echo '{"width": 2000, "filenameOverride": "somefile.svg"}' | bash generate-svg.sh --label-path ~/too-many-cells/data/tabula_muris/all_simple/labels.csv --config-path - -p
+docker-compose -f docker-compose.prod.yaml \
+    run --rm --entrypoint="node" "$@"
+
