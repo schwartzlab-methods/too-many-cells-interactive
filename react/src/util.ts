@@ -4,7 +4,6 @@ import { format } from 'd3-format';
 import { HierarchyNode, tree } from 'd3-hierarchy';
 import { interpolate } from 'd3-interpolate';
 import { schemeSet1 } from 'd3-scale-chromatic';
-import { ColorScaleVariant } from './redux/displayConfigSlice';
 import {
     AllPruner,
     ClickPruner,
@@ -317,20 +316,11 @@ export const interpolateColorScale = (domain: string[]) => {
 };
 
 export const calculateOrdinalColorScaleRangeAndDomain = (
-    colorScaleKey: ColorScaleVariant,
-    nodes: TMCHierarchyDataNode
+    labelMap: Record<string, string>
 ) => {
-    const domain = [
-        ...new Set(
-            nodes
-                .descendants()
-                .flatMap(v =>
-                    Object.values(v.data[colorScaleKey]).flatMap(
-                        v => v.scaleKey
-                    )
-                )
-        ),
-    ].sort((a, b) => (a < b ? -1 : 1)) as string[];
+    const domain = [...new Set(Object.values(labelMap))].sort((a, b) =>
+        a < b ? -1 : 1
+    ) as string[];
 
     let range = interpolateColorScale(domain);
 

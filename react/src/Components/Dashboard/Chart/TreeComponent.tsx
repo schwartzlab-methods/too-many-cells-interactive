@@ -9,11 +9,9 @@ import { bindActionCreators } from 'redux';
 import { extent } from 'd3-array';
 import { select } from 'd3-selection';
 import { Tree as TreeViz } from '../../../Visualizations';
-import { calculateOrdinalColorScaleRangeAndDomain } from '../../../util';
 
 import {
     selectDisplayConfig,
-    updateColorScale,
     updateLinearScale,
 } from '../../../redux/displayConfigSlice';
 import { TreeContext } from '../../../Visualizations/Tree';
@@ -24,7 +22,7 @@ import {
     useSelectTree,
 } from '../../../hooks';
 import { useColorScale, useLinearScale } from '../../../hooks/useScale';
-import { TMCHiearchyNode, TMCHierarchyPointNode } from '../../../types';
+import { TMCHierarchyPointNode } from '../../../types';
 import {
     addClickPrune as _addClickPrune,
     removeClickPrune as _removeClickPrune,
@@ -133,13 +131,6 @@ const TreeComponent = forwardRef<
             })
         );
 
-        const { range: labelRange, domain: labelDomain } =
-            calculateOrdinalColorScaleRangeAndDomain(
-                'labelCount',
-                visibleNodes as TMCHiearchyNode
-            );
-
-        dispatch(updateColorScale({ labelRange, labelDomain }));
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

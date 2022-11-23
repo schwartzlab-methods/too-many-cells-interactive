@@ -11,7 +11,11 @@ import Tree, {
     d3select,
     TreeContext,
 } from '../../react/src/Visualizations/Tree';
-import { transformData } from '../../react/src/prepareData';
+import {
+    addLabels,
+    buildLabelMap,
+    transformData,
+} from '../../react/src/prepareData';
 import {
     addGray,
     AnyPruneHistory,
@@ -250,12 +254,13 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
         let { labelRange, labelDomain } = state.scales.colorScale || {};
 
         if (!labelDomain || !labelRange) {
-            const res = calculateOrdinalColorScaleRangeAndDomain(
-                'labelCount',
-                nodes
-            );
-            labelRange = res.range;
-            labelDomain = res.domain;
+            const labelMap = buildLabelMap(labels);
+            addLabels(nodes, labelMap);
+
+            const rangeDomain =
+                calculateOrdinalColorScaleRangeAndDomain(labelMap);
+            labelRange = rangeDomain.range;
+            labelDomain = rangeDomain.domain;
         }
 
         const scale = makeOrdinalScale(labelRange, labelDomain);
@@ -569,7 +574,7 @@ const run = async () => {
     const state = await getState();
     const config = provideDefaults(state);
     const errors = validateInput(config);
-    const nodes = transformData(clusterTree, labels);
+    const unlabeledNodes = transformData(clusterTree);
 
     if (errors) {
         console.log('error!');
@@ -577,7 +582,7 @@ const run = async () => {
         process.exit(1);
     }
 
-    return saveTree(config, nodes);
+    return saveTree(config, unlabeledNodes);
 };
 
 /* Run the script */

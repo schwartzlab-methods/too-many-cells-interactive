@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y libpixman-1-dev libcairo2-dev libpangoc
 COPY ./react ./react
 COPY ./node ./node
 
-# CPOY --chown switch does not seem to work with variables in older versions of docker
+# COPY --chown switch does not seem to work with variables in older versions of docker
 RUN chown -R $UID:$GID /usr/app
 
 USER $UID

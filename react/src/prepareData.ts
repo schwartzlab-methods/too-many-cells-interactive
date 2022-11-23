@@ -31,21 +31,18 @@ const getId = () =>
  * @returns Promise<HierarchyNode<TMCNode>> Root tree that can be passed to D3 layout
  */
 export const getData = async () => {
-    const labels = await (await fetch('/files/labels.csv')).text();
     const data = (await (
         await fetch('/files/cluster_tree.json')
     ).json()) as RoseNode;
-    return transformData(data, labels);
+    return transformData(data);
 };
 
-export const transformData = (data: RoseNode, labels: string) => {
+export const transformData = (data: RoseNode) => {
     const flat = flatten(data);
-    const tree = buildTree(flat);
-
-    return addLabels(tree, labels);
+    return buildTree(flat);
 };
 
-const addLabels = (tree: HierarchyNode<TMCNode>, labels: string) => {
+export const buildLabelMap = (labels: string) => {
     const labelMap: Record<string, string> = {};
 
     const [headers, ...rows] = labels.split(/\r\n|\n/);
@@ -64,11 +61,26 @@ const addLabels = (tree: HierarchyNode<TMCNode>, labels: string) => {
     rows.forEach((r: string) => {
         const item = r.split(',')[itemIdx];
         const label = r.split(',')[labelIdx];
-        labelMap[item] = ['', null, undefined].includes(label)
-            ? 'Label Not Provided'
-            : label;
+        if (item) {
+            labelMap[item] = ['', null, undefined].includes(label)
+                ? 'Label Not Provided'
+                : label;
+        }
     });
 
+    return labelMap;
+};
+
+/**
+ *
+ * @param tree The (unpruned) tree
+ * @param labelMap The dictionary of label values
+ * @returns tree (mutated in place)
+ */
+export const addLabels = (
+    tree: HierarchyNode<TMCNode>,
+    labelMap: Record<string, string>
+) => {
     /* compute the values for leaf nodes, merge children for non-leaves */
     return tree
         .eachAfter(n => {

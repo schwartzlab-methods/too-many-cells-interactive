@@ -332,7 +332,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
     const containerRef =
         useRef<HTMLDivElement>() as MutableRefObject<HTMLDivElement>;
 
-    useClickAway(containerRef, () => setChoicesVisible(false));
+    //useClickAway(containerRef, () => setChoicesVisible(false));
 
     /* Adjust the visible choices */
     useEffect(() => {

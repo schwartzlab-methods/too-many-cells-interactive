@@ -2,10 +2,16 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
 import { Column, Row } from '../Layout';
 import { Accent, Main, Primary } from '../Typography';
-import { calculateTreeLayout } from '../../util';
-import { useAppSelector, useElementResize } from '../../hooks';
-import { selectDisplayConfig } from '../../redux/displayConfigSlice';
-import { getData } from '../../prepareData';
+import {
+    calculateOrdinalColorScaleRangeAndDomain,
+    calculateTreeLayout,
+} from '../../util';
+import { useAppDispatch, useAppSelector, useElementResize } from '../../hooks';
+import {
+    selectDisplayConfig,
+    updateColorScale,
+} from '../../redux/displayConfigSlice';
+import { addLabels, buildLabelMap, getData } from '../../prepareData';
 import { TMCHierarchyPointNode } from '../../types';
 import theme from '../../theme';
 import TreeControls from './Chart/TreeControls';
@@ -41,6 +47,8 @@ const Dashboard: React.FC = () => {
 
     const { width } = useAppSelector(selectDisplayConfig);
 
+    const dispatch = useAppDispatch();
+
     const {
         setRef,
         ref,
@@ -58,8 +66,17 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         const cb = async () => {
-            const data = await getData();
-            setBaseTree(calculateTreeLayout(data, width));
+            const unlabeledTree = await getData();
+            const labels = await (await fetch('/files/labels.csv')).text();
+            const labelMap = buildLabelMap(labels);
+            const tree = addLabels(unlabeledTree, labelMap);
+
+            const { range: labelRange, domain: labelDomain } =
+                calculateOrdinalColorScaleRangeAndDomain(labelMap);
+
+            dispatch(updateColorScale({ labelRange, labelDomain }));
+
+            setBaseTree(calculateTreeLayout(tree, width));
         };
         cb();
         //eslint-disable-next-line react-hooks/exhaustive-deps
