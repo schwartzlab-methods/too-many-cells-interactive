@@ -27,7 +27,9 @@ export interface RoseNodeObj {
     _significance: number | null;
 }
 
-export type RoseNode = [RoseNodeObj, RoseNode[][]] | [][];
+export type EmptyRoseNode = [RoseNodeObj, []];
+
+export type RoseNode = [RoseNodeObj, RoseNode[] | []] | [];
 
 export interface AttributeMapValue {
     quantity: number;

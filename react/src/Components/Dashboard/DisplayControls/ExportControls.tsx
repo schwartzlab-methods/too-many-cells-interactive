@@ -35,6 +35,7 @@ const ExportControls: React.FC = () => {
 
     const downloads: Record<string, () => void> = useMemo(() => {
         return {
+            exportClusterTree: downloadMeta.bind(null, 'cluster'),
             exportCsv: downloadMeta.bind(null, 'csv'),
             exportJson: downloadMeta.bind(null, 'json'),
             exportPng: downloadPng.bind(
@@ -75,6 +76,10 @@ const ExportControls: React.FC = () => {
             {
                 title: 'Export as JSON',
                 id: 'exportJson',
+            },
+            {
+                title: 'Export as Cluster Tree JSON',
+                id: 'exportClusterTree',
             },
             {
                 title: 'Export as PNG',

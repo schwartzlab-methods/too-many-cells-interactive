@@ -1,5 +1,11 @@
 import { saveAs } from 'file-saver';
-import { TMCHierarchyDataNode, TMCNode } from '../types';
+import {
+    EmptyRoseNode,
+    RoseNode,
+    RoseNodeObj,
+    TMCHierarchyDataNode,
+    TMCNode,
+} from '../types';
 import { getKeys } from '../util';
 import useSelectTree from './useSelectTree';
 
@@ -33,7 +39,7 @@ const useDownloadNodeMeta = () => {
 
     const _rows: Record<string, any>[] = [];
 
-    return (type: 'csv' | 'json') => {
+    return (type: 'csv' | 'json' | 'cluster') => {
         if (selectTree() && !selectTree().empty() && selectTree().datum()) {
             const tree = selectTree();
             if (type === 'json') {
@@ -43,7 +49,7 @@ const useDownloadNodeMeta = () => {
                     )}`,
                     'node-export.json'
                 );
-            } else {
+            } else if (type === 'csv') {
                 tree.datum().eachBefore(node =>
                     _rows.push(transformNode(node))
                 );
@@ -61,9 +67,52 @@ const useDownloadNodeMeta = () => {
                         'node-export.csv'
                     );
                 }
+            } else if (type === 'cluster') {
+                saveAs(
+                    `data:text/json,${encodeURIComponent(
+                        JSON.stringify(
+                            convertToClusterTree(tree.datum(), [
+                                {} as RoseNodeObj,
+                                [],
+                            ])
+                        )
+                    )}`,
+                    'cluster-tree-export.json'
+                );
             }
         }
     };
+};
+
+const convertToClusterTree = (
+    tree: TMCHierarchyDataNode,
+    roseNode: EmptyRoseNode
+): RoseNode => {
+    const [item] = roseNode;
+
+    item._item = tree.data.items
+        ? tree.data.items.map(item => ({
+              ...item,
+              _barcode: {
+                  unCell: item._barcode.unCell,
+              },
+          }))
+        : null;
+
+    item._significance = tree.data.significance;
+    item._distance = tree.data.distance;
+
+    const newNode = [item, []] as RoseNode;
+
+    if (tree.children) {
+        newNode[1] = tree.children.map(child =>
+            convertToClusterTree(child, [{} as RoseNodeObj, []])
+        );
+    } else {
+        newNode[1] = [];
+    }
+
+    return newNode;
 };
 
 export default useDownloadNodeMeta;
