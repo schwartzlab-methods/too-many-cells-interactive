@@ -1,30 +1,27 @@
 ---
-layout: home
+layout: page
 nav_order: 2
 title: Tutorial
 ---
 
 ## Tutorial
 
-For this tutorial we are going to explore data from the [Tabula Muris](https://tabula-muris.ds.czbiohub.org/) project, so our first step will be to fetch the data from the remote server and store it in our current working directory as a zip archive called `tabula-muris.zip`:
+For this tutorial we are going to explore data from the [Tabula Muris](https://tabula-muris.ds.czbiohub.org/) project. You can download the matrix files by using the commands below.
 
 ```bash
 wget -O tabula-muris.zip https://figshare.com/ndownloader/articles/5968960/versions/3
-```
-
-Next, we'll unzip the archive and then unzip the data files themselves:
-
-```bash
 unzip -d tabula-muris tabula-muris.zip
 cd tabula-muris
 unzip droplet.zip
 ```
 
-We're also going to be installing the software using [Docker](https://www.docker.com/) and [Docker-Compose](https://docs.docker.com/compose/install/). These are widely-used and widely-trusted containerization tools that make it easy to build and run software in a range of host environments. Before proceding further, please make sure that both programs are installed on your system.
+Before we can begin exploring the data, we will need to do some preprocessing on our matrices, which, among others, will generate the required `labels.csv` and `cluster_tree.json` files. If you'd like to create these files yourself, please follow the latest [TooManyCells documentation](https://gregoryschwartz.github.io/too-many-cells/) for instructions. Otherwise you can download the files here: <a download href="/files/cluster_tree.json">cluster_tree.json</a> and <a download href="/files/labels.csv">labels.csv</a>.
 
-Before we can begin exploring the data, we will need to use the primary TooManyCells program in order to create the `labels.csv` and `cluster_tree.json` files. Please follow the latest [TooManyCells documentation](https://gregoryschwartz.github.io/too-many-cells/) for instructions on how to do this.
 
-Now, with your matrix files, `labels.csv`, and `cluster_tree.json` in hand, we're ready to start!
+
+We're going to be installing the software using [Docker](https://www.docker.com/) and [Docker-Compose](https://docs.docker.com/compose/install/). These are widely-used and widely-trusted containerization tools that make it easy to build and run software in a range of host environments. Before proceding further, please make sure that both programs are installed on your system.
+
+Now, with Docker, your matrix files, `labels.csv`, and `cluster_tree.json` in hand, we're ready to start!
 
 Let's pull in the latest TooManyCellsInteractive code:
 
