@@ -13,7 +13,7 @@ function help()
    echo "options:"
    echo "tree-path   /path/to/cluter_tree.json."
    echo "label-path  /path/to/labels.csv."
-   echo "matrix-path /path/to/matrices (files in matrix-market format, can be nested and/or gzipped)."
+   echo "matrix-dir /path/to/matrices (files in matrix-market format, can be nested and/or gzipped)."
    echo "port        <Port where webapp will listen>."
    echo "debug       Print data import details."
    echo
