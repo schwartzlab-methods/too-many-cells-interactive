@@ -28,7 +28,9 @@ title: TooManyCells Interactive
 description: >- # this means to ignore newlines until "baseurl:"
   Documentation for the TooManyCells Interactive project.
 url: localhost:4000
-github_username: schwartzlab-methods
+aux_links:
+  "TooManyCells Interactive on GitHub":
+    - "//github.com/schwartzlab-methods/too-many-cells-interactive"
 
 # Build settings
 remote_theme: pmarsceill/just-the-docs
