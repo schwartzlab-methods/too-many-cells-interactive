@@ -9,13 +9,9 @@ import {
 import { mergeAttributeMaps } from './util';
 
 export const buildTree = (node: TMCFlatNode[]) => {
-    return (stratify<TMCFlatNode>()(node) as HierarchyNode<TMCNode>)
-        .sort((a, b) => {
-            const aval = a.data.items ? a.data.items.length : 0;
-            const bval = b.data.items ? b.data.items.length : 0;
-            return aval > bval ? -1 : 1;
-        })
-        .sum(d => (d.items ? d.items.length : 0));
+    return (stratify<TMCFlatNode>()(node) as HierarchyNode<TMCNode>).sum(d =>
+        d.items ? d.items.length : 0
+    );
 };
 
 const getId = () =>
