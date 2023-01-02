@@ -22,7 +22,7 @@ title: TooManyCells Interactive
 # email: the-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
   Documentation for the TooManyCells Interactive project.
-baseurl: too-many-cells-interactive
+baseurl: /too-many-cells-interactive
 url: https://schwartzlab-methods.github.io
 github_username: schwartzlab-methods
 aux_links:
