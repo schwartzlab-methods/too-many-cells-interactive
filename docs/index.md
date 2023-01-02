@@ -25,7 +25,7 @@ With [Docker](https://www.docker.com/) and [Docker-Compose](https://docs.docker.
     --port 1234
 ```
 
-For an example use, see the [tutorial]({% link tutorial.md %}).
+For an example use, see the [tutorial]({{ site.baseurl }}/tutorial.html).
 
 ## Running the application
 
