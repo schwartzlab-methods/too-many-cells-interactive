@@ -600,7 +600,11 @@ const getFeatureDistributions = (
  * @param range: the feature counts
  */
 const getPlainFeatureGroups = (range: number[]): CumSumBin[] => {
-    const thresholds = ticks(0, max(range) || 0, Math.max(max(range) || 0, 25));
+    const thresholds = ticks(
+        min(range) || 0,
+        max(range) || 0,
+        Math.max(max(range) || 0, 25)
+    );
 
     const tx = thresholds.map(value => ({
         value,

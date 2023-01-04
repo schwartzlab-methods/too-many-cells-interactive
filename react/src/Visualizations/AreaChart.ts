@@ -64,9 +64,7 @@ export default class Histogram {
         const binThresholds = this.counts.map(c => c.value);
 
         /* store starting location of each bin*/
-        const ticks = binThresholds
-            //.sort((a, b) => (a < b ? -1 : 1))
-            .map(c => this.xScale(c));
+        const ticks = binThresholds.map(c => this.xScale(c));
 
         const brushed = function (this: SVGGElement, event: D3BrushEvent<any>) {
             if (!event.sourceEvent || !event.selection) return;
@@ -216,6 +214,18 @@ export default class Histogram {
             .attr('fill', 'black')
             .attr('text-anchor', 'middle')
             .style('font-size', 12);
+
+        this.svg
+            .selectAll('g.x-axis g.tick text')
+            .attr('transform', function () {
+                if (
+                    ticks
+                        .map(d => d.toString().length)
+                        .reduce((acc, curr) => (acc += curr)) > 50
+                ) {
+                    return 'translate(5, 0) rotate(20)';
+                } else return null;
+            });
 
         this.svg
             .selectAll<any, any>('g.y-axis')
