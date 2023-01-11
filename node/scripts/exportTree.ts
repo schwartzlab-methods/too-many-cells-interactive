@@ -577,7 +577,7 @@ const run = async () => {
     const unlabeledNodes = transformData(clusterTree);
 
     if (errors) {
-        console.log('error!');
+        console.error('error!');
         console.error(errors);
         process.exit(1);
     }
@@ -592,7 +592,7 @@ run()
         process.exit(0);
     })
     .catch(e => {
-        console.log('error!');
-        console.log(e);
+        console.error('error!');
+        console.error(e);
         process.exit(1);
     });

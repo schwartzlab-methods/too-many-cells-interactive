@@ -54,7 +54,14 @@ const DisplaySettings: React.FC = () => {
         <Column xs={12}>
             <WidgetTitle title='Display Settings' />
             <ToggleCheckbox label='Show Strokes' propName='strokeVisible' />
-            <ToggleCheckbox label='Show Node IDs' propName='nodeIdsVisible' />
+            <ToggleCheckbox
+                label='Show Original Node IDs'
+                propName='originalNodeIdsVisible'
+            />
+            <ToggleCheckbox
+                label='Show Pruned Node IDs'
+                propName='prunedNodeIdsVisible'
+            />
             <ToggleCheckbox
                 label='Show Observation Counts'
                 propName='nodeCountsVisible'

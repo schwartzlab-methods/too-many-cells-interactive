@@ -15,7 +15,8 @@ export interface ToggleableDisplayElements {
     widthScalingDisabled: boolean;
     distanceVisible: boolean;
     nodeCountsVisible: boolean;
-    nodeIdsVisible: boolean;
+    originalNodeIdsVisible: boolean;
+    prunedNodeIdsVisible: boolean;
     piesVisible: boolean;
     strokeVisible: boolean;
 }
@@ -102,7 +103,8 @@ const initialScales: Scales = {
 const initialToggleableValues: ToggleableDisplayElements = {
     distanceVisible: false,
     nodeCountsVisible: false,
-    nodeIdsVisible: false,
+    originalNodeIdsVisible: false,
+    prunedNodeIdsVisible: false,
     piesVisible: true,
     strokeVisible: false,
     widthScalingDisabled: false,
@@ -135,6 +137,12 @@ export const displayConfigSlice = createSlice({
             state,
             { payload }: PayloadAction<keyof ToggleableDisplayElements>
         ) => {
+            if (payload === 'originalNodeIdsVisible') {
+                state.toggleableFeatures.prunedNodeIdsVisible = false;
+            } else if (payload === 'prunedNodeIdsVisible') {
+                state.toggleableFeatures.originalNodeIdsVisible = false;
+            }
+
             state.toggleableFeatures[payload] =
                 !state.toggleableFeatures[payload];
         },

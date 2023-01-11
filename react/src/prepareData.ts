@@ -105,7 +105,8 @@ export const addLabels = (
                   );
         })
         .eachBefore((n, i) => {
-            n.data.nodeId = i;
+            n.data.originalNodeId = i;
+            n.data.prunedNodeId = i;
         });
 };
 

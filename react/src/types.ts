@@ -46,7 +46,6 @@ export interface TMCFlatNode {
     featureHiLos: AttributeMap;
     items: TMCNodeItem[] | null;
     labelCount?: AttributeMap;
-    nodeId?: number;
     parentId: string | undefined;
     significance: number | null;
     userAnnotation: AttributeMap;
@@ -54,7 +53,8 @@ export interface TMCFlatNode {
 
 export interface TMCNode extends TMCFlatNode {
     labelCount: AttributeMap;
-    nodeId: number;
+    originalNodeId: number;
+    prunedNodeId: number;
 }
 
 export const isLinkNode = (

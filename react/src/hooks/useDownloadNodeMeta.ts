@@ -11,8 +11,8 @@ import useSelectTree from './useSelectTree';
 
 const transformNode = (node: TMCHierarchyDataNode) => {
     return {
-        node_id: node.data.nodeId,
-        parent_id: node.parent?.data.nodeId,
+        node_id: node.data.originalNodeId,
+        parent_id: node.parent?.data.originalNodeId,
         item_count: node.value || 0,
         child_count:
             node.descendants().length - 1 > 0

@@ -175,21 +175,32 @@ export const pruneTreeByMinDistance = (
 export const pruneTreeByMinDistanceSearch = (
     tree: TMCHierarchyDataNode,
     distance: number
-) =>
-    distance
-        ? tree.copy().eachAfter(d => {
-              // exclude all children (b/c they have null distance -- probably don't want that?)
-              if (!d.data.distance || d.data.distance < distance) {
-                  //i don't think we need this...
-                  if (d.parent) {
-                      //remove node and siblings w/ "bad" distance
-                      //probably don't want that either; rather, we want to remove the node's children?
-                      //test and compare w/ TMC
-                      d.parent.children = undefined;
-                  }
-              }
-          })
-        : tree.copy();
+) => {
+    if (distance) {
+        const visited: number[] = [];
+        const newTree = tree.copy();
+        newTree.eachAfter(d => {
+            const descendantAlreadyVisited = hasIntersection(
+                visited,
+                (tree.descendants() || [])
+                    .find(n => n.data.originalNodeId === d.data.originalNodeId)
+                    ?.descendants()
+                    .map(n => n.data.originalNodeId) || []
+            );
+
+            if (
+                !!d.data.distance &&
+                d.data.distance <= distance &&
+                !descendantAlreadyVisited
+            ) {
+                d.children = undefined;
+            } else if (d.data.distance) {
+                visited.push(d.data.originalNodeId);
+            }
+        });
+        return newTree;
+    } else return tree.copy();
+};
 
 export const setRootNode = (tree: TMCHierarchyDataNode, nodeId: string) => {
     const targetNode = tree.find(n => n.data.id === nodeId)!.copy();
@@ -500,3 +511,8 @@ export const textToAnnotations = (text: string) => {
  * @returns Boolean
  */
 export const isNil = (arg: any) => ['', null, undefined].includes(arg);
+
+export const hasIntersection = <T>(a: T[], b: T[]) => {
+    const setB = new Set(b);
+    return !![...new Set(a)].filter(x => setB.has(x)).length;
+};

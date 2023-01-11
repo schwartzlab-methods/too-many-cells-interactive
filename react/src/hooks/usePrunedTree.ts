@@ -205,7 +205,11 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
     /* for now, when a prune runs, we rerun all prunes -- if performance suffers we can optimize */
     useEffect(() => {
-        const prunedTree = recalculateLayout();
+        /* recalc layout and update pruned ids */
+        const prunedTree = recalculateLayout().eachBefore((n, i) => {
+            n.data.prunedNodeId = i;
+        });
+
         const withNewFeatureCounts = updateFeatureCounts(
             prunedTree,
             activeFeatures
@@ -275,7 +279,7 @@ export const addUserAnnotations = (
     tree.each(
         n =>
             (n.data.userAnnotation = {
-                userAnnotation: userAnnoationMap[n.data.nodeId] ?? {
+                userAnnotation: userAnnoationMap[n.data.originalNodeId] ?? {
                     quantity: null,
                     scaleKey: null,
                 },

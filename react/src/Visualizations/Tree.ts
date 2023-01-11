@@ -250,7 +250,7 @@ const showToolTip = (
     headingContainer
         .selectAll('li')
         .data([
-            ['Node Id', data.data.nodeId],
+            ['Node Id', data.data.originalNodeId],
             [
                 'Distance',
                 data.data.distance ? formatDigit(data.data.distance) : 'null',
@@ -347,8 +347,9 @@ const showToolTip = (
 };
 
 const makeLinkId = (link: TMCHiearchyLink) =>
-    `${link.source.data.nodeId}-${link.target.data.nodeId}-${!!link.source
-        .children}`;
+    `${link.source.data.originalNodeId}-${
+        link.target.data.originalNodeId
+    }-${!!link.source.children}`;
 
 const deltaBehavior = dispatch('nodeDelta', 'linkDelta');
 
@@ -478,13 +479,15 @@ class RadialTree {
                           const descIds = targetNode
                               .datum()
                               .descendants()
-                              .map(d => d.data.nodeId);
+                              .map(d => d.data.originalNodeId);
 
                           const subtreeNodes = that.nodeContainer
                               .selectAll<SVGGElement, TMCHierarchyPointNode>(
                                   'g.node'
                               )
-                              .filter(d => descIds.includes(d.data.nodeId));
+                              .filter(d =>
+                                  descIds.includes(d.data.originalNodeId)
+                              );
 
                           const subtreeLinks = that.linkContainer
                               .selectAll<SVGGElement, TMCHiearchyLink>(
@@ -492,8 +495,12 @@ class RadialTree {
                               )
                               .filter(
                                   d =>
-                                      descIds.includes(d.target.data.nodeId) ||
-                                      descIds.includes(d.source.data.nodeId)
+                                      descIds.includes(
+                                          d.target.data.originalNodeId
+                                      ) ||
+                                      descIds.includes(
+                                          d.source.data.originalNodeId
+                                      )
                               );
 
                           deltaBehavior.on(
@@ -639,7 +646,8 @@ class RadialTree {
             .attr('y2', d => pointRadial(d.target.x, d.target.y)[1])
             .attr(
                 'id',
-                d => `n-${d.source.data.nodeId}-${d.target.data.nodeId}`
+                d =>
+                    `n-${d.source.data.originalNodeId}-${d.target.data.originalNodeId}`
             );
 
         gradients
@@ -694,7 +702,7 @@ class RadialTree {
                         .attr(
                             'fill',
                             d =>
-                                `url('#n-${d.source.data.nodeId}-${d.target.data.nodeId}')`
+                                `url('#n-${d.source.data.originalNodeId}-${d.target.data.originalNodeId}')`
                         );
                 },
 
@@ -710,7 +718,7 @@ class RadialTree {
                         .attr(
                             'fill',
                             d =>
-                                `url('#n-${d.source.data.nodeId}-${d.target.data.nodeId}')`
+                                `url('#n-${d.source.data.originalNodeId}-${d.target.data.originalNodeId}')`
                         )
                         .transition()
                         .delay(this.transitionTime)
@@ -779,7 +787,8 @@ class RadialTree {
         const {
             distanceVisible,
             nodeCountsVisible,
-            nodeIdsVisible,
+            originalNodeIdsVisible,
+            prunedNodeIdsVisible,
             piesVisible,
             strokeVisible,
         } = this.context.displayContext.toggleableFeatures;
@@ -788,7 +797,7 @@ class RadialTree {
 
         this.nodes = this.nodeContainer
             .selectAll<SVGGElement, TMCHierarchyPointNode>('g.node')
-            .data(visibleNodes.descendants(), d => d.data.nodeId)
+            .data(visibleNodes.descendants(), d => d.data.originalNodeId)
             .join(
                 enter => {
                     return (
@@ -917,7 +926,7 @@ class RadialTree {
                                     (d as PieArcDatum<TMCHierarchyPointNode>)
                                         .data.data[colorScaleKey]
                                 )[0][1].scaleKey
-                            }-${outer.data.nodeId}-${outer.children}`
+                            }-${outer.data.originalNodeId}-${outer.children}`
                     )
                     .join('path')
                     .attr('stroke', 'none')
@@ -947,7 +956,7 @@ class RadialTree {
             .selectAll<SVGGElement, TMCHierarchyPointNode>('path.distance')
             .data(
                 d => (distanceVisible ? [d] : []),
-                d => d.data.nodeId
+                d => d.data.originalNodeId
             )
             .join('path')
             .on('mouseover', (e: MouseEvent, d: TMCHierarchyPointNode) =>
@@ -977,12 +986,28 @@ class RadialTree {
 
         /* node ids */
         this.nodes
-            .selectAll<SVGTextElement, TMCHierarchyPointNode>('text.node-id')
-            .data(d => (nodeIdsVisible ? [d] : []))
+            .selectAll<SVGTextElement, TMCHierarchyPointNode>(
+                'text.original-node-id'
+            )
+            .data(d => (originalNodeIdsVisible ? [d] : []))
             .join('text')
             .style('cursor', 'pointer')
-            .attr('class', 'node-id')
-            .text(d => d.data.nodeId)
+            .attr('class', 'original-node-id')
+            .text(d => {
+                debugger;
+                return d.data.originalNodeId;
+            })
+            .attr('text-anchor', 'middle');
+
+        this.nodes
+            .selectAll<SVGTextElement, TMCHierarchyPointNode>(
+                'text.pruned-node-id'
+            )
+            .data(d => (prunedNodeIdsVisible ? [d] : []))
+            .join('text')
+            .style('cursor', 'pointer')
+            .attr('class', 'pruned-node-id')
+            .text(d => d.data.prunedNodeId)
             .attr('text-anchor', 'middle');
     };
 }
