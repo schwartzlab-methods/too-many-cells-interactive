@@ -170,7 +170,7 @@ export const pruneTreeByMinDistance = (
 /* 
     Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, 
     keep that path, otherwise prune it. This argument assists in finding distant nodes."
-    https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L44
+    https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L180
     */
 export const pruneTreeByMinDistanceSearch = (
     tree: TMCHierarchyDataNode,
@@ -178,8 +178,13 @@ export const pruneTreeByMinDistanceSearch = (
 ) =>
     distance
         ? tree.copy().eachAfter(d => {
+              // exclude all children (b/c they have null distance -- probably don't want that?)
               if (!d.data.distance || d.data.distance < distance) {
+                  //i don't think we need this...
                   if (d.parent) {
+                      //remove node and siblings w/ "bad" distance
+                      //probably don't want that either; rather, we want to remove the node's children?
+                      //test and compare w/ TMC
                       d.parent.children = undefined;
                   }
               }
@@ -488,3 +493,10 @@ export const textToAnnotations = (text: string) => {
 
     return annotations;
 };
+
+/**
+ * Check if argument is "nillish" but allow 0 (which is falsey)
+ * @param arg Any
+ * @returns Boolean
+ */
+export const isNil = (arg: any) => ['', null, undefined].includes(arg);

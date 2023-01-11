@@ -17,7 +17,12 @@ import { Column, Row, WidgetTitle } from '../../Layout';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import { Text } from '../../Typography';
 import { SelectPanel } from '../..';
-import { madCountToValue, roundDigit, valueToMadCount } from '../../../util';
+import {
+    isNil,
+    madCountToValue,
+    roundDigit,
+    valueToMadCount,
+} from '../../../util';
 import { CumSumBin } from '../../../Visualizations/AreaChart';
 import QuestionTip from '../../QuestionTip';
 import { PlainOrMADVal, ValueDisplayUnits } from '../../../types';
@@ -244,7 +249,7 @@ const Pruner: React.FC<PrunerProps> = ({
                             <UpdateBox
                                 onChange={v => setInputVal(v + '')}
                                 onSubmit={() => {
-                                    if (inputVal) {
+                                    if (!isNil(inputVal)) {
                                         onSubmit(+inputVal);
                                     }
                                 }}
@@ -372,7 +377,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
                             <UpdateBox
                                 onChange={v => setInputVal(v + '')}
                                 onSubmit={() => {
-                                    if (inputVal) {
+                                    if (!isNil(inputVal)) {
                                         const madsValue =
                                             viewType === 'mads'
                                                 ? +inputVal
@@ -418,7 +423,7 @@ const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => (
         }}
     >
         <NumberInput
-            onChange={v => !!v && onChange(v)}
+            onChange={v => !isNil(v) && onChange(v as number)}
             value={value as number}
         />
         <SubmitButton onClick={() => onSubmit(value)}>Update</SubmitButton>
