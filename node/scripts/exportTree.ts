@@ -253,10 +253,9 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
     if (scaleType === 'labelCount') {
         let { labelRange, labelDomain } = state.scales.colorScale || {};
 
-        if (!labelDomain || !labelRange) {
-            const labelMap = buildLabelMap(labels);
-            addLabels(nodes, labelMap);
+        const labelMap = buildLabelMap(labels);
 
+        if (!labelDomain || !labelRange) {
             const rangeDomain =
                 calculateOrdinalColorScaleRangeAndDomain(labelMap);
             labelRange = rangeDomain.range;
@@ -343,7 +342,19 @@ const saveTree = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
     if (annotations) {
         addUserAnnotations(nodes, annotations);
     }
-    const visibleNodes = pruneAndCalculateLayout(state, nodes);
+
+    /* labels need to be added before pruning */
+    if (state.scales.colorScale?.variant === 'labelCount') {
+        const labelMap = buildLabelMap(labels);
+        addLabels(nodes, labelMap);
+    }
+
+    const visibleNodes = pruneAndCalculateLayout(state, nodes).eachBefore(
+        (n, i) => {
+            n.data.originalNodeId = i;
+            n.data.prunedNodeId = i;
+        }
+    );
     const { scale, scaleFunction } = getScale(visibleNodes, state);
     const treeScales = getTreeScales(scaleFunction, state, nodes);
 
@@ -400,7 +411,8 @@ const saveTree = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
 const OPTIONAL_DISPLAY_ELEMENTS: (keyof ToggleableDisplayElements)[] = [
     'distanceVisible',
     'nodeCountsVisible',
-    'nodeIdsVisible',
+    'originalNodeIdsVisible',
+    'prunedNodeIdsVisible',
     'piesVisible',
     'strokeVisible',
     'widthScalingDisabled',
@@ -511,7 +523,8 @@ const validateInput = (config: ChartConfig) => {
 const defaultToggleableFeatures = {
     distanceVisible: false,
     nodeCountsVisible: false,
-    nodeIdsVisible: false,
+    originalNodeIdsVisible: false,
+    prunedNodeIdsVisible: false,
     piesVisible: true,
     strokeVisible: false,
     widthScalingDisabled: false,
