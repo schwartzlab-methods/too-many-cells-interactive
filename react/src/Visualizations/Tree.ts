@@ -249,14 +249,22 @@ const showToolTip = (
 
     headingContainer
         .selectAll('li')
-        .data([
-            ['Node Id', data.data.originalNodeId],
+        .data(
             [
-                'Distance',
-                data.data.distance ? formatDigit(data.data.distance) : 'null',
-            ],
-            ['Observation Count', data.value!.toLocaleString()],
-        ])
+                ...(data.data.prunedNodeId !== data.data.originalNodeId
+                    ? [['Pruned Node Id', data.data.prunedNodeId]]
+                    : []),
+            ].concat([
+                ['Node Id', data.data.originalNodeId],
+                [
+                    'Distance',
+                    data.data.distance
+                        ? formatDigit(data.data.distance)
+                        : 'null',
+                ],
+                ['Observation Count', data.value!.toLocaleString()],
+            ])
+        )
         .join('li')
         .attr('class', 'heading-value')
         .html(d => `<strong>${d[0]}:&nbsp;</strong> ${d[1]}`);
@@ -993,10 +1001,7 @@ class RadialTree {
             .join('text')
             .style('cursor', 'pointer')
             .attr('class', 'original-node-id')
-            .text(d => {
-                debugger;
-                return d.data.originalNodeId;
-            })
+            .text(d => d.data.originalNodeId)
             .attr('text-anchor', 'middle');
 
         this.nodes
