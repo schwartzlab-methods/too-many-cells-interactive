@@ -58,7 +58,6 @@ const LegendItem: React.FC<LegendItemProps> = ({
     updateColor,
 }) => {
     const [pickerOpen, setPickerOpen] = useState(false);
-
     return (
         <LegendItemContainer>
             <Popover
@@ -265,33 +264,36 @@ const OrdinalLegend: React.FC<{ scale: ScaleOrdinal<string, string> }> = ({
     scale,
 }) => {
     const dispatch = useAppDispatch();
+
+    const rangeDomain = scale
+        .domain()
+        .map(domain => ({
+            domain,
+            range: scale(domain),
+        }))
+        .sort((a, b) => (a.domain < b.domain ? -1 : 1));
+
     return (
         <>
-            {scale
-                .domain()
-                .sort((a, b) => (a < b ? -1 : 1))
-                .map(d => (
-                    <LegendItem
-                        key={d}
-                        label={d}
-                        color={scale!(d)}
-                        updateColor={(color: string) => {
-                            const currColor = scale!(d);
-                            const range = scale!
-                                .range()
-                                .map(r => (currColor === r ? color : r));
+            {rangeDomain.map(({ domain }, i) => (
+                <LegendItem
+                    key={domain}
+                    label={domain}
+                    color={scale!(domain)}
+                    updateColor={(color: string) => {
+                        const range = rangeDomain.map((r, rdi) =>
+                            rdi === i ? color : r.range
+                        );
 
-                            scale?.range(range);
-
-                            dispatch(
-                                updateActiveOrdinalColorScale({
-                                    range,
-                                    domain: scale.domain(),
-                                })
-                            );
-                        }}
-                    />
-                ))}
+                        dispatch(
+                            updateActiveOrdinalColorScale({
+                                range,
+                                domain: scale.domain(),
+                            })
+                        );
+                    }}
+                />
+            ))}
         </>
     );
 };

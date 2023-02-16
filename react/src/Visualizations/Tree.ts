@@ -148,7 +148,7 @@ const arcPath = arc()({
 const makePie = (data: TMCHierarchyPointNode[], key: ColorScaleVariant) =>
     pie<TMCHierarchyPointNode>().value(d => {
         const item = Object.values(d.data[key])[0];
-        //if scalekey is numeric  use that, otherwise use quantity
+        //if scalekey is numeric use that, otherwise use quantity
         //we're using abs value here b/c the only time we (should) have a negative number is when it is a user
         //annotation or other singleton annotation (i.e., the pie only has one slice and is effectively a scaled dot)
         //if we have a pie with multiple slices represented by negative numbers, they'll need to be converted somehow
@@ -982,7 +982,6 @@ class RadialTree {
             .attr('opacity', d => this.distanceScale(d.data.distance || 0));
 
         /* item counts */
-
         this.nodes
             .selectAll('text.node-count')
             .data(d => (nodeCountsVisible ? [d] : []))
