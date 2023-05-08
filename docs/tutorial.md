@@ -15,7 +15,7 @@ cd tabula-muris
 unzip droplet.zip
 ```
 
-Before we can begin exploring the data, we will need to do some preprocessing on our matrices, which, among others, will generate the required `labels.csv` and `cluster_tree.json` files. If you'd like to create these files yourself, please follow the latest [TooManyCells documentation](https://gregoryschwartz.github.io/too-many-cells/) for instructions. Otherwise you can download the files here: <a download href="/files/cluster_tree.json">cluster_tree.json</a> and <a download href="/files/labels.csv">labels.csv</a>.
+Before we can begin exploring the data, we will need to do some preprocessing on our matrices, which, among others, will generate the required `labels.csv` and `cluster_tree.json` files. If you'd like to create these files yourself, please follow the latest [TooManyCells documentation](https://gregoryschwartz.github.io/too-many-cells/) for instructions. Otherwise you can download the files here: <a download href="./files/cluster_tree.json">cluster_tree.json</a> and <a download href="./files/labels.csv">labels.csv</a>.
 
 
 
