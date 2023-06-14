@@ -27,6 +27,9 @@ With [Docker](https://www.docker.com/) and [Docker-Compose](https://docs.docker.
 
 For an example use, see the [tutorial]({{ site.baseurl }}/tutorial.html).
 
+Importantly, `--matrix-dir` is optional and only required if you want to overlay
+features such as gene expression on the tree.
+
 ## Running the application
 
 To run the application, first make sure that you have [Docker](https://www.docker.com/) and [Docker-Compose](https://docs.docker.com/compose/install/) on your system. Before running the software, use [`too-many-cells`](https://github.com/GregorySchwartz/too-many-cells) to generate (among others) a `cluster_tree.json` file in the output directory. The application needs access to this file as well as a file called `labels.csv` as described in the [`too-many-cells` documentation](https://gregoryschwartz.github.io/too-many-cells/#:~:text=labels.csv) in order to display results. Optionally, you may also include the original matrix files, which will be used to populate a database of features that can overlay your cluster tree visualization. Depending on the size of these files, it may take a while for the database to populate. The current benchmark is about 100,000 entries per second.

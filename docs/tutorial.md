@@ -6,7 +6,10 @@ title: Tutorial
 
 ## Tutorial
 
-For this tutorial we are going to explore data from the [Tabula Muris](https://tabula-muris.ds.czbiohub.org/) project. You can download the matrix files by using the commands below.
+For this tutorial we are going to explore data from the [Tabula
+Muris](https://tabula-muris.ds.czbiohub.org/) project. You can download the
+matrix files by using the commands below. These files are only required if you
+want to overlay gene expression on the tree.
 
 ```bash
 wget -O tabula-muris.zip https://figshare.com/ndownloader/articles/5968960/versions/3
@@ -48,6 +51,9 @@ Before proceding, please note that in order for the containerized process to acc
   --label-path /path/to/labels.csv \
   --port 1212
 ```
+
+As a reminder, `--matrix-dir` is only required for overlaying features such as
+gene expression on the tree.
 
 If all has gone well, you should see a message in your terminal saying that the app is running. To confirm, navigate to [localhost:1212](http://localhost:1212) in a web browser. You should see something like this:
 ![](./images/landing-page.png)
