@@ -1,5 +1,5 @@
 # too-many-cells-interactive
-![](screenshot.gif)
+![](img/screenshot.gif)
 
 # About The Project
 
@@ -7,6 +7,24 @@ too-many-cells-interactive is an interactive visualization tool allowing users t
 
 This tool with its associated website is free and open to all users and there is
 no login requirement.
+
+## Node information
+![](img/node_peek.gif)
+
+## Color changing
+![](img/color_selector.gif)
+
+## Pruning
+![](img/pruning.gif)
+
+## Tree manipulation
+![](img/dragging.gif)
+
+## Branch width adjustment
+![](img/branch_width.gif)
+
+## Feature overlay
+![](img/overlay.gif)
 
 ## Built With
 
