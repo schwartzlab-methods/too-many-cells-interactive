@@ -8,6 +8,10 @@ too-many-cells-interactive is an interactive visualization tool allowing users t
 This tool with its associated website is free and open to all users and there is
 no login requirement.
 
+## Documentation and Quickstart
+
+For detailed documentation, quickstart, and tutorial, see [https://schwartzlab-methods.github.io/too-many-cells-interactive](https://schwartzlab-methods.github.io/too-many-cells-interactive).
+
 ## Node information
 ![](img/node_peek.gif)
 
@@ -36,10 +40,6 @@ no login requirement.
 * [Node.js](https://nodejs.org/en/)
 * [PostgreSQL](https://www.postgresql.org/)
 * [Docker](https://www.docker.com/)
-
-## Documentation and Quickstart
-
-For detailed documentation, quickstart, and tutorial, see [https://schwartzlab-methods.github.io/too-many-cells-interactive](https://schwartzlab-methods.github.io/too-many-cells-interactive).
 
 # Building the application for development
 
