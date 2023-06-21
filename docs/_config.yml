@@ -29,6 +29,9 @@ aux_links:
   TooManyCells Interactive on GitHub:
     - //github.com/schwartzlab-methods/too-many-cells-interactive
 
+# Analytics
+google_analytics: G-FRPWNW4B5Z
+
 # Build settings
 remote_theme: pmarsceill/just-the-docs
 
