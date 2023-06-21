@@ -30,7 +30,7 @@ aux_links:
     - //github.com/schwartzlab-methods/too-many-cells-interactive
 
 # Analytics
-ga_tracking: G-FRPWNW4B5Z
+# ga_tracking: G-FRPWNW4B5Z
 
 # Build settings
 remote_theme: pmarsceill/just-the-docs
