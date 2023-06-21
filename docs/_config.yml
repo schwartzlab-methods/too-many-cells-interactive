@@ -18,15 +18,15 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: TooManyCells Interactive
+title: TooManyCellsInteractive
 # email: the-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Documentation for the TooManyCells Interactive project.
+  Documentation for the TooManyCellsInteractive project.
 baseurl: /too-many-cells-interactive
 url: https://schwartzlab-methods.github.io
 github_username: schwartzlab-methods
 aux_links:
-  TooManyCells Interactive on GitHub:
+  TooManyCellsInteractive on GitHub:
     - //github.com/schwartzlab-methods/too-many-cells-interactive
 
 # Analytics

@@ -23,14 +23,17 @@
 #   jekyll/jekyll sh -c \
 #   "bundle install && bundle exec jekyll serve --host 0.0.0.0 --config _config.local.yml"
 
-title: TooManyCells Interactive
+title: TooManyCellsInteractive
 # email: the-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Documentation for the TooManyCells Interactive project.
+  Documentation for the TooManyCellsInteractive project.
 url: localhost:4000
 aux_links:
-  TooManyCells Interactive on GitHub:
+  TooManyCellsInteractive on GitHub:
     - //github.com/schwartzlab-methods/too-many-cells-interactive
+
+# Analytics
+google_analytics: G-FRPWNW4B5Z
 
 # Build settings
 remote_theme: pmarsceill/just-the-docs
