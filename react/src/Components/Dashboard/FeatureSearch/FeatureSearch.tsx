@@ -23,7 +23,6 @@ import {
 import Button from '../../Button';
 import { Input, TextArea } from '../../Input';
 import { Column, Row, WidgetTitle } from '../../Layout';
-import Modal from '../../Modal';
 import { ActionLink, Caption, Error, Text } from '../../Typography';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import {
@@ -45,6 +44,7 @@ import { CloseIcon } from '../../Icons';
 import { RadioButton, RadioGroup, RadioLabel } from '../../Radio';
 import QuestionTip from '../../QuestionTip';
 import { PlainOrMADVal } from '../../../types';
+import LoadingModal from '../../LoadingModal';
 
 const FeatureSearch: React.FC = () => {
     const [bulkFeatureInput, setBulkFeatureInput] = useState('');
@@ -296,7 +296,7 @@ const FeatureSearch: React.FC = () => {
                     </FeatureList>
                 </FeatureListContainer>
             )}
-            <Modal open={loading} message='Loading...' />
+            <LoadingModal open={loading} />
         </Column>
     );
 };
@@ -414,6 +414,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
     return (
         <AutocompleteContainer ref={containerRef}>
             <AutocompleteInput
+                disabled={!options.length}
                 ref={inputRef}
                 handleKeyPress={handleKeyPress}
                 onChange={e => {
@@ -421,7 +422,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
                     setChoicesVisible(true);
                 }}
                 onClick={() => setChoicesVisible(true)}
-                value={search}
+                value={options.length ? search : 'Loading...'}
             />
             <AutocompleteChoicesContainer _width={parentWidth.current}>
                 {choicesVisible &&

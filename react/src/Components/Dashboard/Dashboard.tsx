@@ -14,6 +14,7 @@ import {
 import { addLabels, buildLabelMap, getData } from '../../prepareData';
 import { TMCHierarchyPointNode } from '../../types';
 import theme from '../../theme';
+import LoadingModal from '../LoadingModal';
 import TreeControls from './Chart/TreeControls';
 import PruneHistory from './DisplayControls/PruneHistory';
 import DisplayControls from './DisplayControls/DisplayControls';
@@ -44,6 +45,7 @@ const ColumnContainer = styled.div`
 
 const Dashboard: React.FC = () => {
     const [baseTree, setBaseTree] = useState<TMCHierarchyPointNode>();
+    const [loading, setLoading] = useState(false);
 
     const { width } = useAppSelector(selectDisplayConfig);
 
@@ -66,17 +68,22 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         const cb = async () => {
-            const unlabeledTree = await getData();
-            const labels = await (await fetch('/files/labels.csv')).text();
-            const labelMap = buildLabelMap(labels);
-            const tree = addLabels(unlabeledTree, labelMap);
+            setLoading(true);
+            try {
+                const unlabeledTree = await getData();
+                const labels = await (await fetch('/files/labels.csv')).text();
+                const labelMap = buildLabelMap(labels);
+                const tree = addLabels(unlabeledTree, labelMap);
 
-            const { range: labelRange, domain: labelDomain } =
-                calculateOrdinalColorScaleRangeAndDomain(labelMap);
+                const { range: labelRange, domain: labelDomain } =
+                    calculateOrdinalColorScaleRangeAndDomain(labelMap);
 
-            dispatch(updateColorScale({ labelRange, labelDomain }));
+                dispatch(updateColorScale({ labelRange, labelDomain }));
 
-            setBaseTree(calculateTreeLayout(tree, width));
+                setBaseTree(calculateTreeLayout(tree, width));
+            } finally {
+                setLoading(false);
+            }
         };
         cb();
         //eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,6 +121,7 @@ const Dashboard: React.FC = () => {
                     </Row>
                 </ColumnContainer>
             </MainContainer>
+            <LoadingModal open={loading} message='LOADING TREE...' />
         </ThemeProvider>
     );
 };

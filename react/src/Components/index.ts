@@ -2,6 +2,8 @@ export { default as AreaChartComponent } from './Dashboard/DisplayControls/AreaC
 export { default as Button } from './Button';
 export { default as Checkbox } from './Checkbox';
 export { default as Dashboard } from './Dashboard/Dashboard';
+export { default as LoadingModal } from './LoadingModal';
+export { default as Modal } from './Modal';
 export { default as Popover } from './Popover';
 export { default as QuestionTip } from './QuestionTip';
 export * from './SelectPanel';

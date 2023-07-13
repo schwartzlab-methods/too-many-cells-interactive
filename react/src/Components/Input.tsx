@@ -58,7 +58,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
 
     const wrappedOnChange = useCallback(
         (arg: string) => {
-            // if val is empty string or starts/ends with 0 r ., update internal value but don't push
+            // if val is empty string or starts/ends with 0 or ., update internal value but don't push
             if (
                 /^(-)?.*(\.|(\.[0-9]*)0)$/.test(arg) ||
                 ['', '-', '-.', '-0.'].includes(arg)

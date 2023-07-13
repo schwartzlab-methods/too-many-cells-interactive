@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Text } from './Typography';
 
 const Background = styled.div<{ open: boolean }>`
     background-color: rgba(0, 0, 0, 0.5);
@@ -32,15 +31,13 @@ const ModalContainer = styled.div`
 
 interface ModalProps {
     open: boolean;
-    message: string;
+    children: React.ReactNode;
 }
 
-const Modal: React.FC<ModalProps> = ({ message, open }) => {
+const Modal: React.FC<ModalProps> = ({ children, open }) => {
     return (
         <Background open={open}>
-            <ModalContainer>
-                <Text>{message}</Text>
-            </ModalContainer>
+            <ModalContainer>{children}</ModalContainer>
         </Background>
     );
 };
