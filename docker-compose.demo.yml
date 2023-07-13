@@ -1,0 +1,66 @@
+version: "3.6"
+services:
+  node:
+    image: too-many-cells-js:latest
+    build: ./
+    environment:
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=tmc
+    networks:
+      - tmc-network
+    restart: always
+    command:
+      - --prod
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.node.rule=Host(`tmci.schwartzlab.ca`)"
+      - "traefik.http.routers.node.entrypoints=websecure"
+      #- "traefik.http.routers.node.entrypoints=web"
+      - "traefik.http.routers.node.tls=true"
+      - "traefik.http.routers.node.tls.certresolver=defaultresolver"
+      - "traefik.http.services.node.loadbalancer.server.port=3000"
+    volumes:
+      - /home/ubuntu/tmci-data-christie/cluster_tree.json:/usr/app/static/files/cluster_tree.json
+      - /home/ubuntu/tmci-data-christie/labels.csv:/usr/app/static/files/labels.csv
+  postgres:
+    image: postgres:14.5
+    environment:
+      - POSTGRES_DB=tmc
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - tmc-network
+  traefik:
+    image: traefik:v2.4
+    environment:
+      - LETSENCRYPT_EMAIL
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      # https://doc.traefik.io/traefik/https/acme/#configuration-examples
+      - --certificatesresolvers.defaultresolver.acme=true
+      - --certificatesresolvers.defaultresolver.acme.email=${LETSENCRYPT_EMAIL}
+      - --certificatesresolvers.defaultresolver.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.defaultresolver.acme.httpchallenge.entrypoint=web
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/letsencrypt:/letsencrypt
+    networks:
+      - tmc-network
+
+
+volumes:
+  postgres-data:
+
+networks:
+  tmc-network:

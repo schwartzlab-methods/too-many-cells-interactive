@@ -29,7 +29,7 @@ WORKDIR /usr/app/react
 # build react app, copy assets into static directory so node can serve
 RUN yarn install && \
     yarn run build && \
-    cp -a dist/* /usr/app/node/static/ 
+    cp -a dist/* /usr/app/node/static/
 
 WORKDIR /usr/app/node
 

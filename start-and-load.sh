@@ -26,6 +26,7 @@ fi
 debug=""
 uid=$(id -u)
 gid=$(id -g)
+docker_compose_path=docker-compose.prod.yaml
 
 while [ -n "$1" ]; do
     if [[ "$1" == '--help' ]]; then
@@ -50,7 +51,11 @@ while [ -n "$1" ]; do
     elif [[ "$1" == '--debug' ]]; then
         debug="--debug"
         shift
-    
+
+    elif [[ "$1" == '--demo' ]]; then
+        docker_compose_path=docker-compose.demo.yml
+        shift
+
     else
         shift
     fi
@@ -72,17 +77,17 @@ if [[ -z $port ]]; then
     echo >&2 "please include the --port argument!" && exit 1
 fi
 
-docker-compose -f docker-compose.prod.yaml build --build-arg UID=$uid --build-arg GID=$gid node
+docker-compose -f $docker_compose_path build --build-arg UID=$uid --build-arg GID=$gid node
 
 # start postgres in the background so we can exec commands to it
-docker-compose -f docker-compose.prod.yaml up -d postgres
+docker-compose -f $docker_compose_path up -d postgres
 
 # make sure that postgres is up before proceeding
 for i in {1..5}; do docker-compose exec postgres psql -U postgres -d tmc -c "SELECT NOW();" > /dev/null 2>&1 && break || sleep 2; done
 
 if [[ -n "${matrix_dir}" ]]; then
 
-    docker-compose -f docker-compose.prod.yaml run --rm \
+    docker-compose -f $docker_compose_path run --rm \
         -v "${matrix_dir}":/usr/data/matrices:ro \
         node --init $debug
 
@@ -91,7 +96,7 @@ else
     docker-compose exec postgres psql -U postgres -d tmc -c 'TRUNCATE features;'
 fi
 
-docker-compose -f docker-compose.prod.yaml run --rm -p "${port}":3000 \
+docker-compose -f $docker_compose_path run --rm -p "${port}":3000 \
     -v "${tree_path}":/usr/app/static/files/cluster_tree.json:ro \
     -v "${label_path}":/usr/app/static/files/labels.csv:ro \
     node --prod
