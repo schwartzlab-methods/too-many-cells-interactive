@@ -557,6 +557,52 @@ class RadialTree {
                                               )
                                           ).toString()
                                   );
+
+                                  /* Update gradient coordinates -- if this is slow, then can try to update on dragend only */
+                                  that.gradientContainer
+                                      .selectAll('linearGradient')
+                                      .data(subtreeLinks.data(), d =>
+                                          makeLinkId(d as TMCHiearchyLink)
+                                      )
+                                      .join(
+                                          enter => enter,
+                                          update => {
+                                              return update
+                                                  .attr(
+                                                      'x1',
+                                                      d =>
+                                                          pointRadial(
+                                                              d.source.x,
+                                                              d.source.y
+                                                          )[0]
+                                                  )
+                                                  .attr(
+                                                      'y1',
+                                                      d =>
+                                                          pointRadial(
+                                                              d.source.x,
+                                                              d.source.y
+                                                          )[1]
+                                                  )
+                                                  .attr(
+                                                      'x2',
+                                                      d =>
+                                                          pointRadial(
+                                                              d.target.x,
+                                                              d.target.y
+                                                          )[0]
+                                                  )
+                                                  .attr(
+                                                      'y2',
+                                                      d =>
+                                                          pointRadial(
+                                                              d.target.x,
+                                                              d.target.y
+                                                          )[1]
+                                                  );
+                                          },
+                                          exit => exit
+                                      );
                               }
                           );
                       }
