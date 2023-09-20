@@ -34,7 +34,7 @@ const debug = (msg: string) => {
     }
 };
 
-const getPool = async (remainingTries = 5) => {
+const getPool = async (remainingTries = 10) => {
     let client;
     let pool;
     try {
@@ -298,6 +298,16 @@ const importData = async (rootDir: string, pool: Pool) => {
             )!;
 
             const features = await getFeaturesDict(featureFile);
+
+            const client = await pool.connect();
+
+            for (let feature in features) {
+                await client.query(
+                    `INSERT INTO feature_names (name) VALUES('${features[feature].feature}') ON CONFLICT(name) DO NOTHING`
+                );
+            }
+
+            client.release();
 
             const barcodesFile = filelist.find(f =>
                 /barcodes.tsv(\.gz)?$/.test(f)

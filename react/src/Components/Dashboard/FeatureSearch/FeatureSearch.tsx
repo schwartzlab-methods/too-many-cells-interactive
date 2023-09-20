@@ -18,7 +18,7 @@ import {
     getKeys,
     getScaleCombinations,
     interpolateColorScale,
-    levenshtein,
+    //levenshtein,
 } from '../../../util';
 import Button from '../../Button';
 import { Input, TextArea } from '../../Input';
@@ -47,8 +47,9 @@ import { PlainOrMADVal } from '../../../types';
 import LoadingModal from '../../LoadingModal';
 
 const FeatureSearch: React.FC = () => {
+    const [autocompleteInput, setAutocompleteInput] = useState('');
     const [bulkFeatureInput, setBulkFeatureInput] = useState('');
-    const [featureList, setFeatureList] = useState<string[]>();
+    const [featureList, setFeatureList] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [lookupType, setLookupType] = useState<'single' | 'bulk'>('single');
 
@@ -86,10 +87,16 @@ const FeatureSearch: React.FC = () => {
     );
 
     useEffect(() => {
-        fetchFeatureNames().then(f => {
-            setFeatureList(f);
-        });
-    }, []);
+        const _fetchFeatureNames = async () => {
+            if (autocompleteInput && autocompleteInput.length > 2) {
+                const featureNames = await fetchFeatureNames(autocompleteInput);
+                setFeatureList(featureNames);
+            } else {
+                setFeatureList([]);
+            }
+        };
+        _fetchFeatureNames();
+    }, [autocompleteInput]);
 
     const bulkFeatureInputError = useMemo(() => {
         if (!bulkFeatureInput) {
@@ -197,8 +204,10 @@ const FeatureSearch: React.FC = () => {
             <Row justifyContent='flex-start'>
                 {lookupType === 'single' ? (
                     <Autocomplete
-                        options={featureList || []}
+                        options={featureList}
                         onSelect={getFeatures}
+                        searchTerm={autocompleteInput}
+                        setSearchTerm={setAutocompleteInput}
                     />
                 ) : (
                     <Column xs={12}>
@@ -315,13 +324,18 @@ const FeatureList = styled.div`
 interface AutocompleteProps {
     options: string[];
     onSelect: (feature: string) => void;
+    searchTerm: string;
+    setSearchTerm: (term: string) => void;
 }
 
-const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
-    const [choices, setChoices] = useState<string[]>([]);
+const Autocomplete: React.FC<AutocompleteProps> = ({
+    options,
+    onSelect,
+    searchTerm,
+    setSearchTerm,
+}) => {
     const [choicesVisible, setChoicesVisible] = useState(false);
     const [minVisibleIdx, setMinVisibleIdx] = useState(0);
-    const [search, setSearch] = useState('');
     const [selectedIdx, setSelectedIdx] = useState<number>(0);
 
     const maxVisible = useMemo(() => 10, []);
@@ -336,7 +350,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
 
     /* Adjust the visible choices */
     useEffect(() => {
-        if (choices.length) {
+        if (options.length) {
             if (selectedIdx - maxVisible === minVisibleIdx) {
                 if (selectedIdx === options.length) {
                     setMinVisibleIdx(0);
@@ -361,25 +375,8 @@ const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [inputRef.current]);
 
-    useEffect(() => {
-        setChoices(
-            options
-                .map(o => ({
-                    word: o,
-                    distance: levenshtein(
-                        o.toLowerCase(),
-                        search.toLowerCase()
-                    ),
-                }))
-                .sort((a, b) => (a.distance < b.distance ? -1 : 1))
-                .map(d => d.word)
-        );
-        setSelectedIdx(0);
-    }, [options, search]);
-
     const resetInputs = () => {
-        setChoices([]);
-        setSearch('');
+        setSearchTerm('');
         setChoicesVisible(false);
         setMinVisibleIdx(0);
         setSelectedIdx(0);
@@ -401,7 +398,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
             resetInputs();
         } else if (e.code === 'Enter') {
             if (selectedIdx > -1) {
-                select(choices[selectedIdx]);
+                select(options[selectedIdx]);
             }
         }
     };
@@ -414,19 +411,18 @@ const Autocomplete: React.FC<AutocompleteProps> = ({ options, onSelect }) => {
     return (
         <AutocompleteContainer ref={containerRef}>
             <AutocompleteInput
-                disabled={!options.length}
                 ref={inputRef}
                 handleKeyPress={handleKeyPress}
                 onChange={e => {
-                    setSearch(e.currentTarget.value);
+                    setSearchTerm(e.currentTarget.value);
                     setChoicesVisible(true);
                 }}
                 onClick={() => setChoicesVisible(true)}
-                value={options.length ? search : 'Loading...'}
+                value={searchTerm}
             />
             <AutocompleteChoicesContainer _width={parentWidth.current}>
                 {choicesVisible &&
-                    choices
+                    options
                         .slice(minVisibleIdx, minVisibleIdx + maxVisible)
                         .map((c, i) => (
                             <Choice
