@@ -74,6 +74,7 @@ const verifyMatrixFilesPresent = async (rootDir: string) => {
 const truncateDatabase = async (pool: Pool) => {
     const client = await pool.connect();
     await client.query('TRUNCATE features;');
+    await client.query('TRUNCATE feature_names;');
     await client.query('DROP INDEX IF EXISTS feature_idx;');
     client.release();
 };
@@ -118,16 +119,17 @@ const insertMany = async (chunk: string, pool: Pool) => {
  * @param filepath Path to features file
  * @returns A dictionary of features keyed by index for fast lookup
  */
+
 const getFeaturesDict = async (filepath: string) => {
     const ret = {} as Record<string, Feature>;
     let i = 1;
     await parseFile(filepath, async row => {
         const vals = row.split('\t');
         ret[i] = {
-            feature: vals[0],
+            feature: vals[1],
             feature_type:
-                vals.length > 1 && vals[1] != vals[0]
-                    ? vals[1]
+                vals.length > 2 && vals[1] != vals[0]
+                    ? vals[2]
                     : 'Gene Expression',
         };
         i++;
