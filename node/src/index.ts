@@ -1,7 +1,7 @@
 import express from 'express';
 import { Pool } from 'pg';
 import path from 'path';
-import { queryFeatures } from './util';
+import { queryFeatures, searchFeatureNames } from './util';
 
 const app = express();
 
@@ -22,6 +22,20 @@ app.use('/api/features', async (req, res) => {
         const formatted = await queryFeatures(features, pool);
 
         res.json(formatted);
+    }
+});
+
+app.use('/api/feature-names', async (req, res) => {
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string') {
+        res.status(422).json('no query sent!');
+    } else {
+        const feature = q.trim();
+
+        const featureNames = await searchFeatureNames(feature, pool);
+
+        res.json(featureNames.map(f => f.name));
     }
 });
 

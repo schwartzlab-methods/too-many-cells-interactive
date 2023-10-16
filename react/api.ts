@@ -1,9 +1,9 @@
 import { FeatureMap } from './src/types';
 
-export const fetchFeatureNames = async () => {
-    const res = await fetch('/api/features-set');
+export const fetchFeatureNames = async (searchTerm: string) => {
+    const res = await fetch(`/api/feature-names?q=${searchTerm}`);
     const features = (await res.json()) as string[];
-    return features.sort((a, b) => (a < b ? -1 : 1));
+    return features;
 };
 
 export const fetchFeatures = async (q: string) => {

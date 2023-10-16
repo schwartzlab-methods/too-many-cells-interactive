@@ -26,3 +26,12 @@ export const queryFeatures = async (features: string[], pool: Pool) => {
 
     return formatted;
 };
+
+export const searchFeatureNames = async (featureName: string, pool: Pool) => {
+    const r = await pool.query<{ name: string }>(
+        `select *, SIMILARITY(name, $1) from feature_names where SIMILARITY(name, $1) > .3 ORDER BY similarity DESC limit 25;`,
+        [featureName]
+    );
+
+    return r.rows;
+};
