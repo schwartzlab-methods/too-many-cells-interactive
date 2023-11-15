@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from 'react';
+import styled from 'styled-components';
 import { hsl } from 'd3-color';
 import { bindActionCreators } from 'redux';
 import { NumberInput } from '../../Input';
-import { Column, Row } from '../../Layout';
+import { Column, Row, WidgetTitle } from '../../Layout';
 import { Caption, Error, Label } from '../../Typography';
 import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 import FeatureSearch from '../FeatureSearch/FeatureSearch';
@@ -94,7 +95,11 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
         <>
             <Column xs={6}>
                 {(!!activeFeatures.length || !!userAnnotationDomain.length) && (
-                    <Row>
+                    <>
+                        <WidgetTitle
+                            title='Legend Selection'
+                            helpText='Use the controls below to select a legend type.'
+                        />
                         <RadioGroup>
                             <RadioButton
                                 checked={colorScaleType === 'labelCount'}
@@ -108,7 +113,7 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
                             />
                             <RadioLabel htmlFor='labelCount'>Labels</RadioLabel>
                         </RadioGroup>
-                    </Row>
+                    </>
                 )}
                 {!!activeFeatures.length && (
                     <Row>
@@ -233,21 +238,33 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
             </Column>
             <Column xs={6}>
                 <Row>
-                    <AnnotationControls />
+                    <PanelContainer>
+                        <AnnotationControls />
+                    </PanelContainer>
                 </Row>
                 <Row>
-                    <ExportControls />
+                    <PanelContainer>
+                        <ExportControls />
+                    </PanelContainer>
                 </Row>
                 <Row>
-                    <PrunerPanel />
+                    <PanelContainer>
+                        <PrunerPanel />
+                    </PanelContainer>
                 </Row>
                 <Row>
-                    <FeatureSearch />
+                    <PanelContainer>
+                        <FeatureSearch />
+                    </PanelContainer>
                 </Row>
             </Column>
         </>
     );
 };
+
+const PanelContainer = styled.div`
+    margin-bottom: 20px;
+`;
 
 export default DisplayControls;
 

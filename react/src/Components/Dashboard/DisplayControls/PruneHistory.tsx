@@ -52,7 +52,11 @@ const PruneHistory: React.FC = () => {
     return (
         <Column xs={12}>
             <Row>
-                <WidgetTitle title='Pruning history' />
+                <WidgetTitle
+                    title='Pruning history'
+                    helpText="After pruning the tree, click 'Apply' to commit the change to your pruning history.
+                    Click on any step in the history to revert to its state."
+                />
                 <Button
                     horizontal
                     onClick={applyPrune}

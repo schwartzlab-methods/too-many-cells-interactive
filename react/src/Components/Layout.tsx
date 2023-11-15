@@ -81,8 +81,10 @@ export const WidgetTitle: React.FC<WidgetTitleProps> = ({
             <Title>{title}</Title>
             {!!helpText && <QuestionTip message={helpText} />}
         </Row>
-        <Row>
-            <Caption>{caption}</Caption>
-        </Row>
+        {caption && (
+            <Row>
+                <Caption>{caption}</Caption>
+            </Row>
+        )}
     </TitleContainer>
 );
