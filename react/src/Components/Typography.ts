@@ -51,3 +51,9 @@ export const ActionLink = styled.span`
     cursor: pointer;
     color: ${props => props.theme.palette.primary};
 `;
+
+export const ExternalLink = styled.a`
+    cursor: pointer;
+    color: ${props => props.theme.palette.primary};
+    text-decoration: none;
+`;

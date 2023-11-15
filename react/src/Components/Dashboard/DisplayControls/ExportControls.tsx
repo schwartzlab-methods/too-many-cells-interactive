@@ -99,8 +99,8 @@ const ExportControls: React.FC = () => {
     return (
         <>
             <WidgetTitle
-                title='Export Controls'
                 caption='Download chart and metadata'
+                title='Export Controls'
             />
 
             <SelectPanel
