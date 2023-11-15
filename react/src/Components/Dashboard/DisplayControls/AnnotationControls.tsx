@@ -50,7 +50,8 @@ const AnnotationControls: React.FC = () => {
     return (
         <Column xs={12}>
             <WidgetTitle
-                helpText='File should be 2-column csv with a column of node ids called `node_id` and a second column of corresponding numeric annotations for each node.'
+                helpText='File should be 2-column csv with a column of node ids called `node_id`
+                and a second column of corresponding numeric annotations for each node.'
                 caption='Upload custom node-level annotations'
                 title='Annotation Upload'
             />

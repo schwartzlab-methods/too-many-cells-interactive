@@ -4,7 +4,6 @@ import {
     Root,
     Anchor as PopoverAnchor,
     Content as PopoverContent,
-    Trigger as PopoverTrigger,
     Portal,
 } from '@radix-ui/react-popover';
 
@@ -19,7 +18,6 @@ const PopoverContentContainer = styled.div`
     flex-grow: 1;
     flex-shrink: 1;
     justify-content: flex-start;
-    max-width: 500px;
     opacity: 1;
     padding: 7px;
     position: absolute;
@@ -29,9 +27,8 @@ const PopoverContentContainer = styled.div`
 interface PopoverProps {
     onOpenChange?: (state: boolean) => void;
     open: boolean;
-    Anchor?: ReactNode;
+    Anchor: ReactNode;
     Content: ReactNode;
-    Trigger?: ReactNode;
 }
 
 export const Popover: React.FC<PopoverProps> = ({
@@ -39,17 +36,18 @@ export const Popover: React.FC<PopoverProps> = ({
     open,
     Anchor,
     Content,
-    Trigger,
 }) => {
     return (
         <Root onOpenChange={onOpenChange} open={open}>
-            {Anchor ? (
-                <PopoverAnchor>{Anchor}</PopoverAnchor>
-            ) : (
-                <PopoverTrigger>{Trigger}</PopoverTrigger>
-            )}
+            <PopoverAnchor>{Anchor}</PopoverAnchor>
             <Portal>
-                <PopoverContent>
+                <PopoverContent
+                    side='top'
+                    sideOffset={35}
+                    style={{ width: '350px' }}
+                    avoidCollisions
+                    collisionPadding={10}
+                >
                     <PopoverContentContainer>{Content}</PopoverContentContainer>
                 </PopoverContent>
             </Portal>

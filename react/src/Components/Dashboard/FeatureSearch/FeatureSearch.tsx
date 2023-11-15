@@ -170,8 +170,9 @@ const FeatureSearch: React.FC = () => {
     return (
         <Column xs={12}>
             <WidgetTitle
-                title='Feature Overlays'
                 caption='Search for a feature by identifier'
+                helpText='Overlay the tree with feature values from the dataset. Use the inputs below to search.'
+                title='Feature Overlays'
             />
             <Row>
                 <RadioGroup>
@@ -191,7 +192,7 @@ const FeatureSearch: React.FC = () => {
                         type='radio'
                     />
                     <RadioLabel htmlFor='bulk'>Bulk Entry</RadioLabel>
-                    <QuestionTip message='Features should be comma-separated with no whitespace.' />
+                    <QuestionTip message='Enter features as a comma-separated list with no whitespace.' />
                 </RadioGroup>
             </Row>
             <Row justifyContent='flex-start'>

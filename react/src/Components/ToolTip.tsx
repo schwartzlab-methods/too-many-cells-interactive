@@ -18,7 +18,12 @@ const ToolTip: React.FC<ToolTipProps> = ({ message, children }) => {
                 open={tipVisible}
                 Anchor={<span>{children}</span>}
                 Content={
-                    <div style={{ maxWidth: '250px' }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexGrow: 1,
+                        }}
+                    >
                         {React.isValidElement(message) ? (
                             message
                         ) : (

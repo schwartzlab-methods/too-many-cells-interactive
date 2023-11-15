@@ -10,7 +10,7 @@ interface RowProps {
 
 //2 accounts for 2% "gutter" margin
 const media = {
-    xs: (cols: number) => `  
+    xs: (cols: number) => `
         flex-basis: ${(cols / 12) * 100 - 2}%;
     `,
     md: (cols: number) => `
