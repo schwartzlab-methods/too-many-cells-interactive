@@ -122,7 +122,7 @@ const PrunerPanel: React.FC = () => {
         <Column xs={12}>
             <WidgetTitle
                 caption='Reduce node count by distance, size, or depth'
-                helpText='Use these controls to reduce the size of the tree by removing nodes.'
+                helpText='Use these controls to reduce the size of the tree by removing leaf nodes.'
                 title='Pruning Controls'
             />
             <Row>
@@ -152,6 +152,7 @@ const PrunerPanel: React.FC = () => {
                     onSubmit={prune('minSize')}
                     onViewTypeChange={updatePruneValueDisplayType}
                     plainValues={sizeMeta.plainGroups}
+                    tipText='Select a minimum observation count for each node'
                     value={getPrunerVal('minSize')}
                     viewType={step.valuePruner.displayValue || 'plain'}
                     xLabel='Size'
@@ -166,8 +167,9 @@ const PrunerPanel: React.FC = () => {
                     onViewTypeChange={updatePruneValueDisplayType}
                     onSubmit={prune('minDistance')}
                     plainValues={distanceMeta.plainGroups}
-                    tipText='Distance values range from zero to lowest value of a root grandchild (to prevent pruning
-                        entire tree when root grandchild distance is small).'
+                    tipText='Select a minimum distance between child nodes, starting from root.
+                        Selection range includes values from zero to lowest value of a root grandchild to prevent pruning
+                        entire tree.'
                     value={getPrunerVal('minDistance')}
                     viewType={step.valuePruner.displayValue || 'plain'}
                     xLabel='Distance'
@@ -182,6 +184,9 @@ const PrunerPanel: React.FC = () => {
                     onViewTypeChange={updatePruneValueDisplayType}
                     onSubmit={prune('minDistanceSearch')}
                     plainValues={distanceSearchMeta.plainGroups}
+                    tipText='Select a minimum distance between child nodes, starting from leaves.
+                    Selection range includes values from zero to lowest value of a root grandchild to prevent pruning
+                    entire tree.'
                     value={getPrunerVal('minDistanceSearch')}
                     viewType={step.valuePruner.displayValue || 'plain'}
                     xLabel='Distance (Search)'
@@ -191,6 +196,7 @@ const PrunerPanel: React.FC = () => {
                     label='Prune by depth'
                     onSubmit={prune('minDepth')}
                     plainValues={depthGroups}
+                    tipText='Prune nodes that whose depth is above the selected maximum.'
                     xLabel='Depth'
                     value={getPrunerVal('minDepth')}
                 />

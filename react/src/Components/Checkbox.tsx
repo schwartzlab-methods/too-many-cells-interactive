@@ -1,6 +1,11 @@
 import React from 'react';
 import styled from 'styled-components';
 import { CheckboxCheckedIcon, CheckboxUncheckedIcon } from './Icons';
+import QuestionTip from './QuestionTip';
+
+const CheckboxLabelContainer = styled.span`
+    display: flex;
+`;
 
 const CheckboxLabel = styled.p`
     margin: 0px 0px 0px 5px;
@@ -20,6 +25,7 @@ interface CheckboxProps {
     label: string;
     onClick: () => void;
     style?: React.CSSProperties;
+    ttText?: string;
 }
 
 const Checkbox: React.FC<CheckboxProps> = ({
@@ -27,6 +33,7 @@ const Checkbox: React.FC<CheckboxProps> = ({
     label,
     onClick,
     style,
+    ttText,
 }) => {
     return (
         <CheckboxContainer style={style} onClick={onClick}>
@@ -35,7 +42,10 @@ const Checkbox: React.FC<CheckboxProps> = ({
             ) : (
                 <CheckboxUncheckedIcon fill='none' />
             )}
-            <CheckboxLabel>{label}</CheckboxLabel>
+            <CheckboxLabelContainer>
+                <CheckboxLabel>{label}</CheckboxLabel>
+                {ttText && <QuestionTip message={ttText} />}
+            </CheckboxLabelContainer>
         </CheckboxContainer>
     );
 };

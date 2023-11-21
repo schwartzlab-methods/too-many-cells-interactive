@@ -178,7 +178,8 @@ const FeatureSearch: React.FC = () => {
         <Column xs={12}>
             <WidgetTitle
                 caption='Search for a feature by identifier'
-                helpText='Overlay the tree with feature values from the dataset. Use the inputs below to search.'
+                helpText='Use the inputs below to search the database for features and retrieve their values.
+                The values will be added to the tree on a gradient scale.'
                 title='Feature Overlays'
             />
             <Row>

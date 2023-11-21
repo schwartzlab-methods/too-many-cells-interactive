@@ -57,16 +57,22 @@ const DisplaySettings: React.FC = () => {
             <ToggleCheckbox
                 label='Show Original Node IDs'
                 propName='originalNodeIdsVisible'
+                ttText='Show the node IDs computed from the original tree'
             />
             <ToggleCheckbox
                 label='Show Pruned Node IDs'
                 propName='prunedNodeIdsVisible'
+                ttText='Show the node IDs computed from the pruned tree'
             />
             <ToggleCheckbox
                 label='Show Observation Counts'
                 propName='nodeCountsVisible'
             />
-            <ToggleCheckbox label='Show Distance' propName='distanceVisible' />
+            <ToggleCheckbox
+                label='Show Distance'
+                propName='distanceVisible'
+                ttText='Show distance indicator between child nodes.'
+            />
             <ToggleCheckbox label='Show Pies' propName='piesVisible' />
             <Checkbox
                 checked={widthScalingDisabled}
@@ -84,11 +90,16 @@ const DisplaySettings: React.FC = () => {
 export default DisplaySettings;
 
 interface ToggleCheckboxProps {
-    propName: keyof ToggleableDisplayElements;
     label: string;
+    propName: keyof ToggleableDisplayElements;
+    ttText?: string;
 }
 
-const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({ propName, label }) => {
+const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({
+    propName,
+    label,
+    ttText,
+}) => {
     const isVisible =
         useAppSelector(selectDisplayConfig)['toggleableFeatures'][propName];
     const dipatch = useAppDispatch();
@@ -96,8 +107,9 @@ const ToggleCheckbox: React.FC<ToggleCheckboxProps> = ({ propName, label }) => {
     return (
         <Checkbox
             checked={isVisible}
-            onClick={dipatch.bind(null, _toggleDisplayProperty(propName))}
             label={label}
+            onClick={dipatch.bind(null, _toggleDisplayProperty(propName))}
+            ttText={ttText}
         />
     );
 };

@@ -12,7 +12,6 @@ import Button from '../../Button';
 import { WidgetTitle } from '../../Layout';
 import { SelectPanel } from '../..';
 import { selectAnnotationSlice } from '../../../redux/annotationSlice';
-import { selectDisplayConfig } from '../../../redux/displayConfigSlice';
 
 const ExportControls: React.FC = () => {
     const [panelOpen, setPanelOpen] = useState(false);
@@ -20,12 +19,6 @@ const ExportControls: React.FC = () => {
     const { scale: colorScale } = useColorScale();
 
     const { activeFeatures } = useAppSelector(selectAnnotationSlice);
-
-    const {
-        scales: {
-            colorScale: { featureScaleSaturation },
-        },
-    } = useAppSelector(selectDisplayConfig);
 
     const state = useExportState();
 
@@ -42,8 +35,7 @@ const ExportControls: React.FC = () => {
                 null,
                 colorScale,
                 selector,
-                activeFeatures,
-                featureScaleSaturation
+                activeFeatures
             ),
             exportState: saveAs.bind(
                 null,
@@ -54,18 +46,10 @@ const ExportControls: React.FC = () => {
                 null,
                 colorScale,
                 selector,
-                activeFeatures,
-                featureScaleSaturation
+                activeFeatures
             ),
         };
-    }, [
-        activeFeatures,
-        colorScale,
-        downloadMeta,
-        featureScaleSaturation,
-        selector,
-        state,
-    ]);
+    }, [activeFeatures, colorScale, downloadMeta, selector, state]);
 
     const items = useMemo(() => {
         return [
@@ -101,6 +85,7 @@ const ExportControls: React.FC = () => {
             <WidgetTitle
                 caption='Download chart and metadata'
                 title='Export Controls'
+                helpText='Save the tree locally as an image, JSON, or configuration file.'
             />
 
             <SelectPanel
