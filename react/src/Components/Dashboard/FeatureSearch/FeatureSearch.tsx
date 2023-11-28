@@ -178,8 +178,22 @@ const FeatureSearch: React.FC = () => {
         <Column xs={12}>
             <WidgetTitle
                 caption='Search for a feature by identifier'
-                helpText='Use the inputs below to search the database for features and retrieve their values.
-                The values will be added to the tree on a gradient scale.'
+                helpText={
+                    <Text fontSize='12px'>
+                        Color the tree by the numeric feature values of each
+                        cell. The distribution represents the number of cells
+                        with each feature value. Select a threshold for "Feature
+                        HiLo" in "Legend Selection" from this distribution. See{' '}
+                        <a
+                            target='_blank'
+                            rel='noreferrer'
+                            href='https://schwartzlab-methods.github.io/too-many-cells-interactive/tutorial.html'
+                        >
+                            https://schwartzlab-methods.github.io/too-many-cells-interactive/tutorial.html
+                        </a>{' '}
+                        for more information.
+                    </Text>
+                }
                 title='Feature Overlays'
             />
             <Row>

@@ -122,7 +122,20 @@ const PrunerPanel: React.FC = () => {
         <Column xs={12}>
             <WidgetTitle
                 caption='Reduce node count by distance, size, or depth'
-                helpText='Use these controls to reduce the size of the tree by removing leaf nodes.'
+                helpText={
+                    <Text fontSize='12px'>
+                        Collapse children nodes into parent nodes, shrinking the
+                        tree. Useful to look at larger populations. See{' '}
+                        <a
+                            target='_blank'
+                            rel='noreferrer'
+                            href='https://schwartzlab-methods.github.io/too-many-cells-interactive/tutorial.html'
+                        >
+                            https://schwartzlab-methods.github.io/too-many-cells-interactive/tutorial.html
+                        </a>{' '}
+                        for more information about different pruning types.
+                    </Text>
+                }
                 title='Pruning Controls'
             />
             <Row>

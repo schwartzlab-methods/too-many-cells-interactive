@@ -54,8 +54,10 @@ const PruneHistory: React.FC = () => {
             <Row>
                 <WidgetTitle
                     title='Pruning history'
-                    helpText="After pruning the tree, click 'Apply' to commit the change to your pruning history.
-                    Click on any step in the history to revert to its state."
+                    helpText="Keeps track of each change to the tree structure from 'Pruning Controls'
+                    or from manual changes on the tree window (such as collapsing nodes and new root nodes).
+                    Select 'Apply' to set a snapshot of the structure. Select a snapshot and click 'Apply' to
+                    revert the tree. Click 'Reset' to start from the original tree."
                 />
                 <Button
                     horizontal

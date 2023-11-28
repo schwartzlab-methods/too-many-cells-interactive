@@ -57,12 +57,12 @@ const DisplaySettings: React.FC = () => {
             <ToggleCheckbox
                 label='Show Original Node IDs'
                 propName='originalNodeIdsVisible'
-                ttText='Show the node IDs computed from the original tree'
+                ttText='Display consistent node IDs ignoring any changes to tree structure.'
             />
             <ToggleCheckbox
                 label='Show Pruned Node IDs'
                 propName='prunedNodeIdsVisible'
-                ttText='Show the node IDs computed from the pruned tree'
+                ttText='Display refreshed node IDs based on the current tree structure.'
             />
             <ToggleCheckbox
                 label='Show Observation Counts'
@@ -71,7 +71,10 @@ const DisplaySettings: React.FC = () => {
             <ToggleCheckbox
                 label='Show Distance'
                 propName='distanceVisible'
-                ttText='Show distance indicator between child nodes.'
+                ttText='Display the "distance" values on each parent node,
+                with darker circles indicating larger values. By default,
+                TooManyCells uses network modularity as a distance measure,
+                with higher values indicating a greater split between children nodes.'
             />
             <ToggleCheckbox label='Show Pies' propName='piesVisible' />
             <Checkbox
