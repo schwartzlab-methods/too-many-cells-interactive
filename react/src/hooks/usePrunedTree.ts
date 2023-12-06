@@ -47,7 +47,7 @@ import useAppDispatch from './useAppDispatch';
 import { getFeatureAverage } from './useScale';
 
 /* This hook has become the site of most tree transformations -- it reacts to changes in state that require the tree to be altered in some way,
-    including prunes, user annotations, and feature additions.    
+    including prunes, user annotations, and feature additions.
 */
 
 const usePrunedTree = (tree: TMCHierarchyDataNode) => {
@@ -583,8 +583,11 @@ const getFeatureDistributions = (
                 count: nodes
                     .descendants()
                     //we want the count of nodes that have an average above the threshold filter
-                    .filter(d => d.data.featureCount[f].scaleKey > b.value)
-                    .length,
+                    .filter(
+                        d =>
+                            (d.data.featureCount[f].scaleKey as number) >
+                            b.value
+                    ).length,
             })),
             madWithZeroes: getMAD(dist) ?? 0,
             max: max(dist) ?? 0,

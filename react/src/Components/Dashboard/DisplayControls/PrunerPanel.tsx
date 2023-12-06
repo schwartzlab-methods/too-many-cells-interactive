@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { isValidElement, useEffect, useMemo, useState } from 'react';
 import { bindActionCreators } from 'redux';
 import styled from 'styled-components';
 import {
@@ -42,7 +42,7 @@ const PrunerContainer = styled.div<{ expanded: boolean }>`
 
 const PrunerLabelContainer = styled.div`
     margin: 0px;
-    justify-content: space-between;
+    display: flex;
     flex-grow: 0;
 `;
 
@@ -121,8 +121,22 @@ const PrunerPanel: React.FC = () => {
     return (
         <Column xs={12}>
             <WidgetTitle
-                title='Pruning Controls'
                 caption='Reduce node count by distance, size, or depth'
+                helpText={
+                    <Text fontSize='12px'>
+                        Collapse children nodes into parent nodes, shrinking the
+                        tree. Useful to look at larger populations. See{' '}
+                        <a
+                            target='_blank'
+                            rel='noreferrer'
+                            href='https://schwartzlab-methods.github.io/too-many-cells-interactive/tutorial.html'
+                        >
+                            https://schwartzlab-methods.github.io/too-many-cells-interactive/tutorial.html
+                        </a>{' '}
+                        for more information about different pruning types.
+                    </Text>
+                }
+                title='Pruning Controls'
             />
             <Row>
                 <SelectPanel
@@ -144,13 +158,14 @@ const PrunerPanel: React.FC = () => {
                 <SmartPruner
                     expanded={selected === 'minSize'}
                     id='minSize'
-                    label={<Text>Prune by size</Text>}
+                    label='Prune by size'
                     madValues={sizeMeta.madGroups}
                     madSize={sizeMeta.mad}
                     median={sizeMeta.median}
                     onSubmit={prune('minSize')}
                     onViewTypeChange={updatePruneValueDisplayType}
                     plainValues={sizeMeta.plainGroups}
+                    tipText='Select a minimum observation count for each node'
                     value={getPrunerVal('minSize')}
                     viewType={step.valuePruner.displayValue || 'plain'}
                     xLabel='Size'
@@ -158,21 +173,16 @@ const PrunerPanel: React.FC = () => {
                 <SmartPruner
                     expanded={selected === 'minDistance'}
                     id='minDistance'
-                    label={
-                        <Row>
-                            <Text>Prune by distance </Text>{' '}
-                            <QuestionTip
-                                message='Distance values range from zero to lowest value of a root grandchild (to prevent pruning 
-                                             entire tree when root grandchild distance is small).'
-                            ></QuestionTip>
-                        </Row>
-                    }
+                    label='Prune by Distance'
                     madValues={distanceMeta.madGroups}
                     madSize={distanceMeta.mad}
                     median={distanceMeta.median}
                     onViewTypeChange={updatePruneValueDisplayType}
                     onSubmit={prune('minDistance')}
                     plainValues={distanceMeta.plainGroups}
+                    tipText='Select a minimum distance between child nodes, starting from root.
+                        Selection range includes values from zero to lowest value of a root grandchild to prevent pruning
+                        entire tree.'
                     value={getPrunerVal('minDistance')}
                     viewType={step.valuePruner.displayValue || 'plain'}
                     xLabel='Distance'
@@ -180,13 +190,16 @@ const PrunerPanel: React.FC = () => {
                 <SmartPruner
                     expanded={selected === 'minDistanceSearch'}
                     id='minDistanceSearch'
-                    label={<Text>Prune by distance (search)</Text>}
+                    label='Prune by distance (search)'
                     madValues={distanceSearchMeta.madGroups}
                     madSize={distanceSearchMeta.mad}
                     median={distanceSearchMeta.median}
                     onViewTypeChange={updatePruneValueDisplayType}
                     onSubmit={prune('minDistanceSearch')}
                     plainValues={distanceSearchMeta.plainGroups}
+                    tipText='Select a minimum distance between child nodes, starting from leaves.
+                    Selection range includes values from zero to lowest value of a root grandchild to prevent pruning
+                    entire tree.'
                     value={getPrunerVal('minDistanceSearch')}
                     viewType={step.valuePruner.displayValue || 'plain'}
                     xLabel='Distance (Search)'
@@ -196,6 +209,7 @@ const PrunerPanel: React.FC = () => {
                     label='Prune by depth'
                     onSubmit={prune('minDepth')}
                     plainValues={depthGroups}
+                    tipText='Prune nodes that whose depth is above the selected maximum.'
                     xLabel='Depth'
                     value={getPrunerVal('minDepth')}
                 />
@@ -211,8 +225,9 @@ interface PrunerProps {
     label: string;
     onSubmit: (size: number) => void;
     plainValues: CumSumBin[];
-    xLabel: string;
+    tipText?: string;
     value?: PlainOrMADVal;
+    xLabel: string;
 }
 
 const Pruner: React.FC<PrunerProps> = ({
@@ -220,6 +235,7 @@ const Pruner: React.FC<PrunerProps> = ({
     label,
     plainValues,
     onSubmit,
+    tipText,
     value,
     xLabel,
 }) => {
@@ -237,7 +253,10 @@ const Pruner: React.FC<PrunerProps> = ({
         <PrunerContainer expanded={expanded}>
             {expanded && (
                 <>
-                    <PrunerLabel>{label}</PrunerLabel>
+                    <PrunerLabel>
+                        <Text>{label}</Text>
+                        {tipText && <QuestionTip message={tipText} />}
+                    </PrunerLabel>
                     <ChartContainer expanded={expanded}>
                         <>
                             <AreaChartComponent
@@ -266,16 +285,17 @@ const Pruner: React.FC<PrunerProps> = ({
 export interface SmartPrunerProps {
     expanded: boolean;
     id: string;
-    label: JSX.Element;
+    label: string | JSX.Element;
     madSize: number;
     madValues: CumSumBin[];
     median: number;
     onViewTypeChange: (viewType: ValueDisplayUnits) => void;
     plainValues: CumSumBin[];
     onSubmit: (value: number, madsValue?: number) => void;
-    xLabel: string;
+    tipText?: string;
     value?: PlainOrMADVal;
     viewType?: ValueDisplayUnits;
+    xLabel: string;
     yLabel?: string;
 }
 
@@ -289,6 +309,7 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
     onViewTypeChange,
     plainValues,
     onSubmit,
+    tipText,
     xLabel,
     value,
     viewType,
@@ -313,7 +334,18 @@ export const SmartPruner: React.FC<SmartPrunerProps> = ({
         <PrunerContainer expanded={expanded}>
             {expanded && (
                 <>
-                    <PrunerLabel>{label}</PrunerLabel>
+                    <PrunerLabel>
+                        {isValidElement(label) ? (
+                            label
+                        ) : (
+                            <>
+                                <Text>{label}</Text>
+                                {tipText && (
+                                    <QuestionTip message={tipText} />
+                                )}{' '}
+                            </>
+                        )}
+                    </PrunerLabel>
                     <ChartContainer expanded={expanded}>
                         <>
                             <RadioGroup>
