@@ -52,7 +52,7 @@ export type ClickPruneType = 'setRootNode' | 'setCollapsedNode';
 
 type AllPruneType = ValuePruneType | ClickPruneType;
 
-/* A new prune step will be an empty object to be populated by UI controls 
+/* A new prune step will be an empty object to be populated by UI controls
     Display type stored on pruner mainly for convenience
 */
 interface Pruner<T> {

@@ -10,7 +10,7 @@ interface RowProps {
 
 //2 accounts for 2% "gutter" margin
 const media = {
-    xs: (cols: number) => `  
+    xs: (cols: number) => `
         flex-basis: ${(cols / 12) * 100 - 2}%;
     `,
     md: (cols: number) => `
@@ -81,8 +81,10 @@ export const WidgetTitle: React.FC<WidgetTitleProps> = ({
             <Title>{title}</Title>
             {!!helpText && <QuestionTip message={helpText} />}
         </Row>
-        <Row>
-            <Caption>{caption}</Caption>
-        </Row>
+        {caption && (
+            <Row>
+                <Caption>{caption}</Caption>
+            </Row>
+        )}
     </TitleContainer>
 );

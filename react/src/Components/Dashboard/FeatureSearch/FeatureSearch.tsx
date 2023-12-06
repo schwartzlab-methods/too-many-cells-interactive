@@ -177,8 +177,24 @@ const FeatureSearch: React.FC = () => {
     return (
         <Column xs={12}>
             <WidgetTitle
-                title='Feature Overlays'
                 caption='Search for a feature by identifier'
+                helpText={
+                    <Text fontSize='12px'>
+                        Color the tree by the numeric feature values of each
+                        cell. The distribution represents the number of cells
+                        with each feature value. Select a threshold for "Feature
+                        HiLo" in "Legend Selection" from this distribution. See{' '}
+                        <a
+                            target='_blank'
+                            rel='noreferrer'
+                            href='https://schwartzlab-methods.github.io/too-many-cells-interactive/tutorial.html'
+                        >
+                            https://schwartzlab-methods.github.io/too-many-cells-interactive/tutorial.html
+                        </a>{' '}
+                        for more information.
+                    </Text>
+                }
+                title='Feature Overlays'
             />
             <Row>
                 <RadioGroup>
@@ -198,7 +214,7 @@ const FeatureSearch: React.FC = () => {
                         type='radio'
                     />
                     <RadioLabel htmlFor='bulk'>Bulk Entry</RadioLabel>
-                    <QuestionTip message='Features should be comma-separated with no whitespace.' />
+                    <QuestionTip message='Enter features as a comma-separated list with no whitespace.' />
                 </RadioGroup>
             </Row>
             <Row justifyContent='flex-start'>

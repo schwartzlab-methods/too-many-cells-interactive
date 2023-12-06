@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
-    "build": "webpack",
+    "build": "webpack --config webpack.config.production.js",
     "format": "prettier --write src",
     "start-cold": "webpack serve --no-hot",
     "start": "webpack serve",

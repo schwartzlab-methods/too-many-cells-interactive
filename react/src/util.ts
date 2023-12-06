@@ -167,11 +167,12 @@ export const pruneTreeByMinDistance = (
               }
           })
         : tree.copy();
-/* 
-    Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, 
-    keep that path, otherwise prune it. This argument assists in finding distant nodes."
-    https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L180
-    */
+
+/**
+ *   Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE,
+ *   keep that path, otherwise prune it. This argument assists in finding distant nodes."
+ *   https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L180
+ */
 export const pruneTreeByMinDistanceSearch = (
     tree: TMCHierarchyDataNode,
     distance: number
@@ -180,18 +181,20 @@ export const pruneTreeByMinDistanceSearch = (
         const visited: number[] = [];
         const newTree = tree.copy();
         newTree.eachAfter(d => {
-            const descendantAlreadyVisited = hasIntersection(
-                visited,
-                (tree.descendants() || [])
-                    .find(n => n.data.originalNodeId === d.data.originalNodeId)
-                    ?.descendants()
-                    .map(n => n.data.originalNodeId) || []
-            );
+            // NOTE: not sure why this was included, but it was very slow and am commenting out for now.
+            // const descendantAlreadyVisited = hasIntersection(
+            //     visited,
+            //     (tree.descendants() || [])
+            //         .find(n => n.data.originalNodeId === d.data.originalNodeId)
+            //         ?.descendants()
+            //         .map(n => n.data.originalNodeId) || []
+            // );
 
             if (
                 !!d.data.distance &&
-                d.data.distance <= distance &&
-                !descendantAlreadyVisited
+                d.data.distance <= distance
+                //&&
+                //!descendantAlreadyVisited
             ) {
                 d.children = undefined;
             } else if (d.data.distance) {
