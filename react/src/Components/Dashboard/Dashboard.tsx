@@ -187,7 +187,6 @@ const LearnMoreSection: React.FC = () => (
                 .
             </Text>
         </OutlinedColumn>
-        <Column xs={0} md={6}></Column>
     </Row>
 );
 

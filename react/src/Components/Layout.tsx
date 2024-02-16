@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import theme from '../theme';
 import QuestionTip from './QuestionTip';
 import { Caption, Title } from './Typography';
 
@@ -14,10 +15,15 @@ const media = {
         flex-basis: ${(cols / 12) * 100 - 2}%;
     `,
     md: (cols: number) => `
-        @media only screen and (min-width: 1238px) {
+        @media only screen and (min-width: ${theme.breakpoints.md}) {
             flex-basis: ${(cols / 12) * 100 - 2}%;
         }
     `,
+    lg: (cols: number) => `
+        @media only screen and (min-width: ${theme.breakpoints.lg}) {
+            flex-basis: ${(cols / 12) * 100 - 2}%;
+        }
+`,
 };
 
 interface ColProps extends RowProps {
@@ -38,6 +44,7 @@ export const Column = styled.div<ColProps>`
     }
     ${props => media.xs(props.xs)}
     ${props => props.md && media.md(props.md)}
+    ${props => props.lg && media.lg(props.lg)}
 `;
 
 export const Row = styled.div<RowProps>`

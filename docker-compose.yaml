@@ -17,7 +17,7 @@ services:
     build: ./
     volumes:
       - ./node:/usr/app
-    depends_on: 
+    depends_on:
       - postgres
     environment:
       - PGUSER=postgres
