@@ -18,7 +18,7 @@ export const Input = styled.input<InputProps>`
     color: ${props => props.theme.palette.grey};
     padding: 0.75em 0.5em;
     margin-left: ${props => props.ml ?? 'inherit'};
-    max-width: ${props => props.width ?? '200px'};
+    width: ${props => props.width ?? '100%'};
 `;
 
 //typing is bad for reuse via attrs.as, so we'll just copy/paste for now
@@ -35,7 +35,7 @@ export const TextArea = styled.textarea<InputProps>`
     color: ${props => props.theme.palette.grey};
     padding: 0.75em 0.5em;
     margin-left: ${props => props.ml ?? 'inherit'};
-    max-width: ${props => props.width ?? '200px'};
+    max-width: ${props => props.width ?? '100%'};
 `;
 
 interface NumberInputProps extends InputProps {
@@ -51,6 +51,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
     onChange,
     ml,
     value,
+    width,
 }) => {
     const [internalValue, setInternalValue] = useState<
         number | string | undefined
@@ -82,6 +83,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
             ml={ml}
             onChange={e => wrappedOnChange(e.currentTarget.value)}
             value={internalValue}
+            width={width}
         />
     );
 };

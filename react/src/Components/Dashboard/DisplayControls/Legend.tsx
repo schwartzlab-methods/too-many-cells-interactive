@@ -120,7 +120,7 @@ const LegendItemContainer = styled.span`
 const LinearLegendContainer = styled.div`
     cursor: pointer;
     height: 25px;
-    width: 200px;
+    width: 150px;
 `;
 
 const LinearLegendLabel = styled(Text)`
