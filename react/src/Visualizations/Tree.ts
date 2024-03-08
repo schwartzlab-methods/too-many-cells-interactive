@@ -141,9 +141,9 @@ const arcPath = arc()({
 
 /**
  *
- * @param data Array of nodes that have been split for each feature label, so there is one node per label/feature
- *              this is so we can pass each slice to the color function without angering typescript
- * @param key the field to be passed to the color scale
+ * @param {TMCHierarchyPointNode[]} data Array of nodes that have been split for each feature label, so there is one node per label/feature.
+ * This is so we can pass each slice to the color function without angering typescript
+ * @param {ColorScaleVariant} key the field to be passed to the color scale
  */
 const makePie = (data: TMCHierarchyPointNode[], key: ColorScaleVariant) =>
     pie<TMCHierarchyPointNode>().value(d => {
@@ -160,6 +160,12 @@ const makePie = (data: TMCHierarchyPointNode[], key: ColorScaleVariant) =>
         );
     })(data);
 
+/**
+ * Calculate the pie path
+ * @param {PieArcDatum<TMCHierarchyPointNode>} d
+ * @param {number} outerRadius
+ * @returns {string}
+ */
 const getPie = (d: PieArcDatum<TMCHierarchyPointNode>, outerRadius: number) =>
     arc()({
         innerRadius: 0,
@@ -167,6 +173,10 @@ const getPie = (d: PieArcDatum<TMCHierarchyPointNode>, outerRadius: number) =>
         ...d,
     }) || '';
 
+/**
+ * Add tooltip to the DOM
+ * @returns {void}
+ */
 const attachToolTip = () => {
     const tt = select('body')
         .append('div')
@@ -214,6 +224,11 @@ const attachToolTip = () => {
         .style('padding', '5px');
 };
 
+/**
+ * Transform the hilo attribute map into data that can be `enter`ed
+ * @param {AttributeMap} hilos
+ * @returns {Array<Record<{total: number, quantity: number, scaleKey: string | number}>>}
+ */
 const getHiLoValues = (hilos: AttributeMap) => {
     const total = sum(Object.values(hilos).map(hl => hl.quantity));
     return Object.values(hilos)
@@ -224,6 +239,14 @@ const getHiLoValues = (hilos: AttributeMap) => {
         }));
 };
 
+/**
+ * Build the tooltip and show
+ * @param {TMCHierarchyPointNode} data The node whose tooltip we want to show
+ * @param {Array<string>} activeFeatures The active features
+ * @param {labelCount | featureAverage | featureHiLos | userAnnotation} colorScaleKey The scale to use
+ * @param {MouseEvent}
+ * @returns {void}
+ */
 const showToolTip = (
     data: TMCHierarchyPointNode,
     activeFeatures: string[],
@@ -354,6 +377,12 @@ const showToolTip = (
         });
 };
 
+/**
+ * Create a unique link id to use with D3's `data` function
+ * We need to know if it has children b/c transitions might rely on this.
+ * @param {TMCHiearchyLink} link
+ * @returns {string} The id
+ */
 const makeLinkId = (link: TMCHiearchyLink) =>
     `${link.source.data.originalNodeId}-${
         link.target.data.originalNodeId

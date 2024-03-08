@@ -8,12 +8,20 @@ import {
 } from './types';
 import { mergeAttributeMaps } from './util';
 
+/**
+ * Transform flattened nodes into a tree
+ * @param {TMCFlatNode[]} node
+ * @returns {HierarchyNode<TMCNode>}
+ */
 export const buildTree = (node: TMCFlatNode[]) => {
     return (stratify<TMCFlatNode>()(node) as HierarchyNode<TMCNode>).sum(d =>
         d.items ? d.items.length : 0
     );
 };
 
+/**  Generate a randomish string suitable for a node id
+ *   @returns {string}
+ */
 const getId = () =>
     `${Math.random().toString(36).slice(2)}-${Date.now().toString(
         36
@@ -21,10 +29,10 @@ const getId = () =>
 
 /**
  * Import TMC Rosetree, flatten, and pass to d3 hierarchy for rebuilding into
- *  tree that is compatible with D3 layout
- * Note that flattening tree as intermediate step is useful for filtering and rebuilding later on
+ *  tree that is compatible with D3 layout.
+ * Note that intermediate flattening step could be useful for filtering and rebuilding later on
  *
- * @returns Promise<HierarchyNode<TMCNode>> Root tree that can be passed to D3 layout
+ * @returns {Promise<HierarchyNode<TMCNode>>} Root tree that can be passed to D3 layout
  */
 export const getData = async () => {
     const data = (await (
@@ -33,11 +41,21 @@ export const getData = async () => {
     return transformData(data);
 };
 
+/**
+ * Transform rosenode into D3's hierarchy node.
+ * @param {RoseNode} data The raw tree from TMC
+ * @returns {HierarchyNode<TMCNode>}
+ */
 export const transformData = (data: RoseNode) => {
     const flat = flatten(data);
     return buildTree(flat);
 };
 
+/**
+ * Create a mapping of label values for quick lookup
+ * @param {string} labels The csv of item,label values
+ * @returns {Record<string, string>}
+ */
 export const buildLabelMap = (labels: string) => {
     const labelMap: Record<string, string> = {};
 
@@ -68,10 +86,10 @@ export const buildLabelMap = (labels: string) => {
 };
 
 /**
- *
- * @param tree The (unpruned) tree
- * @param labelMap The dictionary of label values
- * @returns tree (mutated in place)
+ * Annotate tree with label counts
+ * @param {HierarchyNode<TMCNode>} tree The (unpruned) tree
+ * @param {Record<string, string>} labelMap The dictionary of label values
+ * @returns {HierarchyNode<TMCNode>} (mutated in place)
  */
 export const addLabels = (
     tree: HierarchyNode<TMCNode>,
@@ -110,6 +128,13 @@ export const addLabels = (
         });
 };
 
+/**
+ * Transform the raw rose node into an array of flattened nodes suitable to D3's stratification
+ * @param {RoseNode} data
+ * @param {Array<TMCFlatNode>} nodes
+ * @param {string} parentId
+ * @returns {Array<TMCFlatNode>}
+ */
 const flatten = (
     data: RoseNode,
     nodes: TMCFlatNode[] = [],
@@ -148,5 +173,10 @@ const flatten = (
     return nodes;
 };
 
+/**
+ * Typeguard for non-array objects
+ * @param {any} item
+ * @returns {boolean}
+ */
 const isObject = (item: any): item is object =>
     !!item && typeof item === 'object' && !Array.isArray(item);

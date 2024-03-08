@@ -241,6 +241,11 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
 export default usePrunedTree;
 
+/**
+ * Get the max and min feature average for the tree
+ * @param {TMCHierarchyDataNode} tree
+ * @returns {Array<number, number>}
+ */
 export const getFeatureGradientDomain = (tree: TMCHierarchyDataNode) =>
     extent(
         tree
@@ -248,13 +253,17 @@ export const getFeatureGradientDomain = (tree: TMCHierarchyDataNode) =>
             .map(d => d.data.featureAverage?.average?.quantity || 0)
     ) as [number, number];
 
+/**
+ * Annotate leaf nodes with feature counts
+ * @param {TMCHierarchyDataNode} tree
+ * @param {FeatureMap} featureMaps
+ * @returns {TMCHierarchyDataNode} the mutated tree
+ */
 export const addFeaturesToCells = (
     tree: TMCHierarchyDataNode,
     featureMaps: FeatureMap
 ) => {
     getEntries(featureMaps).map(([feature, featureMap]) => {
-        const range: number[] = [];
-
         tree.leaves().forEach(n => {
             if (n.data.items) {
                 n.data.items = n.data.items.map(cell => {
@@ -262,7 +271,6 @@ export const addFeaturesToCells = (
                     const fcounts = cell._barcode._featureValues || {};
                     fcounts[feature] = featureMap[cell._barcode.unCell] || 0;
                     cell._barcode._featureValues = fcounts;
-                    range.push(fcounts[feature] as number);
                     return cell;
                 });
             }
@@ -272,6 +280,12 @@ export const addFeaturesToCells = (
     return tree;
 };
 
+/**
+ * Annotate nodes with user annotations
+ * @param {TMCHierarchyDataNode} tree
+ * @param {FeatureMap} userAnnoationMap
+ * @returns {TMCHierarchyDataNode} the mutated tree
+ */
 export const addUserAnnotations = (
     tree: TMCHierarchyDataNode,
     userAnnoationMap: AttributeMap
@@ -286,6 +300,11 @@ export const addUserAnnotations = (
             })
     );
 
+/**
+ * Calculate metadata and distribution information for pruners
+ * @param {TMCHierarchyDataNode} nodes the tree
+ * @returns {Distributions}
+ */
 const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
     depthGroups: getDepthGroups(nodes),
     distance: {
@@ -334,6 +353,11 @@ const buildPruneMetadata = (nodes: TMCHierarchyDataNode): Distributions => ({
     },
 });
 
+/**
+ * Calculate metadata for the tree
+ * @param {TMCHierarchyDataNode} nodes tree
+ * @returns {TreeMetaData}
+ */
 const buildTreeMetadata = (nodes: TMCHierarchyDataNode): TreeMetaData => ({
     leafCount: nodes.leaves().length,
     maxDistance: max(nodes.descendants().map(n => n.data.distance!)) || 0,
@@ -344,7 +368,9 @@ const buildTreeMetadata = (nodes: TMCHierarchyDataNode): TreeMetaData => ({
 });
 
 /**
- * @returns object keyed by integer `n` whose value is count of nodes with `depth` <= n
+ * Bin the nodes by depth
+ * @param {TMCHierarchyDataNode} tree
+ * @returns {CumSumBin[]} array of objects whose `value` is integer `n` and `count` is number of nodes with `depth` <= `n`
  */
 const getDepthGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
     const maxSize = max(tree.descendants().map(n => n.depth))!;
@@ -356,7 +382,12 @@ const getDepthGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
 };
 
 /**
- * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
+ * Bin the nodes by distance
+ * @param {TMCHierarchyDataNode} tree
+ * @param {number} cutoffDistance
+ * @param {Fn} pruneFn
+ * @param {number} binCount
+ * @returns {CumSumBin[]} array of objects whose `value` is integer `n` whose `count` is number of nodes with `value` <= `n` in tree
  */
 const getDistanceGroups = (
     tree: TMCHierarchyDataNode,
@@ -382,10 +413,12 @@ const getDistanceGroups = (
 };
 
 /**
- * @param tree the pruned tree (we calculate new distributions for each prune)
- * @param cutoffDistance the MAXIMUM distance that can be pruned before the tree collapses into one generation of nodes.
+ * Bin the nodes by MAD distance
+ * @param {TMCHierarchyDataNode} tree the pruned tree (we calculate new distributions for each prune)
+ * @param {number} cutoffDistance the MAXIMUM distance that can be pruned before the tree collapses into one generation of nodes.
  *  This is the smallest value among the root's grandchildren.
- * @returns object keyed by integer `n` whose value is count of nodes with `distance` >= median + (n * MAD) in tree
+ * @param {Fn} pruneFn
+ * @returns {CumSumBin} array of objects whose value is integer `n` and whose `count` is number of nodes with `distance` >= median + (n * MAD) in tree
  */
 const getDistanceMadGroups = (
     tree: TMCHierarchyDataNode,
@@ -410,6 +443,8 @@ const getDistanceMadGroups = (
  * Find the minimum size-cutoff value needed to display at least one generation of the tree.
  * This ends up being the smallest value of the first two generations
  *  and represents the MAXIMUM value we can prune and still have a tree
+ * @param {TMCHiearchyDataNode} tree
+ * @returns {number}
  */
 const getMinCutoffDistance = (tree: TMCHierarchyDataNode) => {
     if (tree.children) {
@@ -425,6 +460,8 @@ const getMinCutoffDistance = (tree: TMCHierarchyDataNode) => {
 /**
  * Find the minimum size-cutoff value needed to display at least one generation of the tree
  * This ends up being the smallest child of the root
+ * @param {TMCHiearchyDataNode} tree
+ * @returns {number}
  */
 const getMinCutoffDistanceSearch = (tree: TMCHierarchyDataNode) => {
     if (tree.children) {
@@ -435,6 +472,8 @@ const getMinCutoffDistanceSearch = (tree: TMCHierarchyDataNode) => {
 /**
  * Find the minimum size-cutoff value needed to display at least one generation of the tree
  * This ends up being the smallest child of the root
+ * @param {TMCHiearchyDataNode} tree
+ * @returns {number}
  */
 const getMaxCutoffNodeSize = (tree: TMCHierarchyDataNode) => {
     if (tree.children) {
@@ -443,11 +482,10 @@ const getMaxCutoffNodeSize = (tree: TMCHierarchyDataNode) => {
 };
 
 /**
- * get the total features in a given cell
- *
- * @param node TMCHiearchyNode
- * @param feature feature name
- * @returns number
+ * Get the total features in a given cell cluster (leaf node)
+ * @param {TMCHiearchyDataNode} node TMCHiearchyNode
+ * @param {string} feature feature name
+ * @returns {number}
  */
 const getNodeFeatureTotalCount = (node: TMCHiearchyNode, feature: string) => {
     let total = 0;
@@ -459,10 +497,9 @@ const getNodeFeatureTotalCount = (node: TMCHiearchyNode, feature: string) => {
 };
 
 /**
- * get counts for features among cells in the given (leaf) node
- *
- * @param node TMCHiearchyNode
- * @param feature feature name
+ * Get counts for features among cells in the given (leaf) node
+ * @param {TMCHiearchyNode} node TMCHiearchyNode
+ * @param {string} feature feature name
  * @returns number
  */
 const getNodeFeatureCounts = (node: TMCHiearchyNode, feature: string) =>
@@ -471,7 +508,10 @@ const getNodeFeatureCounts = (node: TMCHiearchyNode, feature: string) =>
     );
 
 /**
- * @returns object keyed by integer `n` whose value is count of nodes with `value` <= n in tree
+ * Bin the nodes by size
+ * @param {TMCHierarchyDataNode} tree the pruned tree (we calculate new distributions for each prune)
+ * @param {number} binCount
+ * @returns {Array<CumSumBin>} array of objects whose `value` is integer `n` and whose `count` is number of nodes with `size` >= `value`
  */
 const getSizeGroups = (
     tree: TMCHierarchyDataNode,
@@ -488,7 +528,9 @@ const getSizeGroups = (
 };
 
 /**
- * @returns object keyed by integer `n` whose value is count of nodes with `value` >= median + (n * MAD) in tree
+ * Bin the nodes by size as MAD
+ * @param {TMCHiearchyDataNode} tree
+ * @returns {Array<CumSumBin>} array of objects whose `value` is integer `n` and whose `count` is number of with `value` >= median + (n * MAD) in tree
  */
 const getSizeMadGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
     const maxSize = getMaxCutoffNodeSize(tree)!;
@@ -506,6 +548,13 @@ const getSizeMadGroups = (tree: TMCHierarchyDataNode): CumSumBin[] => {
     }));
 };
 
+/**
+ * Bin values by MAD value
+ * @param {Array<number>} values
+ * @param {number} binCount
+ * @param {number} maxSize
+ * @returns {Array<object>}
+ */
 const getMadGroups = (values: number[], binCount = 15, maxSize?: number) => {
     const mad = getMAD(values)!;
     const med = median(values)!;
@@ -535,6 +584,12 @@ const getMadGroups = (values: number[], binCount = 15, maxSize?: number) => {
     }));
 };
 
+/**
+ * Get the median and MAD(s) for a feature distribution in the tree
+ * @param {TMCHierarchyDataNode} node The tree
+ * @param {string} feature The featuer
+ * @returns {object}
+ */
 export const getFeatureMadAndMeds = (
     node: TMCHierarchyDataNode,
     feature: string
@@ -558,9 +613,9 @@ export const getFeatureMadAndMeds = (
 
 /**
  *
- * @param nodes The tree, possibly pruned
- * @param activeFeatures
- * @returns Distribution of average feature-per-cell counts for each node according to current threshold
+ * @param {TMCHiearchyDataNode} nodes The tree, possibly pruned
+ * @param {Array<string>} activeFeatures
+ * @returns {Record<string, FeatureDistribution>} Distribution of average feature-per-cell counts for each node according to current threshold
  */
 
 const getFeatureDistributions = (
@@ -604,7 +659,8 @@ const getFeatureDistributions = (
 
 /**
  * Divide the feature counts into bins, each keyed by cumsum
- * @param range: the feature counts
+ * @param {Array<number>} range: the feature counts
+ * @returns {Array<CumSumBin>}
  */
 const getPlainFeatureGroups = (range: number[]): CumSumBin[] => {
     const thresholds = ticks(
@@ -622,10 +678,11 @@ const getPlainFeatureGroups = (range: number[]): CumSumBin[] => {
 };
 
 /**
- *
- * @param nodes the base tree (not a pruned tree)
- * @param features the active features
- * @returns TMCHierarchyDataNode (mutated argument)
+ * Annotate the each node in the tree with raw feature count (per feature),
+ * average feature count per cell (per feature), and average count of all features
+ * @param {TMCHierarchyDataNode} nodes the base tree (not a pruned tree)
+ * @param {Array<string>} features the active features
+ * @returns {TMCHierarchyDataNode} (mutated argument)
  */
 export const updateFeatureCounts = (
     nodes: TMCHierarchyDataNode,
@@ -668,11 +725,11 @@ export const updateFeatureCounts = (
     });
 
 /**
- *
- * @param nodes The base tree (not a pruned tree, b/c we need leaves as only leaves have cells)
- * @param thresholds The cutoff for hi/lo for each feature
- * @param activeFeatures The features currently visible
- * @returns TMCHierarchyDataNode (argument will be mutated)
+ * Annotate nodes with feature high and low values
+ * @param {TMCHierarchyDataNode} nodes The base tree (not a pruned tree, b/c we need leaves as only leaves have cells)
+ * @param {Record<string, PlainOrMADVal>} thresholds The cutoff for hi/lo for each feature
+ * @param {Array<string>} activeFeatures The features currently visible
+ * @returns {TMCHierarchyDataNode} TMCHierarchyDataNode (mutated argument)
  */
 export const updatefeatureHiLos = (
     nodes: TMCHierarchyDataNode,

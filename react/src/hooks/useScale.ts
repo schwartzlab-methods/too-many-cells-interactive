@@ -27,6 +27,7 @@ type ScaleType = {
 };
 
 /**
+ * Build linear scale according to display config.
  * @param scaleName The name of the linear scale to return (e.g., branchSizeScale, pieScale)
  */
 export const useLinearScale = <K extends keyof Omit<Scales, 'colorScale'>>(
@@ -67,6 +68,10 @@ export const makeOrdinalScale = (
     >;
 };
 
+/**
+ * Build the active scale according to the configuration and return.
+ * @returns Object with the scale and a function that takes a node and returns the color.
+ */
 export const useColorScale = (): {
     scale: ScaleOrdinal<string, string> | ScaleSequential<string>;
     scaleFunction: (node: TMCHiearchyNode) => string;
@@ -149,6 +154,14 @@ export const useColorScale = (): {
     );
 };
 
+/**
+ * Build a sequential scale according to parameters.
+ * @param {Array<string, string>} range The range of color values
+ * @param {Array<number>} domain The domain of values
+ * @param {number | undefined} saturation The saturation to apply to the colors
+ * @param {string} scaleType 'symlogSequential' if the scale is symlogSequential
+ * @returns the sequential scale.
+ */
 export const buildSequentialScale = (
     range: [string, string],
     domain: number[],
@@ -173,6 +186,16 @@ export const buildSequentialScale = (
     );
 };
 
+/**
+ * Create the color scale according to parameters.
+ * @param {Array<string>} activeFeatures The currently active features
+ * @param {ScaleSequential<string>} featureColorScale The feature color scale
+ * @param {ScaleOrdinal<string, string>} featureHiLoScale The feature hilo scale
+ * @param {ScaleOrdinal<string, string>} labelScale The label scale
+ * @param {ScaleSequential<string>} userAnnotationScale The user annotation scale
+ * @param variant: "labelCount" | "featureAverage" | "featureHiLos" | "userAnnotation"
+ * @returns The scale and function that takes a node and returns the corresponding color
+ */
 export const makeColorScale = (
     activeFeatures: string[],
     featureColorScale: ScaleSequential<string>,
@@ -218,6 +241,12 @@ export const makeColorScale = (
     return { scaleFunction, scale };
 };
 
+/**
+ * Calculate a node's average feature count (divided by descendant count) by dividing by the active feature count
+ * @param {TMCHiearchyNode} node
+ * @param {Array<string>} activeFeatures
+ * @returns number
+ */
 export const getFeatureAverage = (
     node: TMCHiearchyNode,
     activeFeatures: string[]
@@ -231,6 +260,11 @@ export const getFeatureAverage = (
             .flatMap(([k, v]) => v.scaleKey as number)
     ) / activeFeatures.length;
 
+/**
+ * Create the label color function (currenly implemented only for label count)
+ * @param {ScaleOrdinal<string, string>} labelScale
+ * @returns A function that takes a node as an argument and returns its color
+ */
 export const buildLabelColorFunction = (
     labelScale: ScaleOrdinal<string, string>
 ): ((node: TMCHiearchyNode) => string) => {
@@ -240,6 +274,13 @@ export const buildLabelColorFunction = (
     };
 };
 
+type BlendArg = { color: string; weight: number };
+
+/**
+ *
+ * @param {Array<BlendArg>} colors Mappings of colors to weights
+ * @returns {RBGColor} The blended color
+ */
 const blendWeighted = (colors: BlendArg[]) => {
     const { r, b, g } = colors.reduce(
         (acc, curr) => {
@@ -258,8 +299,13 @@ const blendWeighted = (colors: BlendArg[]) => {
     return rgb(r / weightSum, g / weightSum, b / weightSum);
 };
 
-type BlendArg = { color: string; weight: number };
-
+/**
+ * Calculate the blended color for a node on the given scale
+ * @param {ScaleOrdinal<string, string>} scale The ordinal scale to use
+ * @param {TMCHiearchyNode} node
+ * @param {string} colorSource The key in the node to use get the color
+ * @returns {RGBColor}
+ */
 export function getLabelColor(
     scale: ScaleOrdinal<string, string>,
     node: TMCHiearchyNode,
@@ -270,6 +316,12 @@ export function getLabelColor(
     return getBlendedColor(blendValues, scale);
 }
 
+/**
+ * Calculate the weights for a blended color
+ * @param {AttributeMap} counts The mapping of values and counts
+ * @param {ScaleOrdinal<string, string> | ScaleLinear<any, any>} scale
+ * @returns {RGBColor}
+ */
 export const getBlendedColor = (
     counts: AttributeMap,
     scale: ScaleOrdinal<string, string> | ScaleLinear<any, any>
