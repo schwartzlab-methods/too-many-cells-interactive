@@ -91,6 +91,10 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
         });
     };
 
+    const activateIndividualFeatureScale = () => {
+        updateColorScaleType('featureCount');
+    };
+
     return (
         <>
             <Column xs={6}>
@@ -127,6 +131,16 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
                             />
                             <RadioLabel htmlFor='featureHiLos'>
                                 Feature HiLo
+                            </RadioLabel>
+                            <RadioButton
+                                checked={colorScaleType === 'featureCount'}
+                                id='featuresIndividual'
+                                name='featuresIndividual'
+                                onChange={activateIndividualFeatureScale}
+                                type='radio'
+                            />
+                            <RadioLabel htmlFor='featuresIndividual'>
+                                Individual Features
                             </RadioLabel>
                             <RadioButton
                                 checked={

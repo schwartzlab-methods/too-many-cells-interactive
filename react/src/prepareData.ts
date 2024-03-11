@@ -22,7 +22,7 @@ export const buildTree = (node: TMCFlatNode[]) => {
 /**  Generate a randomish string suitable for a node id
  *   @returns {string}
  */
-const getId = () =>
+export const getId = () =>
     `${Math.random().toString(36).slice(2)}-${Date.now().toString(
         36
     )}-${Math.random().toString(36).slice(2)}`;

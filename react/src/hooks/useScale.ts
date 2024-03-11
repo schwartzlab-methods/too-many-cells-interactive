@@ -18,6 +18,7 @@ import {
     selectDisplayConfig,
 } from '../redux/displayConfigSlice';
 import { AttributeMap, TMCHiearchyNode } from '../types';
+import { getEntries, getKeys } from '../util';
 import { selectAnnotationSlice } from '../redux/annotationSlice';
 import { useAppSelector } from './index';
 
@@ -73,7 +74,10 @@ export const makeOrdinalScale = (
  * @returns Object with the scale and a function that takes a node and returns the color.
  */
 export const useColorScale = (): {
-    scale: ScaleOrdinal<string, string> | ScaleSequential<string>;
+    scale:
+        | ScaleOrdinal<string, string>
+        | ScaleSequential<string>
+        | Record<string, ScaleSequential<string>>;
     scaleFunction: (node: TMCHiearchyNode) => string;
 } => {
     const {
@@ -85,6 +89,8 @@ export const useColorScale = (): {
                 featureScaleSaturation,
                 featureHiLoDomain,
                 featureHiLoRange,
+                featuresGradientDomains,
+                featuresGradientRanges,
                 labelDomain,
                 labelRange,
                 userAnnotationDomain,
@@ -109,6 +115,25 @@ export const useColorScale = (): {
         featureGradientDomain,
         featureGradientRange,
         featureGradientScaleType,
+        featureScaleSaturation,
+    ]);
+
+    const individualFeaturesColorScales = useMemo(() => {
+        return getKeys(featuresGradientRanges)
+            .map(n => ({
+                [n]: buildSequentialScale(
+                    featuresGradientRanges[n],
+                    featuresGradientDomains[n],
+                    featureScaleSaturation
+                ),
+            }))
+            .reduce<Record<string, ScaleSequential<string, never>>>(
+                (acc, curr) => ({ ...acc, ...curr }),
+                {}
+            );
+    }, [
+        featuresGradientDomains,
+        featuresGradientRanges,
         featureScaleSaturation,
     ]);
 
@@ -139,6 +164,7 @@ export const useColorScale = (): {
                 activeFeatures,
                 featureColorScale,
                 featureHiLoScale,
+                individualFeaturesColorScales,
                 labelScale,
                 userAnnotationScale,
                 variant
@@ -147,6 +173,7 @@ export const useColorScale = (): {
             activeFeatures,
             featureColorScale,
             featureHiLoScale,
+            individualFeaturesColorScales,
             labelScale,
             userAnnotationScale,
             variant,
@@ -160,7 +187,7 @@ export const useColorScale = (): {
  * @param {Array<number>} domain The domain of values
  * @param {number | undefined} saturation The saturation to apply to the colors
  * @param {string} scaleType 'symlogSequential' if the scale is symlogSequential
- * @returns the sequential scale.
+ * @returns {ScaleSequential} the sequential scale.
  */
 export const buildSequentialScale = (
     range: [string, string],
@@ -200,11 +227,15 @@ export const makeColorScale = (
     activeFeatures: string[],
     featureColorScale: ScaleSequential<string>,
     featureHiLoScale: ScaleOrdinal<string, string>,
+    individualFeaturesColorScales: Record<string, ScaleSequential<string>>,
     labelScale: ScaleOrdinal<string, string>,
     userAnnotationScale: ScaleSequential<string>,
     variant: ColorScaleVariant
 ) => {
-    let scale: ScaleOrdinal<string, string> | ScaleSequential<string>;
+    let scale:
+        | ScaleOrdinal<string, string>
+        | ScaleSequential<string>
+        | Record<string, ScaleSequential<string>>;
     let scaleFunction: (node: TMCHiearchyNode) => string;
     switch (variant) {
         case 'labelCount':
@@ -218,7 +249,28 @@ export const makeColorScale = (
                 return featureColorScale(featureAverage);
             };
             break;
+        case 'featureCount':
+            scale = individualFeaturesColorScales;
+            scaleFunction = (node: TMCHiearchyNode) => {
+                const weightMap = getEntries(
+                    individualFeaturesColorScales
+                ).map<{
+                    color: string;
+                    weight: number;
+                }>(([k, v]) => {
+                    return {
+                        color: v(
+                            (node.data.featureCount[k]?.scaleKey as number) || 0
+                        ),
+                        weight:
+                            (node.data.featureCount[k]?.scaleKey as number) ||
+                            1e-6,
+                    };
+                });
 
+                return blendWeighted(weightMap).toString();
+            };
+            break;
         case 'featureHiLos':
             scale = featureHiLoScale;
             scaleFunction = (node: TMCHiearchyNode) => {

@@ -185,7 +185,19 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
 
             const featureAverages = getFeatureGradientDomain(visibleNodes);
 
-            updateColorScale({ featureGradientDomain: featureAverages });
+            const featureDomains = getFeatureDomains(
+                visibleNodes,
+                activeFeatures
+            );
+            updateColorScale({
+                featureGradientDomain: getFeatureGradientDomain(visibleNodes),
+                featuresGradientDomains: featureDomains,
+            });
+
+            updateColorScale({
+                featureGradientDomain: featureAverages,
+                featuresGradientDomains: featureDomains,
+            });
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeFeatures]);
@@ -223,12 +235,17 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
     useEffect(() => {
         updateTreeMetadata(buildTreeMetadata(visibleNodes));
         if (activeFeatures.length) {
-            updateColorScale({
-                featureGradientDomain: getFeatureGradientDomain(visibleNodes),
-            });
             updateFeatureDistributions(
                 getFeatureDistributions(visibleNodes, activeFeatures)
             );
+            const featureDomains = getFeatureDomains(
+                visibleNodes,
+                activeFeatures
+            );
+            updateColorScale({
+                featureGradientDomain: getFeatureGradientDomain(visibleNodes),
+                featuresGradientDomains: featureDomains,
+            });
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visibleNodes]);
@@ -778,3 +795,23 @@ export const updatefeatureHiLos = (
         }
         n.data.featureHiLos = hilo;
     });
+
+/**
+ * Get the domain of each feature
+ * @param {TMCHiearchyNode} tree
+ * @param {Array<string>} activeFeatures
+ * @returns {Record<string, number[]>}
+ */
+const getFeatureDomains = (tree: TMCHiearchyNode, activeFeatures: string[]) => {
+    const domains = {} as Record<string, number[]>;
+
+    activeFeatures.forEach(feature => {
+        domains[feature] = [];
+        tree.each(n =>
+            domains[feature].push(
+                n.data.featureCount[feature].scaleKey as number
+            )
+        );
+    });
+    return domains;
+};

@@ -14,7 +14,7 @@ import {
     updateActiveOrdinalColorScale,
     updateColorScale,
 } from '../../../redux/displayConfigSlice';
-import { scaleIsSequential } from '../../../types';
+import { scaleIsFeatureIndividual, scaleIsSequential } from '../../../types';
 import { ActionLink, Text } from '../../Typography';
 import { formatDigit } from '../../../util';
 import { Popover } from '../../../Components';
@@ -33,15 +33,19 @@ const Legend: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
         <Column xs={12} className='legend'>
             <WidgetTitle title='Legend' />
             <LegendContainer maxHeight={maxHeight}>
-                {colorScale && !scaleIsSequential(colorScale) && (
-                    <OrdinalLegend
-                        scale={colorScale as ScaleOrdinal<string, string>}
-                    />
-                )}
+                {colorScale &&
+                    !scaleIsFeatureIndividual(colorScale) &&
+                    !scaleIsSequential(colorScale) && (
+                        <OrdinalLegend
+                            scale={colorScale as ScaleOrdinal<string, string>}
+                        />
+                    )}
             </LegendContainer>
-            {colorScale && scaleIsSequential(colorScale) && (
-                <LinearLegend scale={colorScale} />
-            )}
+            {colorScale &&
+                !scaleIsFeatureIndividual(colorScale) &&
+                scaleIsSequential(colorScale) && (
+                    <LinearLegend scale={colorScale} />
+                )}
         </Column>
     );
 };

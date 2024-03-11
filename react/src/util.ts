@@ -14,43 +14,51 @@ import {
 } from './redux/pruneSlice';
 import { AttributeMap, TMCHierarchyDataNode, TMCNode } from './types';
 
-/* typescript-friendly */
+/**
+ * Typescript friendly getEntries
+ * @param {Record<k, v>} obj
+ * @returns {Array<Array<k,v>>}
+ */
 export const getEntries = <T extends Record<string, unknown>>(obj: T) =>
     Object.entries(obj) as [keyof T, T[keyof T]][];
 
-/* typescript-friendly */
+/**
+ * Typescript friendly getKeys
+ * @param {Record<k, v>} obj
+ * @returns {Array<Array<v>>}
+ */
 export const getKeys = <T extends Record<string, unknown>>(obj: T) =>
     Object.keys(obj) as (keyof T)[];
 
 /**
  * Calculate the distance from the origin, used to get radius value for polar coordinates
  *
- * @param x number
- * @param y number
- * @returns number
+ * @param {number} x
+ * @param {number} y
+ * @returns {number}
  */
 export const carToRadius = (x: number, y: number) => Math.hypot(x, y);
 
 /**
  * Calculate theta for polar coordinates from a pair of cartesian coordinates.
  *
- * @param x number
- * @param y number
- * @returns number
+ * @param {number} x
+ * @param {number} y
+ * @returns {number}
  */
 export const carToTheta = (x: number, y: number) =>
     Math.atan2(y, x) + Math.PI / 2;
 
 /**
- * @param base number
+ * @param {number} base
  * @returns the number squared
  */
 export const squared = (base: number) => Math.pow(base, 2);
 
 /**
  * Calculate the median absolute distance
- * @param values array of numbers
- * @returns float
+ * @param {Array<number>} values
+ * @returns {number}
  */
 export const getMAD = (values: number[]) => {
     const med = median(values)!;
@@ -62,8 +70,8 @@ export const getMAD = (values: number[]) => {
 
 /**
  * Calculate the median absolute distance for the distance property, excluding zeroes
- * @param node a TMC Tree
- * @returns float
+ * @param {TMCHierarchyDataNode} node a TMC Tree
+ * @returns {number}
  */
 export const getDistances = (node: TMCHierarchyDataNode) =>
     node
@@ -73,14 +81,18 @@ export const getDistances = (node: TMCHierarchyDataNode) =>
 
 /**
  * Calculate the median absolute distance for node size
- * @param node a TMC Tree
- * @returns float
+ * @param {TMCHierarchyDataNode} node a TMC Tree
+ * @returns {number}
  */
 export const getSizes = (node: TMCHierarchyDataNode) =>
     node.descendants().map(v => v.value!)!;
 
 /**
  * Return value as count of MADs from given median
+ * @param {number} value
+ * @param {number} median
+ * @param {number} mad
+ * @returns {number}
  */
 export const valueToMadCount = (value: number, median: number, mad: number) => {
     return Math.abs(value - median) / mad;
@@ -88,6 +100,10 @@ export const valueToMadCount = (value: number, median: number, mad: number) => {
 
 /**
  * Return value as count of MADs from given median, signed by position wrt median
+ * @param {number} value
+ * @param {number} median
+ * @param {number} mad
+ * @returns {number}
  */
 export const valueToMadCountSigned = (
     value: number,
@@ -97,6 +113,10 @@ export const valueToMadCountSigned = (
 
 /**
  * Return mad count as value, given median and mad
+ * @param {number} madCount
+ * @param {number} median
+ * @param {number} mad
+ * @returns {number}
  */
 export const madCountToValue = (
     madCount: number,
@@ -112,7 +132,9 @@ export const getExtent = (values: number[]) =>
     (values.length ? extent(values) : [0, 0]) as [number, number];
 
 /**
- * @param minSize Minimum value for node (and therefore all children) in order to remain in the graphic
+ * Get minimum value to remain in tree
+ * @param {TMCHierarchyDataNode} tree
+ * @param {number} minSize Minimum value for node (and therefore all children) in order to remain in the graphic
  */
 export const getSizePrunedRemainder = (
     tree: TMCHierarchyDataNode,
@@ -123,8 +145,9 @@ export const getSizePrunedRemainder = (
 };
 
 /**
- * @param tree The original tree (i.e., tree with all possible nodes)
- * @param minSize Minimum value for node (and therefore all children) in order to remain in the graphic
+ * Prune the tree by a minimum value
+ * @param {TMCHierarchyDataNode} tree The original tree (i.e., tree with all possible nodes)
+ * @param {number} minSize Minimum value for node (and therefore all children) in order to remain in the graphic
  * @returns tree pruned of nodes (and siblings) that did not meet {@code minSize}
  */
 export const pruneTreeByMinValue = (
@@ -141,6 +164,12 @@ export const pruneTreeByMinValue = (
     return newTree;
 };
 
+/**
+ * Prune the tree by maximum depth
+ * @param {TMCHierarchyDataNode} tree
+ * @param {number} depth
+ * @returns {TMCHierarchyDataNode}
+ */
 export const pruneTreeByDepth = (tree: TMCHierarchyDataNode, depth: number) =>
     tree.copy().eachAfter(d => {
         if (d.depth > depth && d.parent) {
@@ -149,11 +178,16 @@ export const pruneTreeByDepth = (tree: TMCHierarchyDataNode, depth: number) =>
     });
 
 /**
+ * Prune tree by distance
  * Stopping criteria to stop at the node immediate after a node with DOUBLE distance.
  * So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE.
  * Includes L and R in the final result."
  *
  * https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L43
+
+ * @param {TMCHierarchyDataNode} tree
+ * @param {number} distance
+ * @returns {TMCHierarchyDataNode}
  */
 export const pruneTreeByMinDistance = (
     tree: TMCHierarchyDataNode,
@@ -169,10 +203,15 @@ export const pruneTreeByMinDistance = (
         : tree.copy();
 
 /**
- *   Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE,
- *   keep that path, otherwise prune it. This argument assists in finding distant nodes."
- *   https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L180
+ * Prune tree my minimum distance-search
+ * Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE,
+ * keep that path, otherwise prune it. This argument assists in finding distant nodes."
+ * https://github.com/GregorySchwartz/too-many-cells/blob/master/src/TooManyCells/Program/Options.hs#L180
+ * @param {TMCHierarchyDataNode} tree
+ * @param {number} distance
+ * @returns {TMCHierarchyDataNode}
  */
+
 export const pruneTreeByMinDistanceSearch = (
     tree: TMCHierarchyDataNode,
     distance: number
@@ -307,11 +346,9 @@ export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
     );
 
 /**
- * If domain count is greater than count of colors in scale,
- *  return a new scale with the extra colors evenly distributed
- *
- * @param domain
- * @returns string[]
+ * If domain count is greater than count of colors in scale, return a new scale with the extra colors evenly distributed
+ * @param {Array<string>} domain
+ * @returns {Array<string>} the range
  */
 export const interpolateColorScale = (domain: string[]) => {
     if (domain.length <= schemeSet1.length) {
@@ -416,42 +453,6 @@ export const runPrune = (arg: AllPruner, tree: TMCHierarchyDataNode) => {
             arg.value.plainValue
         );
     }
-};
-
-// taken from here: https://gist.github.com/keesey/e09d0af833476385b9ee13b6d26a2b84
-export const levenshtein = (a: string, b: string): number => {
-    const an = a ? a.length : 0;
-    const bn = b ? b.length : 0;
-    if (an === 0) {
-        return bn;
-    }
-    if (bn === 0) {
-        return an;
-    }
-    const matrix = new Array(bn + 1);
-    for (let i = 0; i <= bn; ++i) {
-        const row = (matrix[i] = new Array<number>(an + 1));
-        row[0] = i;
-    }
-    const firstRow = matrix[0];
-    for (let j = 1; j <= an; ++j) {
-        firstRow[j] = j;
-    }
-    for (let i = 1; i <= bn; ++i) {
-        for (let j = 1; j <= an; ++j) {
-            if (b.charAt(i - 1) === a.charAt(j - 1)) {
-                matrix[i][j] = matrix[i - 1][j - 1];
-            } else {
-                matrix[i][j] =
-                    Math.min(
-                        matrix[i - 1][j - 1], // substitution
-                        matrix[i][j - 1], // insertion
-                        matrix[i - 1][j] // deletion
-                    ) + 1;
-            }
-        }
-    }
-    return matrix[bn][an];
 };
 
 export const getScaleCombinations = (featureList: string[]) =>
