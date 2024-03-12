@@ -333,7 +333,7 @@ type BlendArg = { color: string; weight: number };
  * @param {Array<BlendArg>} colors Mappings of colors to weights
  * @returns {RBGColor} The blended color
  */
-const blendWeighted = (colors: BlendArg[]) => {
+export const blendWeighted = (colors: BlendArg[]) => {
     const { r, b, g } = colors.reduce(
         (acc, curr) => {
             const { r, g, b } = curr.color

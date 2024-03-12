@@ -3,7 +3,7 @@ import { range } from 'd3-array';
 import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
 import { BaseType, select, Selection } from 'd3-selection';
 import { scaleIsFeatureIndividual, scaleIsSequential } from './types';
-import { formatDigit } from './util';
+import { formatDigit, getKeys } from './util';
 
 const getSvgSrc = (
     colorScale:
@@ -98,48 +98,13 @@ export const attachLegend = (
     } else if (!isIndividualScale) {
         const legendHeight = 25;
 
-        legend
-            .append('defs')
-            .append('linearGradient')
-            .attr('id', 'scaleGradientDownload')
-            .selectAll('stop')
-            .data(range(0, 1, 0.01), Math.random)
-            .join('stop')
-            .attr('offset', d => `${d * 100}%`)
-            .attr('stop-color', d =>
-                (colorScale as ScaleSequential<string, never>).interpolator()(d)
-            );
-
-        legend
-            .append('text')
-            .text(
-                formatDigit(
-                    (colorScale as ScaleSequential<string, never>).domain()[0]
-                )
-            )
-            .style('font-size', fontSize)
-            .attr('text-anchor', 'end')
-            .attr('transform', `translate(-10, ${fontSize})`);
-
-        legend
-            .append('rect')
-            .attr('fill', "url('#scaleGradientDownload')")
-            .attr('height', legendHeight)
-            .attr('width', legendWidth - 25);
-
-        legend
-            .append('text')
-            .style('font-size', fontSize)
-            .attr('text-anchor', 'start')
-            .attr('transform', `translate(${legendWidth - 15}, ${fontSize})`)
-            .text(
-                formatDigit(
-                    (colorScale as ScaleSequential<string, never>).domain()[
-                        (colorScale as ScaleSequential<string, never>).domain()
-                            .length - 1
-                    ]
-                )
-            );
+        attachSequentialLegend(
+            legend,
+            colorScale as ScaleSequential<string>,
+            legendHeight,
+            legendWidth,
+            fontSize
+        );
 
         legend
             .append('g')
@@ -149,7 +114,86 @@ export const attachLegend = (
             .join('text')
             .attr('y', (_, i) => fontSize * i)
             .text(d => d);
+    } else if (isIndividualScale) {
+        const legendHeight = 25;
+
+        getKeys(colorScale).forEach((k, i) => {
+            legend
+                .append('text')
+                .text(k)
+                .attr(
+                    'transform',
+                    `translate(0, ${(legendHeight + fontSize + 2) * i})`
+                );
+            attachSequentialLegend(
+                legend,
+                colorScale[k],
+                legendHeight,
+                legendWidth,
+                fontSize,
+                i
+            );
+        });
     }
+};
+
+const attachSequentialLegend = (
+    legendContainer: Selection<SVGGElement, unknown, any, unknown>,
+    colorScale: ScaleSequential<string>,
+    legendHeight: number,
+    legendWidth: number,
+    fontSize: number,
+    offsetIdx = 0
+) => {
+    const legend = legendContainer
+        .append('g')
+        .attr(
+            'transform',
+            `translate(0, ${offsetIdx * (fontSize + legendHeight + 2)})`
+        );
+
+    legend
+        .append('defs')
+        .append('linearGradient')
+        .attr('id', `scaleGradientDownload-${offsetIdx}`)
+        .selectAll('stop')
+        .data(range(0, 1, 0.01), Math.random)
+        .join('stop')
+        .attr('offset', d => `${d * 100}%`)
+        .attr('stop-color', d =>
+            (colorScale as ScaleSequential<string, never>).interpolator()(d)
+        );
+
+    legend
+        .append('text')
+        .text(
+            formatDigit(
+                (colorScale as ScaleSequential<string, never>).domain()[0]
+            )
+        )
+        .style('font-size', fontSize)
+        .attr('text-anchor', 'end')
+        .attr('transform', `translate(-10, ${fontSize})`);
+
+    legend
+        .append('rect')
+        .attr('fill', `url('#scaleGradientDownload-${offsetIdx}')`)
+        .attr('height', legendHeight)
+        .attr('width', legendWidth - 25);
+
+    legend
+        .append('text')
+        .style('font-size', fontSize)
+        .attr('text-anchor', 'start')
+        .attr('transform', `translate(${legendWidth - 15}, ${fontSize})`)
+        .text(
+            formatDigit(
+                (colorScale as ScaleSequential<string, never>).domain()[
+                    (colorScale as ScaleSequential<string, never>).domain()
+                        .length - 1
+                ]
+            )
+        );
 };
 
 export const downloadPng = (

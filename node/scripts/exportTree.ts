@@ -43,6 +43,7 @@ import {
     getLabelColor,
     makeLinearScale,
     makeOrdinalScale,
+    blendWeighted,
 } from '../../react/src/hooks/useScale';
 import { attachLegend } from '../../react/src/downloadImage';
 import {
@@ -127,7 +128,7 @@ if (argv.annotationPath) {
     annotations = textToAnnotations(text);
 }
 
-/*  
+/*
     This is different than the front-end runprunes function in that it recalculates the relevant MADs after each run,
         since the MAD value should be given in terms of the current (pruned) distribution of nodes.
     We don't do this on the FE b/c it has a performance penalty, so instead we just store both values (MADs and plain).
@@ -231,7 +232,7 @@ const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
     return nodes;
 };
 
-/* 
+/*
     Run prunes (should be done after adding features but before calculating scales)
  */
 const pruneAndCalculateLayout = (
@@ -295,6 +296,46 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
             return scale(featureAverage);
         };
 
+        return { scale, scaleFunction };
+    } else if (scaleType === 'featureCount') {
+        const scale = getKeys(
+            state.scales.colorScale?.featuresGradientRanges as Record<
+                string,
+                any
+            >
+        )
+            .map(n => ({
+                [n]: buildSequentialScale(
+                    state.scales.colorScale?.featuresGradientRanges![n] as [
+                        string,
+                        string
+                    ],
+                    state.scales.colorScale?.featuresGradientDomains![
+                        n
+                    ] as number[],
+                    state.scales.colorScale?.featureScaleSaturation
+                ),
+            }))
+            .reduce<Record<string, any>>(
+                (acc, curr) => ({ ...acc, ...curr }),
+                {}
+            );
+        const scaleFunction = (node: TMCHiearchyNode) => {
+            const weightMap = getEntries(scale).map<{
+                color: string;
+                weight: number;
+            }>(([k, v]) => {
+                return {
+                    color: v(
+                        (node.data.featureCount[k]?.scaleKey as number) || 0
+                    ),
+                    weight:
+                        (node.data.featureCount[k]?.scaleKey as number) || 1e-6,
+                };
+            });
+
+            return blendWeighted(weightMap).toString();
+        };
         return { scale, scaleFunction };
     } else {
         const scale = buildSequentialScale(
