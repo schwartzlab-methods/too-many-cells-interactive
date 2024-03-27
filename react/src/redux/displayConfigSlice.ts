@@ -25,6 +25,7 @@ export interface ToggleableDisplayElements {
 export type ColorScaleVariant =
     | 'labelCount'
     | 'featureAverage'
+    | 'featureCount'
     | 'featureHiLos'
     | 'userAnnotation';
 
@@ -34,10 +35,14 @@ export interface ColorScaleConfig {
     //the base color for the gradient scale
     featureScaleSaturation?: number;
     featureGradientScaleType: FeatureGradientScaleType;
-    //average feature counts for each node
+    //average combined feature counts per node
     featureGradientDomain: number[];
     //the two-color range to interpolate between
     featureGradientRange: [string, string];
+    //average individual feature counts for each node
+    featuresGradientDomains: Record<string, number[]>;
+    //the two-color range to interpolate between
+    featuresGradientRanges: Record<string, [string, string]>;
     featureHiLoDomain: string[];
     featureHiLoRange: string[];
     featureHiLoThresholds: Record<string, PlainOrMADVal>;
@@ -86,6 +91,8 @@ const initialScales: Scales = {
         featureHiLoRange: [],
         featureHiLoThresholds: {},
         featureHiLoThresholdUnits: {},
+        featuresGradientDomains: {},
+        featuresGradientRanges: {},
         labelDomain: [],
         labelRange: [],
         userAnnotationRange: ['#D3D3D3', '#FFA500'],

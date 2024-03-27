@@ -1,4 +1,10 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, {
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { range } from 'd3-array';
 import { color as d3Color } from 'd3-color';
 import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
@@ -14,8 +20,8 @@ import {
     updateActiveOrdinalColorScale,
     updateColorScale,
 } from '../../../redux/displayConfigSlice';
-import { scaleIsSequential } from '../../../types';
-import { ActionLink, Text } from '../../Typography';
+import { scaleIsFeatureIndividual, scaleIsSequential } from '../../../types';
+import { ActionLink, Caption, Text } from '../../Typography';
 import { formatDigit } from '../../../util';
 import { Popover } from '../../../Components';
 
@@ -33,15 +39,27 @@ const Legend: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
         <Column xs={12} className='legend'>
             <WidgetTitle title='Legend' />
             <LegendContainer maxHeight={maxHeight}>
-                {colorScale && !scaleIsSequential(colorScale) && (
-                    <OrdinalLegend
-                        scale={colorScale as ScaleOrdinal<string, string>}
-                    />
-                )}
+                {colorScale &&
+                    !scaleIsFeatureIndividual(colorScale) &&
+                    !scaleIsSequential(colorScale) && (
+                        <OrdinalLegend
+                            scale={colorScale as ScaleOrdinal<string, string>}
+                        />
+                    )}
+                {colorScale &&
+                    !scaleIsFeatureIndividual(colorScale) &&
+                    scaleIsSequential(colorScale) && (
+                        <LinearLegend scale={colorScale} />
+                    )}
+                {colorScale &&
+                    scaleIsFeatureIndividual(colorScale) &&
+                    Object.entries(colorScale).map(([k, v]) => (
+                        <span key={k}>
+                            <Caption>{k}</Caption>
+                            <LinearLegend scale={v} scaleName={k} />
+                        </span>
+                    ))}
             </LegendContainer>
-            {colorScale && scaleIsSequential(colorScale) && (
-                <LinearLegend scale={colorScale} />
-            )}
         </Column>
     );
 };
@@ -142,7 +160,8 @@ const LinearLegendList = styled(List)`
 
 const LinearLegend: React.FC<{
     scale: ScaleSequential<string>;
-}> = ({ scale }) => {
+    scaleName?: string;
+}> = ({ scale, scaleName }) => {
     const [basePickerOpen, setBasePickerOpen] = useState(false);
     const [indicatorPickerOpen, setIndicatorPickerOpen] = useState(false);
     const [panelOpen, setPanelOpen] = useState(false);
@@ -152,33 +171,57 @@ const LinearLegend: React.FC<{
 
     const dispatch = useAppDispatch();
 
+    const updateRange = (
+        key: string,
+        range: [string, string],
+        scaleName?: string
+    ) =>
+        dispatch(
+            updateColorScale(
+                scaleName
+                    ? {
+                          [key]: {
+                              ...colorScale.featuresGradientRanges,
+                              [scaleName]: range,
+                          },
+                      }
+                    : {
+                          [key]: range,
+                      }
+            )
+        );
+
+    const [range, rangeKey] = useMemo(() => {
+        switch (colorScale.variant) {
+            case 'userAnnotation':
+                return [colorScale.userAnnotationRange, 'userAnnotationRange'];
+            case 'featureAverage':
+                return [
+                    colorScale.featureGradientRange,
+                    'featureGradientRange',
+                ];
+            default:
+                return [
+                    colorScale.featuresGradientRanges[scaleName!],
+                    'featuresGradientRanges',
+                ];
+        }
+    }, [colorScale, scaleName]);
+
     const pickerColor = useMemo(() => {
         const idx = basePickerOpen ? 0 : 1;
-        return colorScale.variant === 'userAnnotation'
-            ? colorScale.userAnnotationRange[idx]
-            : colorScale.featureGradientRange[idx];
-    }, [basePickerOpen, colorScale]);
+        //we have to get the scale from the store or we'll get circular updates
+        return range[idx];
+    }, [basePickerOpen, range]);
 
     const updateColor = (newColor: string) => {
-        const range =
-            colorScale.variant === 'userAnnotation'
-                ? colorScale.userAnnotationRange.slice()
-                : colorScale.featureGradientRange.slice();
-
-        const key =
-            colorScale.variant === 'userAnnotation'
-                ? 'userAnnotationRange'
-                : 'featureGradientRange';
+        const _range = range.slice() as [string, string];
 
         const newColorIdx = basePickerOpen ? 0 : 1;
 
-        range[newColorIdx] = newColor;
+        _range[newColorIdx] = newColor;
 
-        dispatch(
-            updateColorScale({
-                [key]: range,
-            })
-        );
+        updateRange(rangeKey, _range, scaleName);
     };
 
     return (
@@ -310,14 +353,16 @@ const LegendGradient: React.FC<LegendGradientProps> = ({
     scale,
     width,
 }) => {
-    const selector = 'legend-gradient';
+    const selector = useRef(
+        `legend-gradient-${Math.random().toString(36).slice(3)}`
+    );
 
     useLayoutEffect(() => {
-        renderLinearLegend(`.${selector}`, scale, height, width);
+        renderLinearLegend(`.${selector.current}`, scale, height, width);
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scale]);
 
-    return <span className={selector} />;
+    return <span className={selector.current} />;
 };
 
 export const renderLinearLegend = (
@@ -326,7 +371,7 @@ export const renderLinearLegend = (
     height: number,
     width: number
 ) => {
-    const gradientId = 'legendGradient';
+    const gradientId = `legendGradient-${Math.random().toString(36).slice(3)}`;
 
     const svg = select(selector)
         .selectAll('svg')

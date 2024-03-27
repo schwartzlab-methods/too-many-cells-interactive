@@ -43,6 +43,7 @@ import {
     getLabelColor,
     makeLinearScale,
     makeOrdinalScale,
+    blendWeighted,
 } from '../../react/src/hooks/useScale';
 import { attachLegend } from '../../react/src/downloadImage';
 import {
@@ -127,7 +128,7 @@ if (argv.annotationPath) {
     annotations = textToAnnotations(text);
 }
 
-/*  
+/*
     This is different than the front-end runprunes function in that it recalculates the relevant MADs after each run,
         since the MAD value should be given in terms of the current (pruned) distribution of nodes.
     We don't do this on the FE b/c it has a performance penalty, so instead we just store both values (MADs and plain).
@@ -200,38 +201,35 @@ const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
         const featureMap = await getFeatureMap(state.features);
         addFeaturesToCells(nodes, featureMap);
 
-        if (scaleType === 'featureHiLos') {
-            updateFeatureCounts(nodes, state.features);
+        updateFeatureCounts(nodes, state.features);
 
-            const thresholds =
-                state.scales.colorScale?.featureHiLoThresholds || {};
+        const thresholds = state.scales.colorScale?.featureHiLoThresholds || {};
 
-            getEntries(featureMap).forEach(([k, v]) => {
-                if (!thresholds[k]) {
-                    const { med } = getFeatureMadAndMeds(nodes, k);
-                    thresholds[k].plainValue = med!;
-                } else if (
-                    !!thresholds[k].madsValue &&
-                    featureHiLoThresholdUnits &&
-                    featureHiLoThresholdUnits[k] === 'mads'
-                ) {
-                    const { med, mad } = getFeatureMadAndMeds(nodes, k);
+        getEntries(featureMap).forEach(([k, v]) => {
+            if (!thresholds[k]) {
+                const { med } = getFeatureMadAndMeds(nodes, k);
+                thresholds[k].plainValue = med!;
+            } else if (
+                !!thresholds[k].madsValue &&
+                featureHiLoThresholdUnits &&
+                featureHiLoThresholdUnits[k] === 'mads'
+            ) {
+                const { med, mad } = getFeatureMadAndMeds(nodes, k);
 
-                    thresholds[k].plainValue = madCountToValue(
-                        thresholds[k].madsValue!,
-                        med!,
-                        mad
-                    );
-                }
-            });
-            updatefeatureHiLos(nodes, thresholds, state.features);
-        }
+                thresholds[k].plainValue = madCountToValue(
+                    thresholds[k].madsValue!,
+                    med!,
+                    mad
+                );
+            }
+        });
+        updatefeatureHiLos(nodes, thresholds, state.features);
     }
 
     return nodes;
 };
 
-/* 
+/*
     Run prunes (should be done after adding features but before calculating scales)
  */
 const pruneAndCalculateLayout = (
@@ -295,6 +293,46 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
             return scale(featureAverage);
         };
 
+        return { scale, scaleFunction };
+    } else if (scaleType === 'featureCount') {
+        const scale = getKeys(
+            state.scales.colorScale?.featuresGradientRanges as Record<
+                string,
+                any
+            >
+        )
+            .map(n => ({
+                [n]: buildSequentialScale(
+                    state.scales.colorScale?.featuresGradientRanges![n] as [
+                        string,
+                        string
+                    ],
+                    state.scales.colorScale?.featuresGradientDomains![
+                        n
+                    ] as number[],
+                    state.scales.colorScale?.featureScaleSaturation
+                ),
+            }))
+            .reduce<Record<string, any>>(
+                (acc, curr) => ({ ...acc, ...curr }),
+                {}
+            );
+        const scaleFunction = (node: TMCHiearchyNode) => {
+            const weightMap = getEntries(scale).map<{
+                color: string;
+                weight: number;
+            }>(([k, v]) => {
+                return {
+                    color: v(
+                        (node.data.featureCount[k]?.scaleKey as number) || 0
+                    ),
+                    weight:
+                        (node.data.featureCount[k]?.scaleKey as number) || 1e-6,
+                };
+            });
+
+            return blendWeighted(weightMap).toString();
+        };
         return { scale, scaleFunction };
     } else {
         const scale = buildSequentialScale(
@@ -442,7 +480,16 @@ const validateScales = (scales: ChartConfig['scales']) => {
 
     if (colorScale) {
         const { variant } = colorScale;
-        if (variant === 'featureAverage') {
+        if (variant === 'featureCount') {
+            if (
+                colorScale.featuresGradientRanges &&
+                !Object.values(colorScale.featuresGradientRanges).every(r =>
+                    r.every(_r => typeof _r === 'string')
+                )
+            ) {
+                errors += 'featuresGradientRanges must be strings!\n';
+            }
+        } else if (variant === 'featureAverage') {
             if (
                 colorScale.featureGradientRange &&
                 colorScale.featureGradientRange[1] &&

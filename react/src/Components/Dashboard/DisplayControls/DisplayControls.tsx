@@ -91,11 +91,15 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
         });
     };
 
+    const activateIndividualFeatureScale = () => {
+        updateColorScaleType('featureCount');
+    };
+
     return (
         <>
             <Column xs={6}>
                 {(!!activeFeatures.length || !!userAnnotationDomain.length) && (
-                    <>
+                    <Row>
                         <WidgetTitle
                             title='Legend Selection'
                             helpText='Use the controls below to select a legend type.'
@@ -113,56 +117,75 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
                             />
                             <RadioLabel htmlFor='labelCount'>Labels</RadioLabel>
                         </RadioGroup>
-                    </>
+                    </Row>
                 )}
                 {!!activeFeatures.length && (
-                    <Row>
-                        <RadioGroup>
-                            <RadioButton
-                                checked={colorScaleType === 'featureHiLos'}
-                                id='featureHiLos'
-                                name='featureHiLos'
-                                onChange={activateOrdinalFeatureScale}
-                                type='radio'
-                            />
-                            <RadioLabel htmlFor='featureHiLos'>
-                                Feature HiLo
-                            </RadioLabel>
-                            <RadioButton
-                                checked={
-                                    colorScaleType === 'featureAverage' &&
-                                    featureGradientScaleType === 'sequential'
-                                }
-                                id='two-color'
-                                name='two-color'
-                                onChange={() =>
-                                    activateContinuousFeatureScale('sequential')
-                                }
-                                type='radio'
-                            />
-                            <RadioLabel htmlFor='two-color'>
-                                Feature Avg
-                            </RadioLabel>
-                            <RadioButton
-                                checked={
-                                    colorScaleType === 'featureAverage' &&
-                                    featureGradientScaleType ===
-                                        'symlogSequential'
-                                }
-                                id='two-color-sym'
-                                name='two-color-sym'
-                                onChange={() =>
-                                    activateContinuousFeatureScale(
-                                        'symlogSequential'
-                                    )
-                                }
-                                type='radio'
-                            />
-                            <RadioLabel htmlFor='two-color-sym'>
-                                Feature Avg SymLog
-                            </RadioLabel>
-                        </RadioGroup>
-                    </Row>
+                    <>
+                        <Row>
+                            <RadioGroup>
+                                <RadioButton
+                                    checked={colorScaleType === 'featureHiLos'}
+                                    id='featureHiLos'
+                                    name='featureHiLos'
+                                    onChange={activateOrdinalFeatureScale}
+                                    type='radio'
+                                />
+                                <RadioLabel htmlFor='featureHiLos'>
+                                    Feature HiLo
+                                </RadioLabel>
+                                <RadioButton
+                                    checked={colorScaleType === 'featureCount'}
+                                    id='featuresIndividual'
+                                    name='featuresIndividual'
+                                    onChange={activateIndividualFeatureScale}
+                                    type='radio'
+                                />
+                                <RadioLabel htmlFor='featuresIndividual'>
+                                    Individual Features
+                                </RadioLabel>
+                            </RadioGroup>
+                        </Row>
+                        <Row>
+                            <RadioGroup>
+                                <RadioButton
+                                    checked={
+                                        colorScaleType === 'featureAverage' &&
+                                        featureGradientScaleType ===
+                                            'sequential'
+                                    }
+                                    id='two-color'
+                                    name='two-color'
+                                    onChange={() =>
+                                        activateContinuousFeatureScale(
+                                            'sequential'
+                                        )
+                                    }
+                                    type='radio'
+                                />
+                                <RadioLabel htmlFor='two-color'>
+                                    Feature Avg
+                                </RadioLabel>
+                                <RadioButton
+                                    checked={
+                                        colorScaleType === 'featureAverage' &&
+                                        featureGradientScaleType ===
+                                            'symlogSequential'
+                                    }
+                                    id='two-color-sym'
+                                    name='two-color-sym'
+                                    onChange={() =>
+                                        activateContinuousFeatureScale(
+                                            'symlogSequential'
+                                        )
+                                    }
+                                    type='radio'
+                                />
+                                <RadioLabel htmlFor='two-color-sym'>
+                                    Feature Avg SymLog
+                                </RadioLabel>
+                            </RadioGroup>
+                        </Row>
+                    </>
                 )}
                 {!!userAnnotationDomain.length && (
                     <Row>

@@ -18,7 +18,6 @@ import {
     getKeys,
     getScaleCombinations,
     interpolateColorScale,
-    //levenshtein,
 } from '../../../util';
 import Button from '../../Button';
 import { Input, TextArea } from '../../Input';
@@ -55,7 +54,11 @@ const FeatureSearch: React.FC = () => {
 
     const {
         scales: {
-            colorScale: { featureHiLoThresholds, featureHiLoThresholdUnits },
+            colorScale: {
+                featureHiLoThresholds,
+                featureHiLoThresholdUnits,
+                featuresGradientRanges,
+            },
         },
     } = useAppSelector(selectDisplayConfig);
 
@@ -118,9 +121,14 @@ const FeatureSearch: React.FC = () => {
 
         const range = addGray(domain, interpolateColorScale(domain));
 
+        const newFeaturesRanges = { ...featuresGradientRanges };
+
+        delete newFeaturesRanges[featureName];
+
         updateColorScale({
             featureHiLoRange: range,
             featureHiLoDomain: domain,
+            featuresGradientRanges: newFeaturesRanges,
         });
 
         if (activeFeatures.length === 1) {
@@ -135,6 +143,8 @@ const FeatureSearch: React.FC = () => {
             featureHiLoRange: [],
             featureHiLoDomain: [],
             featureScaleSaturation: undefined,
+            featuresGradientDomains: {},
+            featuresGradientRanges: {},
         });
 
         updateColorScaleType('labelCount');
@@ -143,24 +153,35 @@ const FeatureSearch: React.FC = () => {
     const getFeatures = async (features: string) => {
         setLoading(true);
         const featureMap = await fetchFeatures(features);
+        addFeatures(featureMap);
 
         const keys = getKeys(featureMap);
 
         if (keys.length) {
-            addFeatures(featureMap);
+            const newActiveFeatures = activeFeatures
+                .filter(Boolean)
+                .concat(keys)
+                .filter((k, i, a) => a.findIndex(b => b === k) === i);
 
-            const domain = getScaleCombinations(
-                activeFeatures
-                    .filter(Boolean)
-                    .concat(keys)
-                    .filter((k, i, a) => a.findIndex(b => b === k) === i)
+            const hiLoDomain = getScaleCombinations(newActiveFeatures);
+
+            const hiLoRange = addGray(
+                hiLoDomain,
+                interpolateColorScale(hiLoDomain)
             );
 
-            const range = addGray(domain, interpolateColorScale(domain));
+            const newFeaturesRanges = { ...featuresGradientRanges };
+
+            interpolateColorScale(newActiveFeatures)
+                .reverse()
+                .forEach((s, i) => {
+                    newFeaturesRanges[newActiveFeatures[i]] = ['#D3D3D3', s];
+                });
 
             updateColorScale({
-                featureHiLoRange: range,
-                featureHiLoDomain: domain,
+                featureHiLoRange: hiLoRange,
+                featureHiLoDomain: hiLoDomain,
+                featuresGradientRanges: newFeaturesRanges,
             });
 
             if (!activeFeatures.length) {

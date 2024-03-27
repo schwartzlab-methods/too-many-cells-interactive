@@ -4,13 +4,14 @@ import {
     HierarchyPointNode,
 } from 'd3-hierarchy';
 import { ScaleOrdinal, ScaleSequential } from 'd3-scale';
+import { getKeys } from './util';
 
 export interface RoseNodeItem {
     _barcode: { unCell: string };
     _cellRow: { unRow: number };
 }
 
-/* 
+/*
     _featureValues here is raw count for cell, which must persist on object for further processing
     node.featureHiLos contains calculated display values that may change according to user interaction
 */
@@ -65,6 +66,17 @@ export const scaleIsSequential = (
     scale: ScaleOrdinal<string, string> | ScaleSequential<string>
 ): scale is ScaleSequential<string> =>
     !!(scale as ScaleSequential<string>).interpolator;
+
+export const scaleIsFeatureIndividual = (
+    scale: Record<string, ScaleSequential<string>> | any
+): scale is Record<string, ScaleSequential<string>> => {
+    if (typeof scale !== 'object') {
+        return false;
+    }
+    if (getKeys(scale).every(k => scaleIsSequential(scale[k]))) {
+        return true;
+    } else return false;
+};
 
 /* Tree without layout calculated (i.e., no x or y values attached) */
 export type TMCHiearchyNode = HierarchyNode<TMCNode>;
