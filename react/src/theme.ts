@@ -10,8 +10,8 @@ const theme = {
         white: '#ffffff',
     },
     breakpoints: {
-        lg: '1200px',
-        md: '900px',
+        md: '600px',
+        lg: '900px',
     },
 };
 

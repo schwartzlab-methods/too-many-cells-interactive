@@ -93,7 +93,7 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
 
     return (
         <>
-            <Column xs={6}>
+            <Column xs={12} lg={6}>
                 {(!!activeFeatures.length || !!userAnnotationDomain.length) && (
                     <>
                         <WidgetTitle
@@ -187,7 +187,6 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
                         maxHeight={maxHeight ? +maxHeight / 4 : undefined}
                     />
                 </Row>
-
                 <Row>
                     <DisplaySettings />
                 </Row>
@@ -236,7 +235,7 @@ const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
                     </Column>
                 </Row>
             </Column>
-            <Column xs={6}>
+            <Column xs={12} lg={6}>
                 <Row>
                     <PanelContainer>
                         <AnnotationControls />
