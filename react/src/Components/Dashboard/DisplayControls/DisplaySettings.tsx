@@ -10,6 +10,10 @@ import {
 import Checkbox from '../../Checkbox';
 import { Column, WidgetTitle } from '../../Layout';
 
+/*
+    Controls for adjusting tree display, including pie width, branch scaling,
+    ID visibility, distance visibility, and node count visibility.
+*/
 const DisplaySettings: React.FC = () => {
     const {
         scales: { branchSizeScale, pieScale },

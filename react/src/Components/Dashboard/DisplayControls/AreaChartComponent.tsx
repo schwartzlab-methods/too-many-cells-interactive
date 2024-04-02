@@ -13,6 +13,11 @@ interface AreaChartComponentProps {
     yLabel?: string;
 }
 
+/**
+ * Container component for rendering a D3 area chart.
+ * Responsible for forwarding onBrush callback to the chart.
+ * Renders a div for D3 to attach to.
+ */
 const AreaChartComponent: React.FC<AreaChartComponentProps> = ({
     counts,
     onBrush,

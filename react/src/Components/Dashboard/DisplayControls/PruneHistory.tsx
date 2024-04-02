@@ -16,6 +16,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../../../hooks';
 import { RightArrowIcon } from '../../Icons';
 
+/* Component for displaying prune history, including apply and reset buttons */
 const PruneHistory: React.FC = () => {
     const { addStep, resetHistory, revertToStep } = bindActionCreators(
         {
@@ -127,6 +128,12 @@ const PruneStep: React.FC<PruneStepProps> = ({
     );
 };
 
+/**
+ *
+ * @param {PruneStep} pruneStep the object represending prune state
+ * @param {number} index the index of the currently active prune
+ * @returns {JSX.Element} the label for the prune step
+ */
 const getPruneHistoryLabel = (pruneStep: PruneStep, index: number) => {
     const { name, value, displayValue } = pruneStep.valuePruner;
     const manualPruneCount = pruneStep.clickPruneHistory.length;

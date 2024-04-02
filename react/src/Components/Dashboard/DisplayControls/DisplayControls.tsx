@@ -27,6 +27,7 @@ import ExportControls from './ExportControls';
 import PrunerPanel from './PrunerPanel';
 import Legend from './Legend';
 
+/* High-level component containing the display controls seen on the RHS of the app when viewed in a large screen */
 const DisplayControls: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
     const {
         scales: {
@@ -300,6 +301,7 @@ interface SliderProps {
     value: number;
 }
 
+/* A simple HTML slider input widget */
 const Slider: React.FC<SliderProps> = ({
     disabled,
     label,

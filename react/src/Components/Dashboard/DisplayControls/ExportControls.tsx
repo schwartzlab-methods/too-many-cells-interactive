@@ -13,6 +13,7 @@ import { WidgetTitle } from '../../Layout';
 import { SelectPanel } from '../..';
 import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 
+/* Controls for selecting and executing an export */
 const ExportControls: React.FC = () => {
     const [panelOpen, setPanelOpen] = useState(false);
 

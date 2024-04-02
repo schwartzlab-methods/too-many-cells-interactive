@@ -9,6 +9,7 @@ import { AttributeMap } from '../../../types';
 import { useAppDispatch } from '../../../hooks';
 import { textToAnnotations } from '../../../util';
 
+/* Widget for uploading the user-annotation file */
 const AnnotationControls: React.FC = () => {
     const [uploadError, setUploadError] = useState('');
     const [inputKey, setInputKey] = useState(Math.random());

@@ -30,6 +30,11 @@ import {
 } from '../../../redux/pruneSlice';
 import { selectAnnotationSlice } from '../../../redux/annotationSlice';
 
+/**
+ * React component that wraps the main tree visualization, providing initial arguments from state and
+ * forwarding redux state tree changes to the d3 context object (since d3 is not part of react tree).
+ * Renders a div with a selector for d3 to attach to.
+ */
 const TreeComponent = forwardRef<
     HTMLDivElement,
     { baseTree: TMCHierarchyPointNode }

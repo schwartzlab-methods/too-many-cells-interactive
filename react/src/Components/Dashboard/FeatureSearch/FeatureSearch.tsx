@@ -45,6 +45,7 @@ import QuestionTip from '../../QuestionTip';
 import { PlainOrMADVal } from '../../../types';
 import LoadingModal from '../../LoadingModal';
 
+/* Component for searching for features in the backend database */
 const FeatureSearch: React.FC = () => {
     const [autocompleteInput, setAutocompleteInput] = useState('');
     const [bulkFeatureInput, setBulkFeatureInput] = useState('');
@@ -150,6 +151,12 @@ const FeatureSearch: React.FC = () => {
         updateColorScaleType('labelCount');
     };
 
+    /**
+     * Search for features in the backend and add to scale.
+     * TODO: some of this should probably be moved to the hooks, where the rest of the color
+     * scale calculations are done (could be part of a larger refactor of usePrunedTree.ts)
+     * @param {string} features
+     */
     const getFeatures = async (features: string) => {
         setLoading(true);
         const featureMap = await fetchFeatures(features);
@@ -365,6 +372,7 @@ interface AutocompleteProps {
     setSearchTerm: (term: string) => void;
 }
 
+/* Very simple combobox component that allows limited browsing w/ keyboard */
 const Autocomplete: React.FC<AutocompleteProps> = ({
     options,
     onSelect,

@@ -5,6 +5,7 @@ import { Bold, Text } from '../../Typography';
 import { useAppSelector } from '../../../hooks';
 import { selectDisplayConfig } from '../../../redux/displayConfigSlice';
 
+/* Wrapper for prune statuses */
 const TreeControls: React.FC = () => {
     return (
         <Row>
@@ -13,6 +14,7 @@ const TreeControls: React.FC = () => {
     );
 };
 
+/* Summary numbers for the tree, appear above the tree in the view panel. */
 const PruneStatuses: React.FC = () => {
     const {
         treeMetadata: { leafCount, minValue, maxValue, nodeCount },
@@ -37,6 +39,7 @@ const PruneStatuses: React.FC = () => {
     );
 };
 
+/* Container for the summary numbers */
 const StatusContainer = styled.div`
     display: flex;
     ${Text} {

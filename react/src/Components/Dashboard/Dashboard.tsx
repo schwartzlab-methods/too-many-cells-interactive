@@ -27,6 +27,7 @@ import PruneHistory from './DisplayControls/PruneHistory';
 import DisplayControls from './DisplayControls/DisplayControls';
 import TreeComponent from './Chart/TreeComponent';
 
+/* Base style resets */
 const GlobalStyle = createGlobalStyle`
     body {
         box-sizing: border-box;
@@ -36,11 +37,13 @@ const GlobalStyle = createGlobalStyle`
     }
 `;
 
+/* Outer wrapper */
 const MainContainer = styled.div`
     display: flex;
     justify-content: center;
 `;
 
+/* Inner wrapper */
 const ColumnContainer = styled.div`
     display: flex;
     flex-direction: column;
@@ -50,6 +53,7 @@ const ColumnContainer = styled.div`
     padding: 15px;
 `;
 
+/* Outermost React component, contains tree and control panes */
 const Dashboard: React.FC = () => {
     const [baseTree, setBaseTree] = useState<TMCHierarchyPointNode>();
     const [loading, setLoading] = useState(false);
@@ -142,6 +146,7 @@ const Dashboard: React.FC = () => {
     );
 };
 
+/* Dropdown for summary documentation */
 const LearnMoreSection: React.FC = () => (
     <Row>
         <OutlinedColumn xs={12} md={6}>
