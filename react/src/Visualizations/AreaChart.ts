@@ -13,6 +13,14 @@ export interface CumSumBin {
 }
 
 /* assumes ascending order */
+
+/**
+ * Return the index of the first element that is greater than or equal to `target`
+ *
+ * @param {number[]} arr
+ * @param {number} target
+ * @return {number}
+ */
 const bisectDownSorted = (arr: number[], target: number) => {
     let i = 0;
     while (target > arr[i + 1]) {
@@ -20,7 +28,14 @@ const bisectDownSorted = (arr: number[], target: number) => {
     }
     return i;
 };
-export default class Histogram {
+
+/**
+ * A D3-rendered Bushable Area Chart
+ *
+ * @export
+ * @class AreaChart
+ */
+export default class AreaChart {
     /* We assume that these are already properly sorted [by .count, probably] */
     counts: CumSumBin[];
     h = 240;
@@ -56,6 +71,12 @@ export default class Histogram {
         this.xLabel = xLabel;
     }
 
+    /**
+     * Move the brush
+     *
+     * @param {number} brushValue
+     * @memberof AreaChart
+     */
     setBrush = (brushValue?: number) => {
         const that = this;
         let startX = 0;
@@ -66,11 +87,19 @@ export default class Histogram {
         /* store starting location of each bin*/
         const ticks = binThresholds.map(c => this.xScale(c));
 
+        /**
+         *  The onBrush callback
+         *
+         * @param {SVGGElement} this
+         * @param {D3BrushEvent<any>} event
+         * @return {void}
+         */
         const brushed = function (this: SVGGElement, event: D3BrushEvent<any>) {
             if (!event.sourceEvent || !event.selection) return;
 
             /* "left" x value could be first or second position, depending on orientation to dragstart point */
             const _x0 =
+                !Array.isArray(event.selection[0]) &&
                 event.selection[0] >= startX
                     ? (event.selection[1] as number)
                     : (event.selection[0] as number);
@@ -93,6 +122,7 @@ export default class Histogram {
             brush.move(select(this), [x0, x2]);
         };
 
+        /* Define the brush element and callbacks */
         const brush = brushX<null>()
             .extent([
                 [this.margin, this.title ? this.margin : this.margin / 2],
@@ -106,6 +136,7 @@ export default class Histogram {
             )
             .on('end', () => (startX = 0));
 
+        /* Attach brush */
         this.svg
             .selectAll<SVGGElement, null>('g.brush-container')
             //initial value may be provided from outside
@@ -132,7 +163,13 @@ export default class Histogram {
             );
     };
 
-    /* brushValue is from upstream, may change over life of object if user manually changes input */
+    /**
+     * Method to render (or rerender) chart, likely to be called in a React component with brushValue, which could
+     *    be changed via an input box.
+     *
+     * @param {number} brushValue the position of the brush on the chart
+     * @memberof AreaChart
+     */
     render = (brushValue?: number) => {
         const bins = this.counts.map(c => c.value);
 

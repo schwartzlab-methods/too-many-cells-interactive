@@ -44,7 +44,6 @@ interface NumberInputProps extends InputProps {
 }
 
 /**
- *
  * Component that wraps onChange to ensure it fires only when input is a valid number.
  */
 export const NumberInput: React.FC<NumberInputProps> = ({

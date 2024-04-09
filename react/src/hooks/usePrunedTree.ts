@@ -47,7 +47,11 @@ import useAppDispatch from './useAppDispatch';
 import { getFeatureAverage } from './useScale';
 
 /* This hook has become the site of most tree transformations -- it reacts to changes in state that require the tree to be altered in some way,
-    including prunes, user annotations, and feature additions.
+    including prunes, user annotations, and feature additions. It depends on effects firing in the order they are defined here, and changing the
+    order can lead to unexpected behavior, as can altering the dependency arrays, which deliberately ignore changes in certain objects for purposes
+    of efficiency.
+
+    TODO: refactor into discrete hooks.
 */
 
 const usePrunedTree = (tree: TMCHierarchyDataNode) => {
@@ -177,6 +181,7 @@ const usePrunedTree = (tree: TMCHierarchyDataNode) => {
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeFeatures, featureHiLoThresholds]);
 
+    /* If there are new features, we also need to update the scales */
     useEffect(() => {
         if (activeFeatures.length) {
             updateFeatureDistributions(

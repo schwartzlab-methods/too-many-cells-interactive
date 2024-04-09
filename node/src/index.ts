@@ -3,6 +3,10 @@ import { Pool } from 'pg';
 import path from 'path';
 import { queryFeatures, searchFeatureNames } from './util';
 
+/**
+ * Simple express API for queries to the PG features database.
+ */
+
 const app = express();
 
 const pool = new Pool();
@@ -39,21 +43,11 @@ app.use('/api/feature-names', async (req, res) => {
     }
 });
 
-app.use('/api/features-set', async (req, res) => {
-    //searching all docs by regex is slow, so we can just return all unique values up front
-
-    const allGenes = await pool.query<{ feature: string }>(
-        `SELECT feature FROM features GROUP BY feature`
-    );
-
-    res.json(allGenes.rows.map(f => f.feature));
-});
-
 app.use((req, res) => {
     console.error(`NOT FOUND ${req.path}`);
     res.status(404).json('Not found');
 });
 
 app.listen(3000, () => {
-    console.log(`The app is running!`);
+    console.log('too-many-cells-interactive is running!');
 });

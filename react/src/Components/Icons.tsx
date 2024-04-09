@@ -1,6 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 
+/* Some simple homespun SVG icons */
+
 interface IconProps {
     pointer?: boolean;
     fill?: string;

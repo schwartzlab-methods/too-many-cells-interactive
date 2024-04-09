@@ -418,6 +418,12 @@ export interface TreeContext {
     displayContext: DisplayContext;
     clickPruneCallbacks?: ClickPruneCallbacks;
 }
+
+/**
+ * The main tree graphic
+ *
+ * @class RadialTree
+ */
 class RadialTree {
     branchDragBehavior: DragBehavior<SVGPolygonElement, any, any> | typeof noop;
     container: Selection<SVGGElement, unknown, HTMLElement, any>;
@@ -862,6 +868,7 @@ class RadialTree {
         });
     };
 
+    /* Render or re-render the tree, typically handled by a React parent element that keeps state updated. */
     render = () => {
         const that = this;
 

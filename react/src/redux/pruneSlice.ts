@@ -81,6 +81,7 @@ export interface PruneStep {
     clickPruneHistory: ClickPruner[];
 }
 
+/* Slice of the store than handles pruning state */
 export const pruneSlice = createSlice({
     name: 'pruneState',
     initialState,

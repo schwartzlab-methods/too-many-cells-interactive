@@ -23,6 +23,11 @@ export interface StateExport {
     fontsize?: number;
 }
 
+/**
+ * Collect relevent attributes from Redux Store and export as a state snapshot
+ *
+ * @return {() => StateExport}
+ */
 const useExportState = () => {
     const { activeFeatures } = useAppSelector(selectAnnotationSlice);
     const displayConfig = useAppSelector(selectDisplayConfig);

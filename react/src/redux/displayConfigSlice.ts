@@ -129,6 +129,7 @@ type PartialLinearScale = Partial<{
     [K in keyof Omit<Scales, 'colorScale'>]: Partial<Scales[K]>;
 }>;
 
+/* Slice of the store that handles display configuration */
 export const displayConfigSlice = createSlice({
     name: 'displayConfig',
     initialState,
