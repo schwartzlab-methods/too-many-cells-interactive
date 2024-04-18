@@ -32,6 +32,10 @@ const LegendContainer = styled.div<{ maxHeight?: number }>`
     width: 100%;
 `;
 
+/*
+    'Switch' component for rendering one of various types of legends.
+    Types are ordinal, linear, and many-linear (when the user has selected the individual feature scale).
+*/
 const Legend: React.FC<{ maxHeight?: number }> = ({ maxHeight }) => {
     const { scale: colorScale } = useColorScale();
 
@@ -70,6 +74,7 @@ interface LegendItemProps {
     updateColor: (color: string) => void;
 }
 
+/* An item in an ordinal legend (labeled dot with customizable color) */
 const LegendItem: React.FC<LegendItemProps> = ({
     color,
     label,
@@ -107,6 +112,7 @@ interface ColorPickerProps {
     updateColor: (color: string) => void;
 }
 
+/* Wrapper for the HexColorPicker component, includes a check to ensure the color is valid before changing */
 const ColorPicker: React.FC<ColorPickerProps> = ({ color, updateColor }) => {
     // use a wrapper to prevent submission of invalid values
     const [internalVal, setInternalVal] = useState(color);
@@ -158,6 +164,10 @@ const LinearLegendList = styled(List)`
     }
 `;
 
+/*
+    Legend for a Linear scale with pickable color.
+    Renders an SVG rect and a LinearGradient covering the scale range.
+*/
 const LinearLegend: React.FC<{
     scale: ScaleSequential<string>;
     scaleName?: string;
@@ -303,6 +313,10 @@ const LinearLegend: React.FC<{
     );
 };
 
+/*
+    Component that renders a legend for an ordinal scale by looping through
+    the scale's range and rendering a pickable colored dot an label for each.
+*/
 const OrdinalLegend: React.FC<{ scale: ScaleOrdinal<string, string> }> = ({
     scale,
 }) => {

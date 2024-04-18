@@ -99,6 +99,11 @@ const argv = yargs(process.argv.slice(2))
     .demandOption(['labelPath', 'treePath', 'configPath', 'outPath'])
     .argv as Record<string, string>;
 
+/**
+ * Callback to convert json string to an object.
+ * @param {string} buf
+ * @returns {Object}
+ */
 const parse = (buf: string) => {
     if (!buf) {
         throw Error('file is empty!!');
@@ -128,12 +133,17 @@ if (argv.annotationPath) {
     annotations = textToAnnotations(text);
 }
 
-/*
-    This is different than the front-end runprunes function in that it recalculates the relevant MADs after each run,
-        since the MAD value should be given in terms of the current (pruned) distribution of nodes.
-    We don't do this on the FE b/c it has a performance penalty, so instead we just store both values (MADs and plain).
-    But we can't do that here b/c the data might be arbitrary and the plain values not useful.
-*/
+/**
+ * Prune the tree
+ * This is different than the front-end runprunes function in that it recalculates the relevant MADs after each run,
+ * Since the MAD value should be given in terms of the current (pruned) distribution of nodes.
+ * We don't do this on the FE b/c it has a performance penalty, so instead we just store both values (MADs and plain).
+ * But we can't do that here b/c the data might be arbitrary and the plain values not useful.
+ *
+ * @param {AnyPruneHistory[]} pruneHistory
+ * @param {TMCHierarchyDataNode} tree
+ * @returns {TMCHierarchyDataNode} the pruned tree
+ */
 const runBackEndPrunes = (
     pruneHistory: AnyPruneHistory[],
     tree: TMCHierarchyDataNode
@@ -183,6 +193,11 @@ const runBackEndPrunes = (
     return _prunedNodes;
 };
 
+/**
+ * Fetch the feature map from the database
+ * @param {string[]} features
+ * @return {Promise<Record<string, Record<string | number, number>>>}
+ */
 const getFeatureMap = async (features: string[]) => {
     const pool = new Pool();
     const featureMap = await queryFeatures(features, pool);
@@ -192,6 +207,10 @@ const getFeatureMap = async (features: string[]) => {
 
 /**
  * If features are present, add them to cells and annotate nodes as required for scales to render appropriately.
+ *
+ * @param {ChartConfig} state
+ * @param {TMCHiearchyNode} nodes
+ * @return {Promise<TMCHiearchyNode>} The annotated tree
  */
 const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
     const { variant: scaleType, featureHiLoThresholdUnits } =
@@ -229,8 +248,11 @@ const addFeatures = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
     return nodes;
 };
 
-/*
-    Run prunes (should be done after adding features but before calculating scales)
+/**
+ * Prune the tree according to the config and calculate the layout
+ * @param {ChartConfig} state
+ * @param {TMCHiearchyNode} nodes
+ * @return {HierarchyPointNode<TMCNode>}
  */
 const pruneAndCalculateLayout = (
     state: ChartConfig,
@@ -244,7 +266,11 @@ const pruneAndCalculateLayout = (
     return visibleNodes;
 };
 
-/* Calculate scales based on visible nodes and state config */
+/**
+ * Calculate scales based on visible nodes and state config
+ * @param {TMCHierarchyPointNode} nodes
+ * @param {ChartConfig} state
+ */
 const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
     const { variant: scaleType } = state.scales.colorScale!;
 
@@ -352,7 +378,13 @@ const getScale = (nodes: TMCHierarchyPointNode, state: ChartConfig) => {
     }
 };
 
-/* Return the scales needed for the graphic */
+/**
+ * Return the scales needed for the graphic
+ *
+ * @param {(node: TMCHiearchyNode) => string} scaleFunction
+ * @param {ChartConfig} state
+ * @param {TMCHiearchyNode} nodes
+ */
 const getTreeScales = (
     scaleFunction: (node: TMCHiearchyNode) => string,
     state: ChartConfig,
@@ -369,7 +401,12 @@ const getTreeScales = (
     ),
 });
 
-/* Draw the tree and write to the output directory */
+/**
+ * Draw the tree and write to the output directory
+ * @param {ChartConfig} state
+ * @param {TMCHiearchyNode} nodes
+ * @return {Promise<unknown>} Empty promise
+ */
 const saveTree = async (state: ChartConfig, nodes: TMCHiearchyNode) => {
     const dom = new JSDOM(`<!DOCTYPE html><body></body></html>`);
 
@@ -456,11 +493,22 @@ const OPTIONAL_DISPLAY_ELEMENTS: (keyof ToggleableDisplayElements)[] = [
     'widthScalingDisabled',
 ];
 
+/**
+ * Validate the user-provided scale range, returning false if invalid
+ * @param {any} range
+ * @returns {boolean}
+ */
 const validateRange = (range: any) =>
     Array.isArray(range) &&
     range.every(n => typeof n === 'number') &&
     range.length == 2;
 
+/**
+ * Validate user-provided scales
+ *
+ * @param {ChartConfig['scales']} scales
+ * @return {string | void} If errors are found, return as string, else return void
+ */
 const validateScales = (scales: ChartConfig['scales']) => {
     let errors = '';
     if (!scales) {
@@ -542,6 +590,12 @@ const validateScales = (scales: ChartConfig['scales']) => {
     }
 };
 
+/**
+ * Validate the user-provided state config
+ *
+ * @param {ChartConfig} config
+ * @return {string} Empty string if no errors found, else the list of errors
+ */
 const validateInput = (config: ChartConfig) => {
     let errors = '';
     if (!config.features.every(f => typeof f === 'string')) {
@@ -585,6 +639,12 @@ const defaultScales: StateExport['scales'] = {
     pieScaleRange: [5, 20],
 };
 
+/**
+ * Provide reasonable defaults if the user-provided state document is missing items
+ *
+ * @param {StateConfig} state
+ * @return {ChartConfig}
+ */
 const provideDefaults = (state: StateConfig): ChartConfig => {
     const config = {} as ChartConfig;
 
@@ -611,7 +671,12 @@ const provideDefaults = (state: StateConfig): ChartConfig => {
     return config;
 };
 
-/* If state config was passed as stdin (and --config switch was `--config=-`) read from there, otherwise read from file */
+/**
+ * Get the state from the arguments.
+ * If state config was passed as stdin (and --config switch was `--config=-`) read from there, otherwise read from file
+ *
+ * @return {Promise<StateConfig>}
+ */
 const getState = async (): Promise<StateConfig> =>
     new Promise(resolve => {
         argv.configPath === '-'
@@ -629,7 +694,11 @@ const getState = async (): Promise<StateConfig> =>
               );
     });
 
-/* The main function  */
+/**
+ * The main function; read arguments, provide defaults, validate, build tree, and save
+ *
+ * @return {Promise<unknown>} Empty promise
+ */
 const run = async () => {
     const state = await getState();
     const config = provideDefaults(state);

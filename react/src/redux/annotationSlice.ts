@@ -25,7 +25,7 @@ const initialState: AnnotationSliceState = {
     featureMaps: {},
     userAnnoationMap: {},
 };
-
+/* Slice of the store that handles annotation and feature data */
 export const annotationSlice = createSlice({
     name: 'annotationSlice',
     initialState,

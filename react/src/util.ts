@@ -244,6 +244,13 @@ export const pruneTreeByMinDistanceSearch = (
     } else return tree.copy();
 };
 
+/**
+ * Return a subtree with the root node of `nodeId`
+ *
+ * @param {TMCHierarchyDataNode} tree
+ * @param {string} nodeId
+ * @return {TMCHiearchyNode}
+ */
 export const setRootNode = (tree: TMCHierarchyDataNode, nodeId: string) => {
     const targetNode = tree.find(n => n.data.id === nodeId)!.copy();
     // if we reinstate, stratify() will fail if
@@ -253,6 +260,13 @@ export const setRootNode = (tree: TMCHierarchyDataNode, nodeId: string) => {
     return targetNode;
 };
 
+/**
+ * Remove children of node with nodeId (mutates argument)
+ *
+ * @param {TMCHierarchyDataNode} tree
+ * @param {string} nodeId
+ * @return {void}
+ */
 export const collapseNode = (tree: TMCHierarchyDataNode, nodeId: string) =>
     tree.copy().eachAfter(n => {
         if (n.data.id === nodeId) {
@@ -274,19 +288,30 @@ export const calculateTreeLayout = (
         .size([2 * Math.PI, (w / 2) * 0.9])
         .separation((a, b) => (a.parent == b.parent ? 3 : 2) / a.depth)(nodes);
 
+/**
+ * Assert that the given prune step contains no pruning history
+ *
+ * @param {Readonly<PruneStep>} ctx
+ * @returns {boolean}
+ */
 export const pruneStepIsEmpty = (ctx: Readonly<PruneStep>) =>
     getObjectIsEmpty(ctx.clickPruneHistory) &&
     getObjectIsEmpty(ctx.valuePruner);
 
+/**
+ * Assert that the object has no properties of its own
+ *
+ * @param {Record<any, any>} obj
+ */
 export const getObjectIsEmpty = (obj: Record<any, any>) =>
     !Object.keys(obj).length;
 
 /**
  * Round number and return
  *
- * @param value number
- * @param sd significant digits
- * @returns number
+ * @param {number} value
+ * @param {number} sd significant digits
+ * @returns {number}
  */
 export const roundDigit = (value: number, sd?: number): number => {
     let fmt = '';
@@ -320,8 +345,8 @@ export const roundDigit = (value: number, sd?: number): number => {
  * Convert number to string, adding commas to numbers greater than a thousand,
  *     otherwise use decimal notation, varying significant digits by size
  *
- * @param value number
- * @returns string
+ * @param {number} value
+ * @returns {string}
  */
 export const formatDigit = (value: number, d?: number) => {
     const rounded = roundDigit(value, d);
@@ -330,7 +355,12 @@ export const formatDigit = (value: number, d?: number) => {
     } else return rounded;
 };
 
-/* merge two dictionaries by summing corresponding values */
+/**
+ * Merge two attribute maps by summing corresponding values
+ *
+ * @param {AttributeMap} obj1
+ * @param {AttributeMap} obj2
+ */
 export const mergeAttributeMaps = (obj1: AttributeMap, obj2: AttributeMap) =>
     [
         ...new Set([...Object.keys(obj1), ...Object.keys(obj2)]),
@@ -371,6 +401,12 @@ export const interpolateColorScale = (domain: string[]) => {
         });
 };
 
+/**
+ * Calculate the label scale from the map, adding colors as needed
+ *
+ * @param {Record<string, string>} labelMap
+ * @return {obj} An object containing the range and domain
+ */
 export const calculateOrdinalColorScaleRangeAndDomain = (
     labelMap: Record<string, string>
 ) => {
@@ -394,6 +430,14 @@ export const calculateOrdinalColorScaleRangeAndDomain = (
 export type AnyPruneHistory = Partial<PruneStep> &
     Omit<PruneStep, 'clickPruneHistory'>;
 
+/**
+ * Prune `tree` by running each prune in `pruneHistory`
+ *
+ * @param {number} activeStepIdx
+ * @param {AnyPruneHistory[]} pruneHistory
+ * @param {TMCHierarchyDataNode} tree
+ * @return {TMCHierarchyDataNode}
+ */
 export const runPrunes = (
     activeStepIdx: number,
     pruneHistory: AnyPruneHistory[],
@@ -415,9 +459,17 @@ export const runPrunes = (
     return _prunedNodes;
 };
 
+/* Typeguard */
 const isValuePruner = (pruner: AllPruner): pruner is ValuePruner =>
     !!(pruner as ValuePruner).value?.madsValue;
 
+/**
+ * Run the click prunes in `clickPruneHistory`
+ *
+ * @param {ClickPruner[]} clickPruneHistory
+ * @param {TMCHierarchyDataNode} tree
+ * @return {TMCHierarchyDataNode}
+ */
 export const runClickPrunes = (
     clickPruneHistory: ClickPruner[],
     tree: TMCHierarchyDataNode
@@ -440,21 +492,34 @@ export const prunerMap = {
     setRootNode: setRootNode,
 };
 
-export const runPrune = (arg: AllPruner, tree: TMCHierarchyDataNode) => {
-    if (!arg.name || !arg.value) return tree;
-    if (!isValuePruner(arg)) {
-        return prunerMap[arg.name as ClickPruneType](
+/**
+ * Run the prune contained in `pruner`
+ *
+ * @param {AllPruner} pruner
+ * @param {TMCHierarchyDataNode} tree
+ * @return {TMCHierarchyDataNode}
+ */
+export const runPrune = (pruner: AllPruner, tree: TMCHierarchyDataNode) => {
+    if (!pruner.name || !pruner.value) return tree;
+    if (!isValuePruner(pruner)) {
+        return prunerMap[pruner.name as ClickPruneType](
             tree,
-            arg.value.plainValue as string
+            pruner.value.plainValue as string
         );
     } else {
-        return prunerMap[arg.name as ValuePruneType](
+        return prunerMap[pruner.name as ValuePruneType](
             tree,
-            arg.value.plainValue
+            pruner.value.plainValue
         );
     }
 };
 
+/**
+ * Get the names of the hilo scale ordinal values
+ *
+ * @param {string[]} featureList
+ * @return {string[]}
+ */
 export const getScaleCombinations = (featureList: string[]) =>
     featureList
         .sort((a, b) => (a > b ? -1 : 1))
@@ -473,6 +538,13 @@ export const getScaleCombinations = (featureList: string[]) =>
             }
         }, []);
 
+/**
+ * Add an additional gray "All low" value to the hilo scale to designate the "all low" combination
+ *
+ * @param {string[]} domain
+ * @param {string[]} range
+ * @return {string[]} the new range
+ */
 export const addGray = (domain: string[], range: string[]) => {
     const allLowIdx = domain.findIndex(item => !item.includes('high'));
     if (allLowIdx) {
@@ -481,6 +553,12 @@ export const addGray = (domain: string[], range: string[]) => {
     return range;
 };
 
+/**
+ * Convert a csv-formatted string to a map of annotations
+ *
+ * @param {string} text
+ * @return {AttributeMap}
+ */
 export const textToAnnotations = (text: string) => {
     const rows = text.split(/\r?\n/).filter(Boolean);
 
@@ -516,6 +594,13 @@ export const textToAnnotations = (text: string) => {
  */
 export const isNil = (arg: any) => ['', null, undefined].includes(arg);
 
+/**
+ * Determine whether the arrays of objects have at least one intersecting value
+ *
+ * @param {T[]} a
+ * @param {T[]} b
+ * @return {boolean}
+ */
 export const hasIntersection = <T>(a: T[], b: T[]) => {
     const setB = new Set(b);
     return !![...new Set(a)].filter(x => setB.has(x)).length;

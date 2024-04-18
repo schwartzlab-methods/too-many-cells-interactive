@@ -3,8 +3,8 @@ import { selectDisplayConfig } from '../redux/displayConfigSlice';
 import { TMCHierarchyPointNode } from '../types';
 import useAppSelector from './useAppSelector';
 
-/* 
-   Tree is already globally persisted on the DOM, so we'll just pass around the selection of the root node
+/*
+   Tree is already globally persisted on the DOM, so we'll just pass around the d3 selection of the root node.
    We can't pass around the nodes themselves, however, b/c selection is not part of react and no hook fires on render
 */
 const useSelectTree = () => {

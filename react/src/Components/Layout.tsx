@@ -78,6 +78,7 @@ interface WidgetTitleProps {
     title: string;
 }
 
+/* Container component for UI elements */
 export const WidgetTitle: React.FC<WidgetTitleProps> = ({
     caption,
     helpText,

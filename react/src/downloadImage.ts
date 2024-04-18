@@ -5,6 +5,16 @@ import { BaseType, select, Selection } from 'd3-selection';
 import { scaleIsFeatureIndividual, scaleIsSequential } from './types';
 import { formatDigit, getKeys } from './util';
 
+/**
+ * Attach an SVG legend to the SVG tree and convert to a data URL for download
+ *
+ * @param {(ScaleOrdinal<string, string>
+ *         | ScaleSequential<string>
+ *         | Record<string, ScaleSequential<string>>)} colorScale
+ * @param {string} selector
+ * @param {string[]} activeFeatures
+ * @return {string} the data URL for the image, base64-encoded
+ */
 const getSvgSrc = (
     colorScale:
         | ScaleOrdinal<string, string>
@@ -30,7 +40,15 @@ const getSvgSrc = (
 };
 
 /**
- * Attach legend -- mutates svg element
+ * Attach an SVG legen to the SVG chart (mutates svc)
+ *
+ * @param {Selection<SVGSVGElement, unknown, any, unknown>} svg
+ * @param {(ScaleOrdinal<string, string>
+ *         | ScaleSequential<string>
+ *         | Record<string, ScaleSequential<string>>)} colorScale
+ * @param {number} [fontSize=20]
+ * @param {string[]} activeFeatures
+ * @return {void}
  */
 export const attachLegend = (
     svg: Selection<SVGSVGElement, unknown, any, unknown>,
@@ -137,6 +155,16 @@ export const attachLegend = (
     }
 };
 
+/**
+ * Create a gradient legend for the scale and attach to `legendContainer` (mutates argument)
+ *
+ * @param {Selection<SVGGElement, unknown, any, unknown>} legendContainer
+ * @param {ScaleSequential<string>} colorScale
+ * @param {number} legendHeight
+ * @param {number} legendWidth
+ * @param {number} fontSize
+ * @param {number} [offsetIdx=0]
+ */
 const attachSequentialLegend = (
     legendContainer: Selection<SVGGElement, unknown, any, unknown>,
     colorScale: ScaleSequential<string>,
@@ -196,6 +224,16 @@ const attachSequentialLegend = (
         );
 };
 
+/**
+ * Conver the SVG at `selector` to a PNG and download
+ *
+ * @param {(ScaleOrdinal<string, string>
+ *         | ScaleSequential<string>
+ *         | Record<string, ScaleSequential<string>>)} colorScale
+ * @param {string} selector
+ * @param {string[]} activeFeatures
+ * @returns {void}
+ */
 export const downloadPng = (
     colorScale:
         | ScaleOrdinal<string, string>
@@ -227,6 +265,15 @@ export const downloadPng = (
     };
 };
 
+/**
+ * Download the SVG at `selector`
+ *
+ * @param {(ScaleOrdinal<string, string>
+ *         | ScaleSequential<string>
+ *         | Record<string, ScaleSequential<string>>)} colorScale
+ * @param {string} selector
+ * @param {string[]} activeFeatures
+ */
 export const downloadSvg = (
     colorScale:
         | ScaleOrdinal<string, string>

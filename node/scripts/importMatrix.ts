@@ -28,12 +28,24 @@ const DEBUG = !!argv.debug;
 
 const CHUNK_SIZE = 100000;
 
+/**
+ * Write debug messages to console if --debug switch was passed
+ *
+ * @param {string} msg
+ * @returns {void}
+ */
 const debug = (msg: string) => {
     if (argv.debug) {
         console.debug(`[${new Date().toLocaleTimeString()}] ${msg}`);
     }
 };
 
+/**
+ * Get a database connection. There's a chance of lag, so we'll try a few times.
+ *
+ * @param {number} [remainingTries=10]
+ * @return {Promise<Pool>}
+ */
 const getPool = async (remainingTries = 10) => {
     let client;
     let pool;
@@ -55,6 +67,13 @@ const getPool = async (remainingTries = 10) => {
     return pool as Pool;
 };
 
+/**
+ * Confirm that the file path passed contains matrix files in the expected format
+ *
+ * @param {string} rootDir
+ * @return {Promise<void>} empty promise
+ * @throws Will throw an error if no files are found
+ */
 const verifyMatrixFilesPresent = async (rootDir: string) => {
     const missingFiles = {
         matrixFiles: 'matrix files not found',
@@ -71,6 +90,12 @@ const verifyMatrixFilesPresent = async (rootDir: string) => {
     }
 };
 
+/**
+ * Refresh database by truncating tables and indices
+ *
+ * @param {Pool} pool
+ * @returns {void}
+ */
 const truncateDatabase = async (pool: Pool) => {
     const client = await pool.connect();
     await client.query('TRUNCATE features;');
@@ -79,6 +104,12 @@ const truncateDatabase = async (pool: Pool) => {
     client.release();
 };
 
+/**
+ * Create the feature index
+ *
+ * @param {Pool} pool
+ * @returns {void}
+ */
 const createIndex = async (pool: Pool) => {
     const client = await pool.connect();
     await client.query(
@@ -87,6 +118,13 @@ const createIndex = async (pool: Pool) => {
     client.release();
 };
 
+/**
+ * Copy a chunk of rows into the database
+ *
+ * @param {string} chunk
+ * @param {Pool} pool
+ * @return {Promise} resolves to true if successful, otherwise rejected
+ */
 const insertMany = async (chunk: string, pool: Pool) => {
     const query = 'COPY features (id, feature, feature_type, value) FROM STDIN';
 
@@ -115,9 +153,10 @@ const insertMany = async (chunk: string, pool: Pool) => {
 };
 
 /**
+ * Parse the feature flatfile into a dictionary for quick lookup later
  *
- * @param filepath Path to features file
- * @returns A dictionary of features keyed by index for fast lookup
+ * @param {string} filepath Path to features file
+ * @returns {Promise<Record<string, Feature>>}
  */
 
 const getFeaturesDict = async (filepath: string) => {
@@ -139,9 +178,9 @@ const getFeaturesDict = async (filepath: string) => {
 };
 
 /**
- *
- * @param filepath Path to barcode file
- * @returns A dictionary of barcodes keyed by index for fast lookup
+ * Parse the barcode flat file into a dictionary for quick lookup later
+ * @param {string} filepath Path to barcode file
+ * @returns {Promise<Record<string, string>>}
  */
 const getBarcodesDict = async (filepath: string) => {
     const ret = {} as Record<string, string>;

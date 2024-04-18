@@ -57,6 +57,10 @@ const TextInputGroup = styled.div`
     flex-wrap: nowrap;
 `;
 
+/*
+    Controls for pruning the tree, includes selection panel, pruning widgets and
+    metadata area charts.
+*/
 const PrunerPanel: React.FC = () => {
     const [selected, setSelected] = useState<ValuePruneType>();
     const [panelVisible, setPanelVisible] = useState(false);
@@ -218,6 +222,7 @@ const PrunerPanel: React.FC = () => {
     );
 };
 
+/* The basic pruner, does not use MADs */
 export default PrunerPanel;
 
 interface PrunerProps {
@@ -245,7 +250,6 @@ const Pruner: React.FC<PrunerProps> = ({
         if (value?.plainValue) {
             setInputVal(roundDigit(value.plainValue).toString());
         }
-
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value]);
 
@@ -299,6 +303,7 @@ export interface SmartPrunerProps {
     yLabel?: string;
 }
 
+/* Pruner that allows toggling between basic and MAD values. */
 export const SmartPruner: React.FC<SmartPrunerProps> = ({
     expanded,
     id,
@@ -446,6 +451,7 @@ interface UpdateBoxProps {
     value: number | string;
 }
 
+/* Input component that permits users to submit only numbers and submits on Enter keypress */
 const UpdateBox: React.FC<UpdateBoxProps> = ({ onChange, onSubmit, value }) => (
     <TextInputGroup
         onKeyUp={e => {

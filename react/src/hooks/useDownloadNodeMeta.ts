@@ -9,6 +9,12 @@ import {
 import { getKeys } from '../util';
 import useSelectTree from './useSelectTree';
 
+/**
+ * "Flatten" a node into a mapping of key-value pairs
+ *
+ * @param {TMCHierarchyDataNode} node
+ * @return {Record<string, string | number>}
+ */
 const transformNode = (node: TMCHierarchyDataNode) => {
     return {
         node_id: node.data.originalNodeId,
@@ -26,6 +32,12 @@ interface ExportNode extends TMCNode {
     children?: ExportNode[];
 }
 
+/**
+ * Add `children` to TMCNode
+ *
+ * @param {TMCHierarchyDataNode} node the tree
+ * @return {ExportNode} the tree with `children`
+ */
 const mapMeta = (node: TMCHierarchyDataNode) => {
     const data: ExportNode = node.data;
     if (node.children) {
@@ -34,6 +46,11 @@ const mapMeta = (node: TMCHierarchyDataNode) => {
     return data;
 };
 
+/**
+ * Transform the tree to the desired format (csv, json, cluster tree) and save
+ *
+ * @return {void}
+ */
 const useDownloadNodeMeta = () => {
     const { selectTree } = useSelectTree();
 
@@ -84,6 +101,13 @@ const useDownloadNodeMeta = () => {
     };
 };
 
+/**
+ * Transform the tree back into its original structure (similar to cluster_tree.json)
+ *
+ * @param {TMCHierarchyDataNode} tree
+ * @param {EmptyRoseNode} roseNode
+ * @return {RoseNode}
+ */
 const convertToClusterTree = (
     tree: TMCHierarchyDataNode,
     roseNode: EmptyRoseNode
