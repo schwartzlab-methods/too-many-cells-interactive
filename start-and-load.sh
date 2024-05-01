@@ -9,13 +9,14 @@ function help()
 {
    echo "Start the TMC containers and mount label and tree files, optionally loading in matrix data."
    echo
-   echo "Syntax: start-and-load.sh --tree-path --label-path --port [--matrix-path] [--debug]"
+   echo "Syntax: start-and-load.sh --tree-path --label-path --port [--matrix-path] [--default-depth] [--debug]"
    echo "options:"
-   echo "tree-path   /path/to/cluter_tree.json."
-   echo "label-path  /path/to/labels.csv."
-   echo "matrix-dir /path/to/matrices (files in matrix-market format, can be nested and/or gzipped)."
-   echo "port        <Port where webapp will listen>."
-   echo "debug       Print data import details."
+   echo "tree-path       /path/to/cluter_tree.json."
+   echo "label-path      /path/to/labels.csv."
+   echo "matrix-dir      /path/to/matrices (files in matrix-market format, can be nested and/or gzipped)."
+   echo "port            Port where webapp will listen."
+   echo "default-depth   Prune the tree at this depth at load time (integer)."
+   echo "debug           Print data import details."
    echo
 }
 
@@ -24,6 +25,7 @@ if [[ $# -lt 6 ]]; then
 fi
 
 debug=""
+default_depth=NA
 uid=$(id -u)
 gid=$(id -g)
 docker_compose_path=docker-compose.prod.yaml
@@ -47,6 +49,10 @@ while [ -n "$1" ]; do
     elif [[ "$1" == '--port' ]]; then
         shift
         port=$1
+
+    elif [[ "$1" == '--default-depth' ]]; then
+        shift
+        default_depth=$1
 
     elif [[ "$1" == '--debug' ]]; then
         debug="--debug"
@@ -77,7 +83,11 @@ if [[ -z $port ]]; then
     echo >&2 "please include the --port argument!" && exit 1
 fi
 
-docker-compose -f $docker_compose_path build --build-arg UID=$uid --build-arg GID=$gid node
+docker-compose -f $docker_compose_path build \
+    --build-arg UID=$uid \
+    --build-arg GID=$gid \
+    --build-arg DEFAULT_DEPTH=$default_depth \
+    node
 
 # start postgres in the background so we can exec commands to it
 docker-compose -f $docker_compose_path up -d postgres

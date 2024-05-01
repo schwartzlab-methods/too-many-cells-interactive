@@ -75,18 +75,20 @@ const PruneHistory: React.FC = () => {
                     Reset
                 </Button>
             </Row>
-            <StepContainer>
-                {pruneHistory.map((history, i) => (
-                    <PruneStep
-                        key={i}
-                        active={i === activePruneIdx}
-                        empty={pruneStepIsEmpty(history)}
-                        index={i}
-                        pruneStep={history}
-                        setActive={() => revertToStep(i)}
-                    />
-                ))}
-            </StepContainer>
+            <Row>
+                <StepContainer>
+                    {pruneHistory.map((history, i) => (
+                        <PruneStep
+                            key={i}
+                            active={i === activePruneIdx}
+                            empty={pruneStepIsEmpty(history)}
+                            index={i}
+                            pruneStep={history}
+                            setActive={() => revertToStep(i)}
+                        />
+                    ))}
+                </StepContainer>
+            </Row>
         </Column>
     );
 };
