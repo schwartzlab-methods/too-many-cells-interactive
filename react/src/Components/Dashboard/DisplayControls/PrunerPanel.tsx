@@ -73,7 +73,7 @@ const PrunerPanel: React.FC = () => {
             },
             {
                 title: 'Prune by Depth',
-                id: 'minDepth',
+                id: 'maxDepth',
             },
             {
                 title: 'Prune by Distance',
@@ -209,13 +209,13 @@ const PrunerPanel: React.FC = () => {
                     xLabel='Distance (Search)'
                 />
                 <Pruner
-                    expanded={selected === 'minDepth'}
+                    expanded={selected === 'maxDepth'}
                     label='Prune by depth'
-                    onSubmit={prune('minDepth')}
+                    onSubmit={prune('maxDepth')}
                     plainValues={depthGroups}
                     tipText='Prune nodes that whose depth is above the selected maximum.'
                     xLabel='Depth'
-                    value={getPrunerVal('minDepth')}
+                    value={getPrunerVal('maxDepth')}
                 />
             </Row>
         </Column>

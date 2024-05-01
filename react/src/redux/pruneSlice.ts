@@ -46,7 +46,7 @@ export type ValuePruneType =
     | 'minSize'
     | 'minDistance'
     | 'minDistanceSearch'
-    | 'minDepth';
+    | 'maxDepth';
 
 export type ClickPruneType = 'setRootNode' | 'setCollapsedNode';
 
