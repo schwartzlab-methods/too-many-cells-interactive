@@ -590,11 +590,11 @@ const getMadGroups = (values: number[], binCount = 15, maxSize?: number) => {
     // assume that max is greater than median...
     const greatestPositiveMadDistance = valueToMadCount(max || 0, med, mad);
 
-    const binSize =
-        Math.abs(
-            Math.abs(greatestPositiveMadDistance) -
-                Math.abs(greatestNegativeMadDistance)
-        ) / binCount;
+    // greatestPositiveMadDistance is >= 0 by def.
+    // greatestNegativeMadDistance is <= 0 by def.
+    // Therefore binSize is guaranteed to be >= 0.
+    const binSize = (greatestPositiveMadDistance -
+                greatestNegativeMadDistance) / binCount;
 
     return range(
         greatestNegativeMadDistance,
@@ -609,7 +609,7 @@ const getMadGroups = (values: number[], binCount = 15, maxSize?: number) => {
 /**
  * Get the median and MAD(s) for a feature distribution in the tree
  * @param {TMCHierarchyDataNode} node The tree
- * @param {string} feature The featuer
+ * @param {string} feature The feature
  * @returns {object}
  */
 export const getFeatureMadAndMeds = (
