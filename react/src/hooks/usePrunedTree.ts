@@ -593,8 +593,8 @@ const getMadGroups = (values: number[], binCount = 15, maxSize?: number) => {
     // greatestPositiveMadDistance is >= 0 by def.
     // greatestNegativeMadDistance is <= 0 by def.
     // Therefore binSize is guaranteed to be >= 0.
-    const binSize = (greatestPositiveMadDistance -
-                greatestNegativeMadDistance) / binCount;
+    const binSize =
+        (greatestPositiveMadDistance - greatestNegativeMadDistance) / binCount;
 
     return range(
         greatestNegativeMadDistance,
