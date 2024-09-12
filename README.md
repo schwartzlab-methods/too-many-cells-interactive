@@ -8,6 +8,9 @@ too-many-cells-interactive is an interactive visualization tool allowing users t
 This tool with its associated website is free and open to all users and there is
 no login requirement.
 
+## Publication
+To get a detailed description of too-many-cells-interactive and interesting applications consider reading the [publication](https://doi.org/10.1093/gigascience/giae056), and please remember to cite.
+
 ## Documentation and Quickstart
 
 For detailed documentation, quickstart, and tutorial, see [https://schwartzlab-methods.github.io/too-many-cells-interactive](https://schwartzlab-methods.github.io/too-many-cells-interactive).
