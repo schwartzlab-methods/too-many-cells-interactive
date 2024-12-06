@@ -18,6 +18,7 @@ import {
     selectDisplayConfig,
     updateColorScale,
 } from '../../redux/displayConfigSlice';
+import { addValuePrune } from '../../redux/pruneSlice';
 import { addLabels, buildLabelMap, getData } from '../../prepareData';
 import { TMCHierarchyPointNode } from '../../types';
 import theme from '../../theme';
@@ -90,6 +91,20 @@ const Dashboard: React.FC = () => {
                 const { range: labelRange, domain: labelDomain } =
                     calculateOrdinalColorScaleRangeAndDomain(labelMap);
 
+                if (
+                    process.env.DEFAULT_DEPTH &&
+                    Number.isInteger(+process.env.DEFAULT_DEPTH)
+                ) {
+                    dispatch(
+                        addValuePrune({
+                            name: 'maxDepth',
+                            value: {
+                                plainValue: +process.env.DEFAULT_DEPTH,
+                            },
+                        })
+                    );
+                }
+
                 dispatch(updateColorScale({ labelRange, labelDomain }));
 
                 setBaseTree(calculateTreeLayout(tree, width));
@@ -121,7 +136,7 @@ const Dashboard: React.FC = () => {
                     </Row>
                     {learnMoreVisible && <LearnMoreSection />}
                     <Row style={{ marginLeft: '10px' }} alignItems='flex-start'>
-                        <Column xs={12} md={6}>
+                        <Column xs={12} md={6} lg={5}>
                             <TreeControls />
                             {baseTree && (
                                 <TreeComponent
@@ -130,7 +145,7 @@ const Dashboard: React.FC = () => {
                                 />
                             )}
                         </Column>
-                        <Column xs={12} md={6}>
+                        <Column xs={12} md={6} lg={7}>
                             <Row>
                                 <PruneHistory />
                             </Row>

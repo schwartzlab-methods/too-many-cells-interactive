@@ -484,7 +484,7 @@ export const runClickPrunes = (
 };
 
 export const prunerMap = {
-    minDepth: pruneTreeByDepth,
+    maxDepth: pruneTreeByDepth,
     minSize: pruneTreeByMinValue,
     minDistance: pruneTreeByMinDistance,
     minDistanceSearch: pruneTreeByMinDistanceSearch,
