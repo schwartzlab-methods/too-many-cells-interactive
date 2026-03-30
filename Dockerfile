@@ -1,4 +1,4 @@
-FROM node:18.7-buster
+FROM node:18.7-bullseye
 
 WORKDIR /usr/app
 
