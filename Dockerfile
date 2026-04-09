@@ -15,6 +15,9 @@ USER root
 RUN id -u $UID || groupadd -f -g $GID tmc-user
 RUN id -u $UID || useradd --create-home --shell /bin/bash -g $GID -u $UID tmc-user
 
+RUN echo "deb http://archive.debian.org/debian buster main" > /etc/apt/sources.list && \
+    echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/10no-check-valid-until
+
 # first four are for canvas dep
 RUN apt-get update && apt-get install -y \
     libpixman-1-dev \
