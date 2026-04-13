@@ -1,4 +1,4 @@
-FROM node:18.7-bullseye
+FROM node:18.7-buster
 
 WORKDIR /usr/app
 
@@ -14,6 +14,12 @@ USER root
 # we do this in two steps to avoid the || && gotcha
 RUN id -u $UID || groupadd -f -g $GID tmc-user
 RUN id -u $UID || useradd --create-home --shell /bin/bash -g $GID -u $UID tmc-user
+
+# debian buster EOL
+# these commands just re-directs debian sources to the archived versions
+RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list && \
+    sed -i '/stretch-updates/d' /etc/apt/sources.list
 
 # first four are for canvas dep
 RUN apt-get update && apt-get install -y \
